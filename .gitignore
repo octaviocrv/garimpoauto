@@ -2,8 +2,18 @@ CLAUDE.md
 MazyOS/
 _memoria/
 dados/
-identidade/
 marketing/
 saidas/
 scripts/
 templates/
+
+# Aplicações web
+apps/*/node_modules/
+apps/*/dist/
+apps/*/.env
+apps/*/.env.*
+!apps/*/.env.example
+
+# Arquivos locais e dumps
+core
+core.*
