@@ -1,0 +1,35 @@
+<!-- @dsCard group="Components" viewport="700x200" name="Buttons" -->
+<link rel="stylesheet" href="../../styles.css">
+<script src="../../_ds_bundle.js"></script>
+<style>body{margin:0;padding:20px 24px;background:#fff;font-family:var(--font-body)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.label{font-size:10px;color:var(--color-slate-400);min-width:50px}</style>
+<div id="root"></div>
+<script type="text/babel">
+const { Button } = window.GarimpoAuto || {};
+if (Button) {
+  ReactDOM.render(
+    <div>
+      <div className="row">
+        <span className="label">Primary</span>
+        <Button variant="primary" size="sm">Small</Button>
+        <Button variant="primary" size="md">Medium</Button>
+        <Button variant="primary" size="lg">Large</Button>
+        <Button variant="primary" disabled>Disabled</Button>
+      </div>
+      <div className="row">
+        <span className="label">Variants</span>
+        <Button variant="primary">Teal</Button>
+        <Button variant="secondary">Black</Button>
+        <Button variant="ghost">Ghost</Button>
+        <Button variant="outline">Outline</Button>
+        <Button variant="gold">Gold</Button>
+        <Button variant="dark">Dark</Button>
+      </div>
+    </div>,
+    document.getElementById('root')
+  );
+} else {
+  document.getElementById('root').innerHTML = '<p style="color:#94a3b8;font-size:13px">Bundle not built yet</p>';
+}
+</script>

@@ -1,0 +1,27 @@
+<!-- @dsCard group="Components" viewport="700x160" name="Cards" -->
+<link rel="stylesheet" href="../../styles.css">
+<script src="../../_ds_bundle.js"></script>
+<style>body{margin:0;padding:20px 24px;background:var(--color-slate-50);font-family:var(--font-body);display:flex;gap:16px;align-items:start}</style>
+<div id="root"></div>
+<script type="text/babel">
+const { Card, Badge } = window.GarimpoAuto || {};
+if (Card) {
+  ReactDOM.render(
+    <>
+      <Card style={{width:200}}>
+        <div style={{fontFamily:'var(--font-heading)',fontWeight:700,fontSize:18,color:'var(--color-black)'}}>R$ 45.900</div>
+        <div style={{fontSize:13,color:'var(--color-slate-600)',marginTop:4}}>Honda Civic EXL 2021</div>
+        <div style={{fontSize:12,color:'var(--color-slate-400)',marginTop:2}}>42.000 km · Automático</div>
+      </Card>
+      <Card padding="20px" shadow="var(--shadow-md)" style={{width:200}}>
+        <div style={{display:'flex',gap:6,marginBottom:8}}>{Badge && <><Badge variant="teal">Novo</Badge><Badge variant="gold">Destaque</Badge></>}</div>
+        <div style={{fontFamily:'var(--font-heading)',fontWeight:700,fontSize:18,color:'var(--color-black)'}}>R$ 38.500</div>
+        <div style={{fontSize:13,color:'var(--color-slate-600)',marginTop:4}}>VW Polo TSI 2022</div>
+      </Card>
+    </>,
+    document.getElementById('root')
+  );
+} else {
+  document.getElementById('root').innerHTML = '<p style="color:#94a3b8;font-size:13px">Bundle not built yet</p>';
+}
+</script>

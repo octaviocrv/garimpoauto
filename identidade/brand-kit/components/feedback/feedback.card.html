@@ -1,0 +1,26 @@
+<!-- @dsCard group="Components" viewport="700x100" name="Badges" -->
+<link rel="stylesheet" href="../../styles.css">
+<script src="../../_ds_bundle.js"></script>
+<style>body{margin:0;padding:20px 24px;background:#fff;font-family:var(--font-body);display:flex;gap:10px;align-items:center;flex-wrap:wrap}</style>
+<div id="root"></div>
+<script type="text/babel">
+const { Badge } = window.GarimpoAuto || {};
+if (Badge) {
+  ReactDOM.render(
+    <>
+      <Badge variant="default">Default</Badge>
+      <Badge variant="teal">Novo</Badge>
+      <Badge variant="secondary">Secundário</Badge>
+      <Badge variant="gold">Destaque</Badge>
+      <Badge variant="success">Disponível</Badge>
+      <Badge variant="error">Vendido</Badge>
+      <Badge variant="dark">Premium</Badge>
+      <Badge variant="teal" size="sm">Small</Badge>
+      <Badge variant="secondary" size="lg">Large</Badge>
+    </>,
+    document.getElementById('root')
+  );
+} else {
+  document.getElementById('root').innerHTML = '<p style="color:#94a3b8;font-size:13px">Bundle not built yet</p>';
+}
+</script>

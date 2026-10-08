@@ -1,0 +1,84 @@
+:root {
+  /* === Garimpo Auto — Color System === */
+  /* Base */
+  --color-black: #0A0A0A;
+  --color-white: #FFFFFF;
+  /* Primary — Teal (from Han's jacket) */
+  --color-teal-900: #134E4A;
+  --color-teal-800: #115E59;
+  --color-teal-700: #0F766E;
+  --color-teal-600: #0D9488;
+  --color-teal-500: #14B8A6;
+  --color-teal-400: #2DD4BF;
+  --color-teal-300: #5EEAD4;
+  --color-teal-200: #99F6E4;
+  --color-teal-100: #CCFBF1;
+  --color-teal-50: #F0FDFA;
+  /* Utility orange scale — reserved for non-brand contextual states */
+  --color-orange-900: #7C2D12;
+  --color-orange-800: #9A3412;
+  --color-orange-700: #C2410C;
+  --color-orange-600: #EA580C;
+  --color-orange-500: #F97316;
+  --color-orange-400: #FB923C;
+  --color-orange-300: #FDBA74;
+  --color-orange-200: #FED7AA;
+  --color-orange-100: #FFEDD5;
+  --color-orange-50: #FFF7ED;
+  /* Warm white / Stone — Han's jacket details */
+  --color-stone-900: #1C1917;
+  --color-stone-800: #292524;
+  --color-stone-700: #44403C;
+  --color-stone-600: #57534E;
+  --color-stone-500: #78716C;
+  --color-stone-400: #A8A29E;
+  --color-stone-300: #D6D3D1;
+  --color-stone-200: #E7E5E4;
+  --color-stone-100: #F5F5F4;
+  --color-stone-50: #FAFAF9;
+  /* Gold — Garimpo (pepita) */
+  --color-gold-600: #D97706;
+  --color-gold-500: #EAB308;
+  --color-gold-400: #FBBF24;
+  --color-gold-300: #FDE047;
+  --color-gold-200: #FEF08A;
+  /* Neutrals — Slate */
+  --color-slate-950: #020617;
+  --color-slate-900: #0F172A;
+  --color-slate-800: #1E293B;
+  --color-slate-700: #334155;
+  --color-slate-600: #475569;
+  --color-slate-500: #64748B;
+  --color-slate-400: #94A3B8;
+  --color-slate-300: #CBD5E1;
+  --color-slate-200: #E2E8F0;
+  --color-slate-100: #F1F5F9;
+  --color-slate-50: #F8FAFC;
+  /* === Semantic tokens === */
+  --bg-primary: var(--color-white);
+  --bg-secondary: var(--color-slate-50);
+  --bg-tertiary: var(--color-slate-100);
+  --bg-inverse: var(--color-black);
+  --bg-card: var(--color-white);
+  --bg-card-hover: var(--color-slate-50);
+  --text-primary: var(--color-slate-800);
+  --text-secondary: var(--color-slate-500);
+  --text-tertiary: var(--color-slate-400);
+  --text-inverse: var(--color-white);
+  --text-heading: var(--color-black);
+  --accent-primary: var(--color-teal-700);
+  --accent-primary-hover: var(--color-teal-600);
+  --accent-primary-light: var(--color-teal-50);
+  --accent-secondary: var(--color-black);
+  --accent-secondary-hover: var(--color-slate-900);
+  --accent-secondary-light: var(--color-stone-100);
+  --accent-gold: var(--color-gold-400);
+  --accent-gold-hover: var(--color-gold-500);
+  --border-default: var(--color-slate-200);
+  --border-strong: var(--color-slate-300);
+  --border-focus: var(--color-teal-500);
+  --status-success: var(--color-teal-600);
+  --status-warning: var(--color-gold-500);
+  --status-error: #DC2626;
+  --status-info: var(--color-teal-500);
+}

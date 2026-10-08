@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body { margin: 0; background: #0A0A0A; overflow-x: hidden; }
+a { color: #14B8A6; }
+a:hover { color: #2DD4BF; }
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes fadeUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+@keyframes pulse { 0%,100% { opacity:.15; } 50% { opacity:.3; } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+</style>
+</helmet>
+
+<!-- === NAV === -->
+<nav style="position:fixed; top:0; left:0; right:0; z-index:100; display:flex; align-items:center; justify-content:space-between; padding:16px 32px; background:rgba(10,10,10,0.85); backdrop-filter:blur(16px); border-bottom:1px solid rgba(255,255,255,0.06);">
+  <div style="display:flex; align-items:center; gap:10px;">
+    <div style="width:36px; height:36px; border-radius:50%; background:#0F766E; display:flex; align-items:center; justify-content:center; overflow:hidden; border:2px solid rgba(255,255,255,0.2);">
+      <img src="assets/han-profile.jpeg" style="width:40px; height:40px; object-fit:cover; object-position:center top; margin-top:4px;">
+    </div>
+    <span style="font-family:'Zen Kaku Gothic New',sans-serif; font-weight:900; font-size:18px; color:#fff; letter-spacing:-0.02em;">Garimpo Auto</span>
+  </div>
+  <div style="display:flex; align-items:center; gap:24px;">
+    <span style="font-family:'Inter',sans-serif; font-size:13px; color:rgba(255,255,255,0.5); cursor:pointer;">Sobre</span>
+    <span style="font-family:'Inter',sans-serif; font-size:13px; color:rgba(255,255,255,0.5); cursor:pointer;">Recursos</span>
+    <div style="padding:8px 20px; border-radius:8px; background:#0F766E; color:#fff; font-family:'Inter',sans-serif; font-size:13px; font-weight:600; cursor:pointer;">Entrar</div>
+  </div>
+</nav>
+
+<!-- === HERO === -->
+<section style="min-height:100vh; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; padding:80px 32px 40px;">
+  <!-- Background pattern — subtle oriental grid -->
+  <div style="position:absolute; inset:0; opacity:0.03; background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.5) 0px, transparent 1px, transparent 60px), repeating-linear-gradient(90deg, rgba(255,255,255,0.5) 0px, transparent 1px, transparent 60px);"></div>
+  <!-- Teal glow -->
+  <div style="position:absolute; top:10%; right:15%; width:500px; height:500px; background:radial-gradient(circle, rgba(15,118,110,0.15) 0%, transparent 70%); animation:pulse 6s ease-in-out infinite;"></div>
+  <!-- Gold accent glow -->
+  <div style="position:absolute; bottom:20%; left:10%; width:300px; height:300px; background:radial-gradient(circle, rgba(251,191,36,0.08) 0%, transparent 70%); animation:pulse 8s ease-in-out infinite 2s;"></div>
+
+  <div style="display:flex; align-items:center; gap:48px; max-width:1100px; width:100%; position:relative; z-index:2; flex-wrap:wrap; justify-content:center;">
+    <!-- Left: Text -->
+    <div style="flex:1; min-width:340px; animation:fadeUp 0.8s ease both;">
+      <!-- Japanese accent text -->
+      <div style="font-family:'Zen Kaku Gothic New',sans-serif; font-size:13px; font-weight:500; color:#0D9488; letter-spacing:0.1em; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+        <div style="width:24px; height:1px; background:#0D9488;"></div>
+        ガリンポ · GARIMPO
+      </div>
+      <h1 style="font-family:'Zen Kaku Gothic New',sans-serif; font-size:clamp(36px,5vw,56px); font-weight:900; color:#ffffff; line-height:1.1; letter-spacing:-0.03em; margin:0 0 20px;">
+        O jeito mais<br>
+        <span style="background:linear-gradient(135deg, #14B8A6 0%, #0F766E 50%, #FBBF24 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">esperto</span>
+        de garimpar<br>carros
+      </h1>
+      <p style="font-family:'Inter',sans-serif; font-size:17px; color:rgba(255,255,255,0.5); line-height:1.6; margin:0 0 32px; max-width:440px;">
+        Tecnologia e inteligência pra revendedores que não perdem tempo. Encontre, compare e feche negócio mais rápido.
+      </p>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div style="padding:14px 32px; border-radius:8px; background:#0F766E; color:#fff; font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px;">
+          Entrar no sistema
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+        </div>
+        <div style="padding:14px 28px; border-radius:8px; background:transparent; color:rgba(255,255,255,0.7); font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:600; cursor:pointer; border:1.5px solid rgba(255,255,255,0.12);">
+          Conhecer mais
+        </div>
+      </div>
+      <!-- Stats row -->
+      <div style="display:flex; gap:32px; margin-top:40px; padding-top:32px; border-top:1px solid rgba(255,255,255,0.06);">
+        <div>
+          <div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:28px; font-weight:800; color:#14B8A6;">2.4k+</div>
+          <div style="font-family:'Inter',sans-serif; font-size:12px; color:rgba(255,255,255,0.35); margin-top:2px;">Revendedores</div>
+        </div>
+        <div>
+          <div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:28px; font-weight:800; color:#FBBF24;">18k+</div>
+          <div style="font-family:'Inter',sans-serif; font-size:12px; color:rgba(255,255,255,0.35); margin-top:2px;">Carros listados</div>
+        </div>
+        <div>
+          <div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:28px; font-weight:800; color:#fff;">98%</div>
+          <div style="font-family:'Inter',sans-serif; font-size:12px; color:rgba(255,255,255,0.35); margin-top:2px;">Satisfação</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Han mascot -->
+    <div style="flex:none; width:420px; position:relative; animation:fadeUp 0.8s ease 0.2s both;">
+      <!-- Decorative circle behind Han -->
+      <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:380px; height:380px; border-radius:50%; border:1px solid rgba(15,118,110,0.2);"></div>
+      <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:320px; height:320px; border-radius:50%; border:1px solid rgba(15,118,110,0.1);"></div>
+      <!-- Kanji watermark -->
+      <div style="position:absolute; top:8%; right:-10%; font-family:'Zen Kaku Gothic New',sans-serif; font-size:120px; font-weight:900; color:rgba(255,255,255,0.02); line-height:1; user-select:none;">探</div>
+      <!-- Han image -->
+      <img src="assets/han-fullbody.jpeg" style="width:100%; height:auto; position:relative; z-index:2; animation:float 6s ease-in-out infinite; filter:drop-shadow(0 20px 40px rgba(0,0,0,0.5));">
+      <!-- Teal glow under Han -->
+      <div style="position:absolute; bottom:-10px; left:50%; transform:translateX(-50%); width:200px; height:40px; background:radial-gradient(ellipse, rgba(15,118,110,0.3) 0%, transparent 70%); filter:blur(8px);"></div>
+    </div>
+  </div>
+</section>
+
+<!-- === FEATURES === -->
+<section style="padding:80px 32px; position:relative;">
+  <div style="max-width:1100px; margin:0 auto;">
+    <!-- Section header -->
+    <div style="text-align:center; margin-bottom:56px;">
+      <div style="font-family:'Zen Kaku Gothic New',sans-serif; font-size:12px; font-weight:500; color:#0D9488; letter-spacing:0.15em; margin-bottom:8px;">機能 · RECURSOS</div>
+      <h2 style="font-family:'Zen Kaku Gothic New',sans-serif; font-size:clamp(28px,4vw,40px); font-weight:900; color:#fff; margin:0; letter-spacing:-0.02em;">Tudo que você precisa, nada que não precisa</h2>
+    </div>
+
+    <!-- Feature cards -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px;">
+      <!-- Card 1 -->
+      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:28px; display:flex; flex-direction:column; gap:12px;">
+        <div style="width:44px; height:44px; border-radius:10px; background:rgba(15,118,110,0.12); display:flex; align-items:center; justify-content:center;">
+          <svg width="22" height="22" fill="none" stroke="#14B8A6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.35-4.35"></path></svg>
+        </div>
+        <h3 style="font-family:'Plus Jakarta Sans',sans-serif; font-size:17px; font-weight:700; color:#fff; margin:0;">Busca inteligente</h3>
+        <p style="font-family:'Inter',sans-serif; font-size:14px; color:rgba(255,255,255,0.4); line-height:1.6; margin:0;">Filtre por modelo, ano, km e preço. Encontre a pepita de ouro em segundos, não em horas.</p>
+      </div>
+      <!-- Card 2 -->
+      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:28px; display:flex; flex-direction:column; gap:12px;">
+        <div style="width:44px; height:44px; border-radius:10px; background:rgba(251,191,36,0.1); display:flex; align-items:center; justify-content:center;">
+          <svg width="22" height="22" fill="none" stroke="#FBBF24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14l-5-4.87 6.91-1.01z"></path></svg>
+        </div>
+        <h3 style="font-family:'Plus Jakarta Sans',sans-serif; font-size:17px; font-weight:700; color:#fff; margin:0;">Alertas de oportunidade</h3>
+        <p style="font-family:'Inter',sans-serif; font-size:14px; color:rgba(255,255,255,0.4); line-height:1.6; margin:0;">Receba notificações quando um carro com bom preço aparecer no mercado. Seja o primeiro.</p>
+      </div>
+      <!-- Card 3 -->
+      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:28px; display:flex; flex-direction:column; gap:12px;">
+        <div style="width:44px; height:44px; border-radius:10px; background:rgba(15,118,110,0.12); display:flex; align-items:center; justify-content:center;">
+          <svg width="22" height="22" fill="none" stroke="#14B8A6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M16 18l6-6-6-6"></path><path d="M8 6l-6 6 6 6"></path></svg>
+        </div>
+        <h3 style="font-family:'Plus Jakarta Sans',sans-serif; font-size:17px; font-weight:700; color:#fff; margin:0;">Anúncios em 1 toque</h3>
+        <p style="font-family:'Inter',sans-serif; font-size:14px; color:rgba(255,255,255,0.4); line-height:1.6; margin:0;">Crie anúncios profissionais com IA. Foto, descrição e preço sugerido — tudo automático.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- === CTA SECTION === -->
+<section style="padding:60px 32px 80px; position:relative;">
+  <div style="max-width:800px; margin:0 auto; background:linear-gradient(135deg, #0F766E 0%, #115E59 100%); border-radius:16px; padding:48px; display:flex; align-items:center; gap:32px; position:relative; overflow:hidden; flex-wrap:wrap; justify-content:center;">
+    <!-- Pattern overlay -->
+    <div style="position:absolute; inset:0; opacity:0.05; background-image:repeating-linear-gradient(45deg, #fff 0px, transparent 1px, transparent 30px);"></div>
+    <!-- Han face -->
+    <div style="width:100px; height:100px; border-radius:50%; overflow:hidden; border:3px solid rgba(255,255,255,0.3); flex-shrink:0; position:relative; z-index:2;">
+      <img src="assets/han-profile.jpeg" style="width:110px; height:110px; object-fit:cover; object-position:center top; margin-top:6px;">
+    </div>
+    <div style="flex:1; min-width:260px; position:relative; z-index:2;">
+      <h3 style="font-family:'Zen Kaku Gothic New',sans-serif; font-size:24px; font-weight:900; color:#fff; margin:0 0 8px; letter-spacing:-0.01em;">Pronto pra garimpar?</h3>
+      <p style="font-family:'Inter',sans-serif; font-size:15px; color:rgba(255,255,255,0.7); margin:0 0 20px; line-height:1.5;">Entre agora e comece a encontrar os melhores negócios da região.</p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <div style="padding:12px 28px; border-radius:8px; background:#fff; color:#0F766E; font-family:'Plus Jakarta Sans',sans-serif; font-size:14px; font-weight:700; cursor:pointer;">Criar conta grátis</div>
+        <div style="padding:12px 28px; border-radius:8px; background:rgba(255,255,255,0.12); color:#fff; font-family:'Plus Jakarta Sans',sans-serif; font-size:14px; font-weight:600; cursor:pointer; border:1px solid rgba(255,255,255,0.2);">Já tenho conta</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- === FOOTER === -->
+<footer style="padding:24px 32px; border-top:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:space-between; max-width:1100px; margin:0 auto; flex-wrap:wrap; gap:12px;">
+  <div style="display:flex; align-items:center; gap:8px;">
+    <div style="width:24px; height:24px; border-radius:50%; background:#0F766E; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+      <img src="assets/han-profile.jpeg" style="width:28px; height:28px; object-fit:cover; object-position:center top; margin-top:2px;">
+    </div>
+    <span style="font-family:'Zen Kaku Gothic New',sans-serif; font-weight:700; font-size:13px; color:rgba(255,255,255,0.4);">Garimpo Auto</span>
+  </div>
+  <span style="font-family:'Inter',sans-serif; font-size:12px; color:rgba(255,255,255,0.25);">© 2026 Garimpo Auto · Todos os direitos reservados</span>
+</footer>
+
+</x-dc>
+</body>
+</html>

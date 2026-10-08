@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+body { margin: 0; background: #f0eee9; font-family: system-ui, sans-serif; }
+.dv-turn { padding: 40px 44px 32px; border-bottom: 1px solid rgba(0,0,0,.08); scroll-margin-top: 16px; }
+.dv-thd { display: flex; align-items: baseline; gap: 10px; margin: 0 0 20px; }
+.dv-tid { font: 600 10px ui-monospace, Menlo, monospace; padding: 3px 7px; background: #1a1a1a; color: #fff; border-radius: 4px; text-decoration: none; }
+.dv-tname { font: 600 13px/1.2 system-ui, sans-serif; color: #1a1a1a; }
+.dv-opts { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+.dv-opt { flex: none; display: flex; flex-direction: column; gap: 9px; scroll-margin-top: 16px; }
+.dv-oid { font: 600 10.5px ui-monospace, Menlo, monospace; padding: 3px 7px; background: rgba(0,0,0,.08); color: #1a1a1a; border-radius: 5px; text-decoration: none; }
+.dv-olabel { display: flex; align-items: baseline; gap: 8px; font: 400 11px/1.3 system-ui, sans-serif; color: rgba(0,0,0,.55); }
+.dv-card { max-width: 100%; background: #fff; border: 1px solid rgba(0,0,0,.08); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); overflow: hidden; }
+.dv-opt:target .dv-oid { background: #2a78d6; color: #fff; }
+.dv-next { margin: 22px 0 0; font: 12px/1.5 system-ui, sans-serif; color: rgba(0,0,0,.5); }
+</style>
+</helmet>
+
+<section class="dv-turn" id="t1">
+  <div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">App Icon Compositions</span></div>
+  <div class="dv-opts">
+
+    <!-- 1a: Classic Blue Circle -->
+    <div class="dv-opt" id="1a">
+      <div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Classic blue circle — like the reference</div>
+      <div class="dv-card" style="width: 320px">
+        <div style="display: flex; align-items: center; justify-content: center; padding: 40px; background: #ffffff;">
+          <div style="width: 220px; height: 220px; border-radius: 50%; background: #1a56db; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 24px rgba(26,86,219,0.25);">
+            <div style="width: 190px; height: 190px; border-radius: 50%; border: 5px solid #ffffff; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+              <img src="uploads/Gemini_Generated_Image_3v7i9g3v7i9g3v7i.jpeg" style="width: 210px; height: 210px; object-fit: cover; object-position: center top; margin-top: 16px;">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1b: Dark Navy Premium -->
+    <div class="dv-opt" id="1b">
+      <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Dark navy — premium feel</div>
+      <div class="dv-card" style="width: 320px">
+        <div style="display: flex; align-items: center; justify-content: center; padding: 40px; background: #ffffff;">
+          <div style="width: 220px; height: 220px; border-radius: 50%; background: #0f172a; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 24px rgba(15,23,42,0.3);">
+            <div style="width: 190px; height: 190px; border-radius: 50%; border: 5px solid #ffffff; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+              <img src="uploads/Gemini_Generated_Image_3v7i9g3v7i9g3v7i.jpeg" style="width: 210px; height: 210px; object-fit: cover; object-position: center top; margin-top: 16px;">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1c: Vibrant Teal -->
+    <div class="dv-opt" id="1c">
+      <div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Vibrant teal — modern tech</div>
+      <div class="dv-card" style="width: 320px">
+        <div style="display: flex; align-items: center; justify-content: center; padding: 40px; background: #ffffff;">
+          <div style="width: 220px; height: 220px; border-radius: 50%; background: #0d9488; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 24px rgba(13,148,136,0.25);">
+            <div style="width: 190px; height: 190px; border-radius: 50%; border: 5px solid #ffffff; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+              <img src="uploads/Gemini_Generated_Image_3v7i9g3v7i9g3v7i.jpeg" style="width: 210px; height: 210px; object-fit: cover; object-position: center top; margin-top: 16px;">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1d: Rounded Square -->
+    <div class="dv-opt" id="1d">
+      <div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Rounded square — iOS style</div>
+      <div class="dv-card" style="width: 320px">
+        <div style="display: flex; align-items: center; justify-content: center; padding: 40px; background: #ffffff;">
+          <div style="width: 220px; height: 220px; border-radius: 48px; background: #1a56db; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 24px rgba(26,86,219,0.25);">
+            <div style="width: 188px; height: 188px; border-radius: 40px; border: 5px solid #ffffff; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+              <img src="uploads/Gemini_Generated_Image_3v7i9g3v7i9g3v7i.jpeg" style="width: 210px; height: 210px; object-fit: cover; object-position: center top; margin-top: 16px;">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1e: Gradient Blue-Purple -->
+    <div class="dv-opt" id="1e">
+      <div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>Gradient blue-purple — bold</div>
+      <div class="dv-card" style="width: 320px">
+        <div style="display: flex; align-items: center; justify-content: center; padding: 40px; background: #ffffff;">
+          <div style="width: 220px; height: 220px; border-radius: 50%; background: linear-gradient(135deg, #1a56db 0%, #7c3aed 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 24px rgba(124,58,237,0.25);">
+            <div style="width: 190px; height: 190px; border-radius: 50%; border: 5px solid #ffffff; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+              <img src="uploads/Gemini_Generated_Image_3v7i9g3v7i9g3v7i.jpeg" style="width: 210px; height: 210px; object-fit: cover; object-position: center top; margin-top: 16px;">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1f: Off-White Detail -->
+    <div class="dv-opt" id="1f">
+      <div class="dv-olabel"><a class="dv-oid" href="#1f">1f</a>Off-white detail — matches the jacket</div>
+      <div class="dv-card" style="width: 320px">
+        <div style="display: flex; align-items: center; justify-content: center; padding: 40px; background: #ffffff;">
+          <div style="width: 220px; height: 220px; border-radius: 50%; background: #f5f5f4; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 24px rgba(10,10,10,0.16);">
+            <div style="width: 190px; height: 190px; border-radius: 50%; border: 5px solid #ffffff; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+              <img src="uploads/Gemini_Generated_Image_3v7i9g3v7i9g3v7i.jpeg" style="width: 210px; height: 210px; object-fit: cover; object-position: center top; margin-top: 16px;">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <p class="dv-next">Try next: "use <a class="dv-oid" href="#1a">1a</a> but with a thicker border" · "combine <a class="dv-oid" href="#1d">1d</a> shape with <a class="dv-oid" href="#1c">1c</a> color" · "show me as full app icon mockup on a phone screen"</p>
+</section>
+
+</x-dc>
+</body>
+</html>

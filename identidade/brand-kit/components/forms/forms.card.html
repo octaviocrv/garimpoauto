@@ -1,0 +1,21 @@
+<!-- @dsCard group="Components" viewport="700x160" name="Form Inputs" -->
+<link rel="stylesheet" href="../../styles.css">
+<script src="../../_ds_bundle.js"></script>
+<style>body{margin:0;padding:20px 24px;background:#fff;font-family:var(--font-body);display:flex;gap:16px;align-items:start}</style>
+<div id="root"></div>
+<script type="text/babel">
+const { Input } = window.GarimpoAuto || {};
+if (Input) {
+  ReactDOM.render(
+    <>
+      <Input label="Modelo do carro" placeholder="Ex: Honda Civic" style={{width:180}} />
+      <Input label="Preço máximo" placeholder="R$ 50.000" type="number" style={{width:150}} />
+      <Input label="Email" error="Email inválido" value="test@" style={{width:160}} />
+      <Input label="Desabilitado" placeholder="..." disabled style={{width:140}} />
+    </>,
+    document.getElementById('root')
+  );
+} else {
+  document.getElementById('root').innerHTML = '<p style="color:#94a3b8;font-size:13px">Bundle not built yet</p>';
+}
+</script>
