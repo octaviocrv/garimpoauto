@@ -1,41 +1,12 @@
 import { ArrowRight, ChartNoAxesCombined, Search, SlidersHorizontal } from 'lucide-react'
 import './App.css'
+import { Hero } from './components/Hero'
 
 function App() {
   return (
     <div className="site-shell">
-      <header className="topbar">
-        <a className="brand" href="#inicio" aria-label="Garimpo Auto, ir para o início">
-          <span className="brand-mark"><img src="/mascot/han-profile.jpeg" alt="" /></span>
-          <span>Garimpo Auto</span>
-        </a>
-        <nav className="nav-links" aria-label="Navegação principal">
-          <a href="#como-funciona">Como funciona</a>
-          <a href="#foco">O que estamos fazendo</a>
-        </nav>
-        <a className="topbar-action" href="#acompanhar">Acompanhar</a>
-      </header>
-
       <main>
-        <section className="hero" id="inicio">
-          <div className="hero-copy">
-            <p className="eyebrow">Busca de carros usados em um só lugar</p>
-            <h1>Garimpo Auto</h1>
-            <p className="hero-lede">Ache carros sem abrir vários sites. A gente reúne os anúncios e deixa a comparação mais clara pra você encontrar bom negócio.</p>
-            <div className="hero-actions">
-              <a className="button button-primary" href="#como-funciona">Ver como funciona <ArrowRight size={18} aria-hidden="true" /></a>
-              <a className="button button-secondary" href="#foco">Acompanhar construção</a>
-            </div>
-            <p className="hero-note">Primeira versão em desenvolvimento para revendedores da região de BH e Contagem.</p>
-          </div>
-          <div className="hero-visual" aria-label="Han, mascote do Garimpo Auto">
-            <div className="visual-frame">
-              <span className="frame-outline frame-outline-one" />
-              <span className="frame-outline frame-outline-two" />
-              <img src="/mascot/han-fullbody.jpeg" alt="Han, mascote do Garimpo Auto" />
-            </div>
-          </div>
-        </section>
+        <Hero />
 
         <section className="steps-section" id="como-funciona" aria-labelledby="steps-title">
           <div className="section-heading">

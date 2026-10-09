@@ -1,7 +1,41 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body { margin: 0; min-width: 320px; font-family: Inter, sans-serif; }
 a { color: inherit; text-decoration: none; }
 a:focus-visible { outline: 3px solid #14b8a6; outline-offset: 3px; }
+
+@layer components {
+  /* Linha neon principal dos hologramas (kanjis, carros, mapa, tags) */
+  .neon-teal {
+    stroke: #00f0ff;
+    stroke-width: 1px;
+    fill: none;
+    filter: drop-shadow(0 0 2px rgba(0, 240, 255, 0.8)) drop-shadow(0 0 6px rgba(0, 240, 255, 0.4));
+  }
+
+  /* Elementos de fundo (cidade, templo, palmeiras) */
+  .neon-teal-dim {
+    opacity: 0.3;
+    stroke: #00f0ff;
+    fill: none;
+    filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.2));
+  }
+
+  /* Detalhes quentes (preço, cards), como na referência */
+  .neon-amber {
+    stroke: #f59e0b;
+    stroke-width: 1px;
+    fill: none;
+    filter: drop-shadow(0 0 2px rgba(245, 158, 11, 0.7)) drop-shadow(0 0 6px rgba(245, 158, 11, 0.3));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float { animation: none; }
+}

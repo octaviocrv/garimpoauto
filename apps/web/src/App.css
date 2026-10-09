@@ -10,56 +10,11 @@
 
 .site-shell { background: var(--off-white); color: var(--black); }
 
-.topbar {
-  align-items: center;
-  background: rgba(10, 10, 10, 0.96);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  display: flex;
-  justify-content: space-between;
-  min-height: 72px;
-  padding: 0 48px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.brand { align-items: center; color: var(--white); display: inline-flex; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 18px; font-weight: 900; gap: 10px; }
-.brand-mark { background: var(--teal); border: 2px solid rgba(255, 255, 255, 0.32); border-radius: 50%; display: grid; height: 34px; overflow: hidden; place-items: center; width: 34px; }
-.brand-mark img { height: 40px; margin-top: 4px; object-fit: cover; width: 40px; }
-.nav-links { display: flex; gap: 28px; }
-.nav-links a { color: rgba(255, 255, 255, 0.68); font-size: 14px; }
-.nav-links a:hover { color: var(--white); }
-.topbar-action { background: var(--teal); border-radius: 6px; color: var(--white); font-size: 14px; font-weight: 700; padding: 10px 16px; }
-.topbar-action:hover, .button-primary:hover { background: var(--teal-light); }
-
-.hero {
-  background: var(--black);
-  color: var(--white);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 0.7fr);
-  min-height: 620px;
-  overflow: hidden;
-  padding: 80px max(48px, calc((100vw - 1180px) / 2));
-}
-
-.hero-copy { align-self: center; max-width: 640px; }
+.section-heading h2, .focus-section h2, .cta-section h2 { font-family: 'Zen Kaku Gothic New', sans-serif; font-weight: 900; letter-spacing: 0; }
 .eyebrow { color: var(--teal); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight: 800; margin: 0 0 14px; text-transform: uppercase; }
-.hero h1, .section-heading h2, .focus-section h2, .cta-section h2 { font-family: 'Zen Kaku Gothic New', sans-serif; font-weight: 900; letter-spacing: 0; }
-.hero h1 { font-size: 64px; line-height: 1; margin: 0; }
-.hero-lede { color: rgba(255, 255, 255, 0.7); font-size: 19px; line-height: 1.6; margin: 24px 0 30px; max-width: 550px; }
-.hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .button { align-items: center; border: 1px solid transparent; border-radius: 6px; display: inline-flex; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; font-weight: 800; gap: 8px; justify-content: center; min-height: 48px; padding: 0 20px; }
 .button-primary { background: var(--teal); color: var(--white); }
-.button-secondary { border-color: rgba(255, 255, 255, 0.32); color: var(--white); }
-.button-secondary:hover { background: var(--white); color: var(--black); }
-.hero-note { color: rgba(255, 255, 255, 0.42); font-size: 13px; margin: 24px 0 0; }
-
-.hero-visual { align-self: end; min-height: 460px; position: relative; }
-.visual-frame { bottom: -84px; height: 560px; position: absolute; right: 0; width: 440px; }
-.visual-frame img { bottom: 0; height: 100%; object-fit: contain; object-position: bottom; position: absolute; right: 0; width: 100%; z-index: 2; }
-.frame-outline { border: 1px solid var(--teal); border-radius: 50%; display: block; position: absolute; }
-.frame-outline-one { height: 360px; right: 20px; top: 76px; width: 360px; }
-.frame-outline-two { border-color: rgba(255, 255, 255, 0.16); height: 470px; right: -36px; top: 20px; width: 470px; }
+.button-primary:hover { background: var(--teal-light); }
 
 .steps-section, .focus-section, .cta-section, .footer { margin-left: auto; margin-right: auto; max-width: 1180px; }
 .steps-section { padding: 104px 48px; }
@@ -83,15 +38,6 @@
 .footer { border-top: 1px solid #d6d3d1; color: var(--slate-muted); display: flex; font-size: 13px; justify-content: space-between; padding: 24px 48px; }
 
 @media (max-width: 800px) {
-  .topbar { padding: 0 20px; }
-  .nav-links { display: none; }
-  .hero { display: block; min-height: 0; padding: 68px 24px 0; }
-  .hero h1 { font-size: 46px; }
-  .hero-lede { font-size: 17px; }
-  .hero-visual { min-height: 400px; margin-top: 16px; }
-  .visual-frame { height: 460px; right: 50%; transform: translateX(50%); width: min(100%, 390px); }
-  .frame-outline-one { height: 290px; top: 70px; width: 290px; }
-  .frame-outline-two { height: 370px; top: 30px; width: 370px; }
   .steps-section, .focus-section { padding: 72px 24px; }
   .section-heading h2, .focus-section h2 { font-size: 32px; }
   .steps-grid, .focus-section { grid-template-columns: 1fr; }
