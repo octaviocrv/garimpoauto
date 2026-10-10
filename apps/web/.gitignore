@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Cópia das buscas salvas (gerada por npm run copiar-dados)
+public/dados

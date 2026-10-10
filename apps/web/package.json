@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "copiar-dados": "node scripts/copiar-dados.mjs",
     "dev": "vite",
+    "predev": "npm run copiar-dados",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
