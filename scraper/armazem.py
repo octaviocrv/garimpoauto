@@ -415,6 +415,48 @@ class Armazem:
 
         return self._usar(f)
 
+    def fipe_casamento(self, fonte: str, anuncio_id: str, entrada_hash: str) -> Optional[dict[str, Any]]:
+        def f(cur: Any) -> Optional[dict[str, Any]]:
+            cur.execute(
+                "SELECT referencia_codigo, codigo_fipe, preco, mes_referencia, confianca, motivo, "
+                "bloqueio, preco_estranho FROM fipe_casamento "
+                "WHERE fonte = %s AND anuncio_id = %s AND entrada_hash = %s",
+                (fonte, anuncio_id, entrada_hash),
+            )
+            return cur.fetchone()
+
+        return self._usar(f)
+
+    def fipe_salvar_casamento(
+        self, fonte: str, anuncio_id: str, entrada_hash: str, resultado: dict[str, Any],
+    ) -> None:
+        def f(cur: Any) -> None:
+            cur.execute(
+                "INSERT INTO fipe_casamento (fonte, anuncio_id, entrada_hash, referencia_codigo, codigo_fipe, "
+                "preco, mes_referencia, confianca, motivo, bloqueio, preco_estranho, casado_em) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
+                "ON DUPLICATE KEY UPDATE entrada_hash = VALUES(entrada_hash), "
+                "referencia_codigo = VALUES(referencia_codigo), codigo_fipe = VALUES(codigo_fipe), "
+                "preco = VALUES(preco), mes_referencia = VALUES(mes_referencia), "
+                "confianca = VALUES(confianca), motivo = VALUES(motivo), bloqueio = VALUES(bloqueio), "
+                "preco_estranho = VALUES(preco_estranho), casado_em = VALUES(casado_em)",
+                (
+                    fonte, anuncio_id, entrada_hash, resultado.get("referencia_codigo"),
+                    resultado.get("codigo_fipe"), resultado.get("preco"), resultado.get("mes_referencia"),
+                    resultado["confianca"], resultado["motivo"], resultado.get("bloqueio"),
+                    resultado.get("preco_estranho", False), self.agora(),
+                ),
+            )
+
+        self._usar(f)
+
+    def fipe_resumo_casamentos(self) -> dict[str, int]:
+        def f(cur: Any) -> dict[str, int]:
+            cur.execute("SELECT confianca, COUNT(*) AS total FROM fipe_casamento GROUP BY confianca")
+            return {str(r["confianca"]): int(r["total"]) for r in cur.fetchall()}
+
+        return self._usar(f)
+
     # -- sessões de busca ----------------------------------------------------
 
     def espiar(self, chave_hash: str, ttl_orfa: float) -> Optional[tuple[int, Optional[datetime]]]:
