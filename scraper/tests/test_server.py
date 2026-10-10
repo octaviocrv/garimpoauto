@@ -251,13 +251,13 @@ def test_repassa_os_filtros_para_a_busca():
     c, fonte = cliente()
     c.get("/buscar", params={
         "texto": "hilux", "marca": "toyota", "modelo": "hilux", "ano_min": 2015, "ano_max": 2020,
-        "preco_min": 100000, "preco_max": 200000, "km_max": 90000, "regiao": "goiania-e-regiao",
+        "preco_min": 100000, "preco_max": 200000, "km_max": 90000, "regiao": "grande-goiania-e-anapolis",
         "estado": "go", "cidade": "Goiânia",
     })
     b = fonte.buscas[0]
     assert (b.marca, b.modelo, b.ano_min, b.ano_max, b.preco_min, b.preco_max, b.km_max) == (
         "toyota", "hilux", 2015, 2020, 100000, 200000, 90000)
-    assert (b.regiao, b.estado, b.cidade) == ("goiania-e-regiao", "GO", "Goiânia")
+    assert (b.regiao, b.estado, b.cidade) == ("grande-goiania-e-anapolis", "GO", "Goiânia")
 
 
 def test_detalhe_tecnico_so_com_dev():

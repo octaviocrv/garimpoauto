@@ -58,6 +58,24 @@ A tela pode juntar as páginas numa lista só, anexando `anuncios` de cada respo
 - **Teto:** o "Ver mais" vai até `GARIMPO_MAX_PAGINAS_SOB_DEMANDA` páginas por busca (padrão 70, veja os testes de confiança abaixo).
 - **Fila:** só uma leitura real da OLX por vez no servidor. Uma busca nunca fica travada na pausa de outra, porque a pausa acontece antes de entrar na fila.
 
+## Região e cidade (filtradas na própria OLX)
+
+A OLX aceita região e cidade na URL, no caminho `estado-xx/região/zona/cidade`. O servidor monta esse caminho sozinho.
+
+- **Seletor de região da tela:** `GET /regioes?estado=MG` devolve `{"estado": "MG", "regioes": [{"slug": "belo-horizonte-e-regiao", "nome": "Belo Horizonte e região"}, ...]}`. Mande o `slug` no parâmetro `regiao` das buscas. Sem `estado`, usa o padrão do servidor. Os 27 estados têm lista (67 regiões no total, Minas tem 7).
+- **`regiao`:** aceita o `slug` ou o nome (sem acento também). Se a região não existe naquele estado, o servidor responde 422 com "Não achei essa região nesse estado, escolhe uma da lista?". Isso importa porque a OLX, com região errada na URL, **devolve o Brasil todo sem avisar**.
+- **`cidade`:** se a OLX tem página da cidade, o filtro vai na URL e já chega filtrado: `total_na_fonte`, `informacao` e a paginação são os da cidade (ex.: Contagem, 239 anúncios de "fiat argo"). `filtros_na_origem` traz `"cidade"`.
+- **Cidade sem página na OLX:** vale o filtro depois da coleta e vem o aviso `filtro_aproximado` ("Não achei a cidade X na lista da OLX, então filtrei por aqui. Pode ter ficado algum carro de fora."), com `filtros_locais` trazendo `"cidade"`. Se a pessoa escolheu uma região, a busca já vem restrita a ela.
+- **Quem não tem página própria:** a OLX só tem página para parte das cidades (em MG, 154 locais de uns 850 municípios). **Belo Horizonte não é uma página só**: a capital é dividida em 9 zonas (Barreiro, Centro-Sul, Leste, Nordeste, Noroeste, Norte, Oeste, Pampulha e Venda Nova).
+- **Sem estado** ("Brasil todo") não dá para procurar a cidade na lista, então ela segue filtrada depois da coleta, sem aviso. `filtros_locais` mostra isso.
+
+A lista de locais vem de `scraper/dados_olx/localidades.json`, gerada por `gerar_localidades.py` a partir dos sitemaps da OLX (rodar de vez em quando).
+
+### Exemplo real (fiat argo, MG, cidade Contagem)
+- **Antes** (filtro depois da coleta): a OLX devolvia 399 de 1.407 carros do estado (8 páginas) e **sobravam 66 de Contagem**.
+- **Agora** (cidade na URL): a OLX diz que tem 239 e entregou **233, todos de Contagem**.
+- O filtro de depois mostrava 28% do que existia.
+
 ## O que acontece quando a lista da OLX muda no meio
 Entre uma página e outra, anúncios novos entram no topo e empurram a lista. Resultado:
 - **Repetição:** coberta. O mesmo `listId` que reaparece na página seguinte é descartado, e o mesmo carro anunciado de novo por outra loja vem marcado em `repetido_de` (e não some).

@@ -33,6 +33,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import ValidationError
 
 import config
+import localidades
 from busca import aviso_filtro_aproximado, chave_busca, filtros_locais, montar_resultado, texto_informacao
 from config import LimitesBusca
 from schemas import Anuncio, Aviso, Busca, PaginaBusca, ResultadoBusca
@@ -42,6 +43,7 @@ from sources.base import Fonte
 MSG_ERRO = "Não achei esse carro agora, tenta de novo?"
 MSG_MAIS_FALHOU = "Não consegui buscar mais agora, tenta de novo daqui a pouco?"
 MSG_PEDIDO = "Esse pedido de busca não está certo, confere os filtros?"
+MSG_REGIAO = "Não achei essa região nesse estado, escolhe uma da lista?"
 ESPERA_PING = 15.0  # segundos sem novidade até mandar um sinal de vida no stream
 
 
@@ -80,6 +82,10 @@ def pagina_json(p: PaginaBusca, max_paginas: int) -> dict[str, Any]:
 
 def sse(evento: str, dados: Any) -> str:
     return f"event: {evento}\ndata: {json.dumps(dados, ensure_ascii=False)}\n\n"
+
+
+class PedidoInvalido(Exception):
+    """Pedido que a pessoa pode corrigir. A mensagem já está pronta para a tela."""
 
 
 class SessaoBusca:
@@ -303,6 +309,10 @@ def criar_app(
     async def _pedido_ruim(request: Request, exc: RequestValidationError) -> JSONResponse:
         return JSONResponse({"erro": MSG_PEDIDO}, status_code=422)
 
+    @app.exception_handler(PedidoInvalido)
+    async def _pedido_invalido(request: Request, exc: PedidoInvalido) -> JSONResponse:
+        return JSONResponse({"erro": str(exc)}, status_code=422)
+
     @app.exception_handler(Exception)
     async def _quebrou(request: Request, exc: Exception) -> JSONResponse:
         return JSONResponse({"erro": MSG_ERRO}, status_code=500)
@@ -329,6 +339,12 @@ def criar_app(
         estado = (estado or "").strip() or estado_padrao
         if estado.lower() == "todos":
             estado = None
+        if regiao and regiao.strip() and estado and localidades.tem_dados(estado):
+            # Só entra região que a OLX tem. Nome errado faria a OLX buscar no Brasil todo sem avisar.
+            slug = localidades.achar_regiao(estado, regiao)
+            if slug is None:
+                raise PedidoInvalido(MSG_REGIAO)
+            regiao = slug  # o endereço da OLX: escrever de jeitos diferentes não muda o cache
         try:
             return Busca(
                 texto=texto, marca=marca, modelo=modelo, versao=versao, ano_min=ano_min, ano_max=ano_max,
@@ -342,6 +358,14 @@ def criar_app(
     @app.get("/saude")
     def saude() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/regioes")
+    def regioes(estado: Optional[str] = None) -> dict[str, Any]:
+        """As regiões que a OLX tem em um estado, para o seletor da tela. Estado ausente usa o padrão."""
+        uf = ((estado or "").strip() or estado_padrao).upper()
+        if not localidades.tem_dados(uf):
+            raise PedidoInvalido(MSG_PEDIDO)
+        return {"estado": uf, "regioes": localidades.regioes(uf)}
 
     @app.get("/buscar/pagina")
     def pagina(
