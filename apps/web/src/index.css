@@ -370,7 +370,7 @@ a:focus-visible { outline: 3px solid #14b8a6; outline-offset: 3px; }
   align-items: center;
   background: #111111;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 9999px;
+  border-radius: 18px;
   box-shadow:
     0 10px 30px -10px rgba(0, 0, 0, 0.8),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -379,7 +379,7 @@ a:focus-visible { outline: 3px solid #14b8a6; outline-offset: 3px; }
   gap: 16px;
   justify-content: space-between;
   margin: 32px 0 28px;
-  padding: 14px 20px;
+  padding: 18px 24px;
 }
 
 .search-field {
@@ -564,7 +564,13 @@ a:focus-visible { outline: 3px solid #14b8a6; outline-offset: 3px; }
   .search-console__mascot { height: 320px; opacity: 0.22; right: -20px; top: -40px; width: 280px; }
   .search-console__form { flex-direction: column; }
   .search-console__submit { min-height: 52px; }
-  .results-toolbar { align-items: flex-start; flex-direction: column; padding: 0 16px; }
+  .results-toolbar {
+    align-items: flex-start;
+    border-radius: 20px;
+    flex-direction: column;
+    margin: 20px 0;
+    padding: 16px;
+  }
   .analysis-hero { flex-direction: column; }
   .analysis-hero__media { aspect-ratio: 16 / 9; min-height: 0; width: 100%; }
 }

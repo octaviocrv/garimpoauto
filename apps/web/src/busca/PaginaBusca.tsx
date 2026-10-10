@@ -10,7 +10,7 @@ import {
   nomeDoEstado, type Rascunho,
 } from './pedido'
 import { useRegioes, useZonas } from './regioes'
-import { T, buscadoAs, naOlx, novosDesde } from './textos'
+import { T, buscadoAs, novosDesde } from './textos'
 import { useBusca } from './useBusca'
 import type { Anuncio } from '../types'
 
@@ -18,6 +18,17 @@ const DEV = new URLSearchParams(window.location.search).get('dev') === '1'
 
 const campo = 'search-field min-h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-white placeholder:text-gray-600 focus:border-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-300/10'
 const botao = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 text-gray-300 transition-colors hover:border-cyan-300/30 hover:bg-cyan-300/[0.06] hover:text-white'
+
+// "informacao" chega como frase pronta do servidor (ex.: "Mostrando 50 de 2.294 carros. Toca em
+// Ver mais pra ver o resto."). Só a 1ª frase aparece, com os números em ciano; o resto some (o
+// botão "Ver mais" já deixa claro que dá pra carregar mais).
+function Informacao({ texto }: { texto: string }) {
+  const [primeira] = texto.split(/(?<=\.) +/)
+  const numeros = (s: string) => s.split(/(\d[\d.,]*\d|\d)/g).map((parte, i) => (
+    /\d/.test(parte) ? <strong key={i} className="text-cyan-300">{parte}</strong> : parte
+  ))
+  return <span className="text-gray-50">{numeros(primeira)}</span>
+}
 
 function Campo({ nome, children }: { nome: string; children: React.ReactNode }) {
   return (
@@ -82,7 +93,6 @@ export function PaginaBusca() {
   const primeira = busca.primeira
   const meta = [
     resposta ? nomeDoEstado(resposta.estado_aplicado) : null,
-    resposta?.total_na_fonte ? naOlx(resposta.total_na_fonte) : null,
     primeira?.coletado_em ? buscadoAs(primeira.coletado_em) : null,
   ].filter(Boolean)
   const avisos = busca.avisos.filter((a) => a.codigo !== 'fonte_parcial') // a falha a tela já conta do jeito dela
@@ -258,17 +268,26 @@ export function PaginaBusca() {
 
         {busca.fase === 'pronto' && resposta && !nadaAchado && (
           <div className="results-toolbar">
-            <div>
-              <p className="flex items-center gap-2 font-semibold text-gray-100" aria-live="polite">
-                <CarFront size={17} className="text-cyan-300" aria-hidden="true" /> {resposta.informacao}
+            <div className="min-w-0">
+              <p className="flex items-start gap-2.5 text-[15px] font-bold leading-snug sm:items-center sm:text-base" aria-live="polite">
+                <CarFront size={22} className="mt-0.5 flex-none text-cyan-300 sm:mt-0" aria-hidden="true" />
+                <Informacao texto={resposta.informacao} />
               </p>
-              <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-gray-600">{meta.join(' · ')}</p>
+              <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-gray-500 sm:tracking-[0.12em]">
+                {meta.map((item, i) => i === 0 ? (
+                  <span key={i} className="rounded-md bg-teal-400/15 px-2 py-1 font-bold text-teal-300">{item}</span>
+                ) : (
+                  <span key={i} className="flex items-center gap-2">
+                    <span className="text-gray-700" aria-hidden="true">·</span>{item}
+                  </span>
+                ))}
+              </p>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row sm:flex-nowrap sm:items-center sm:gap-3">
               {novos > 0 && (
-                <p className="rounded-full border border-cyan-200/30 bg-cyan-300/15 px-3 py-1.5 text-xs font-bold text-cyan-200">{novosDesde(novos)}</p>
+                <p className="inline-flex min-h-11 items-center justify-center rounded-xl border border-cyan-200/30 bg-cyan-300/15 px-4 text-sm font-bold text-cyan-200">{novosDesde(novos)}</p>
               )}
-              <button type="button" onClick={() => busca.pedido && buscar(busca.pedido, true)} className={`${botao} text-sm`}>
+              <button type="button" onClick={() => busca.pedido && buscar(busca.pedido, true)} className={`${botao} w-full justify-center whitespace-nowrap text-sm sm:w-auto`}>
                 <RefreshCw size={14} aria-hidden="true" /> {T.buscarDeNovo}
               </button>
             </div>
