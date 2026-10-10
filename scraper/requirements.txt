@@ -1,0 +1,13 @@
+# Dependências do coletor (scraper/). Instalar com:
+#   .venv/bin/pip install -r requirements.txt
+# Se for usar DynamicFetcher ou StealthyFetcher um dia, rodar depois: scrapling install
+
+# Já instalados no .venv, versões fixas
+scrapling[fetchers]==0.4.15
+httpx==0.28.1
+python-dotenv==1.2.4
+
+# Ainda NÃO instalados no .venv. Versões fixas na que o pip escolheria em 09/10/2026
+pydantic==2.14.0
+fastapi==0.143.0
+uvicorn==0.54.0
