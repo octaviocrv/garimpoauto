@@ -51,6 +51,11 @@ class Anuncio:
         self.incompleto = bool(self.campos_faltando)
         return self
 
+    @property
+    def anunciado_em(self) -> Optional[datetime]:
+        """A data que a pessoa vê: a da renovação, se o anúncio foi renovado, senão a da publicação."""
+        return self.renovado_em or self.publicado_em
+
     def to_dict(self, com_raw: bool = True) -> dict[str, Any]:
         d = asdict(self)
         for campo in ("publicado_em", "renovado_em"):

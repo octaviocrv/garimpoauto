@@ -50,7 +50,9 @@ ESPERA_PING = 15.0  # segundos sem novidade até mandar um sinal de vida no stre
 
 
 def _anuncio_json(a: Anuncio) -> dict[str, Any]:
-    return a.to_dict(com_raw=False)  # sem o item cru da fonte
+    d = a.to_dict(com_raw=False)  # sem o item cru da fonte
+    d["anunciado_em"] = a.anunciado_em.isoformat() if a.anunciado_em else None  # renovação, senão publicação
+    return d
 
 
 def _avisos_json(avisos: list, dev: bool) -> list[dict]:
