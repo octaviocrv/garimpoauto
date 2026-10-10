@@ -118,3 +118,89 @@ def test_resolver_local_diz_o_que_foi_para_a_olx_e_o_que_nao_foi():
 def test_sem_o_arquivo_de_locais_confia_na_regiao_que_veio(monkeypatch):
     monkeypatch.setattr(localidades, "_dados", lambda: {"estados": {}, "nomes": {}})
     assert url(estado="MG", regiao="qualquer-coisa-e-regiao") == "/estado-mg/qualquer-coisa-e-regiao?q=civic&sf=1"
+
+
+# --- zonas (entre a região e a cidade) -----------------------------------------
+
+
+def test_belo_horizonte_tem_as_9_zonas_da_capital_na_lista():
+    slugs = {z["slug"] for z in localidades.zonas("MG", BH)}
+    assert {"barreiro", "pampulha", "venda-nova", "zona-centro-sul", "zona-leste", "zona-nordeste", "zona-noroeste", "zona-norte", "zona-oeste"} <= slugs
+    assert "grande-belo-horizonte" in slugs  # as cidades da região ficam em outra zona
+
+
+def test_lista_de_zonas_vem_em_ordem_e_cada_uma_com_nome():
+    lista = localidades.zonas("MG", BH)
+    assert all(z["slug"] and z["nome"] for z in lista)
+    assert [z["nome"] for z in lista] == sorted((z["nome"] for z in lista), key=localidades._sem_simbolos)
+
+
+def test_nome_da_zona_sem_titulo_da_olx_sai_do_endereco():
+    assert localidades.nome_zona("XX", "r", "zona-centro-sul") == "Zona Centro Sul"
+    assert localidades.nome_zona("XX", "r", "regiao-de-sete-lagoas") == "Região de Sete Lagoas"
+
+
+@pytest.mark.parametrize("texto", ["barreiro", "Barreiro", " BARREIRO "])
+def test_achar_zona(texto):
+    assert localidades.achar_zona("MG", BH, texto) == "barreiro"
+
+
+def test_achar_zona_pelo_nome_com_ou_sem_acento_e_hifen():
+    assert localidades.achar_zona("MG", BH, "zona-centro-sul") == "zona-centro-sul"
+    assert localidades.achar_zona("MG", BH, "Zona Centro Sul") == "zona-centro-sul"
+
+
+def test_zona_que_nao_e_daquela_regiao_nao_e_aceita():
+    assert localidades.achar_zona("MG", "regiao-de-divinopolis", "barreiro") is None
+    assert localidades.achar_zona("MG", BH, "zona-marciana") is None
+    assert localidades.achar_zona("MG", "regiao-que-nao-existe", "barreiro") is None
+    assert localidades.achar_zona("MG", BH, "") is None
+
+
+def test_zona_vai_na_url_depois_da_regiao():
+    assert url(estado="MG", regiao=BH, zona="Barreiro") == f"/estado-mg/{BH}/barreiro?q=civic&sf=1"
+
+
+def test_zona_que_nao_existe_nunca_vai_na_url():
+    assert url(estado="MG", regiao=BH, zona="zona-marciana") == f"/estado-mg/{BH}?q=civic&sf=1"
+
+
+def test_zona_sem_regiao_nao_vira_pedido():
+    with pytest.raises(ValueError):
+        Busca(texto="x", estado="MG", zona="barreiro")
+
+
+def test_resolver_local_com_zona():
+    assert resolver(estado="MG", regiao=BH, zona="barreiro") == (f"{BH}/barreiro", {"regiao", "zona"}, [])
+    assert resolver(estado="MG", regiao=BH, zona="marte") == (BH, {"regiao"}, ["a zona marte"])
+
+
+def test_cidade_da_mesma_zona_vai_ate_a_cidade_e_a_de_outra_zona_fica_na_zona():
+    mesma = resolver(estado="MG", regiao=BH, zona="grande-belo-horizonte", cidade="Contagem")
+    assert mesma == (CONTAGEM, {"regiao", "zona", "cidade"}, [])
+    outra = resolver(estado="MG", regiao=BH, zona="barreiro", cidade="Contagem")
+    assert outra == (f"{BH}/barreiro", {"regiao", "zona"}, [])  # a cidade segue filtrada depois, a zona manda
+
+
+def test_cidade_sozinha_continua_como_antes():
+    assert resolver(estado="MG", cidade="Contagem") == (CONTAGEM, {"cidade"}, [])
+
+
+def test_zona_que_o_sitemap_lista_mas_a_olx_nao_serve_fica_fora_da_lista():
+    """Em Minas, 22 das 37 zonas do sitemap respondem o Brasil todo na URL. Só entram as que têm nome na OLX."""
+    assert {z["slug"] for z in localidades.zonas("MG", BH)} >= {"barreiro", "pampulha"}
+    assert len(localidades.zonas("MG", BH)) == 14
+    assert localidades.zonas("MG", "regiao-de-divinopolis") == []
+    assert localidades.achar_zona("MG", "regiao-de-divinopolis", "regiao-central-mineira") is None
+    assert localidades.achar_zona("MG", "regiao-de-juiz-de-fora", "regiao-de-juiz-de-fora") is None
+    assert localidades.achar_zona("MG", "regiao-de-governador-valadares-e-teofilo-otoni", "manhuacu") == "manhuacu"
+
+
+def test_zona_inventada_numa_regiao_valida_nao_vai_na_url():
+    assert url(estado="MG", regiao="regiao-de-divinopolis", zona="regiao-central-mineira") == "/estado-mg/regiao-de-divinopolis?q=civic&sf=1"
+
+
+def test_estado_ainda_nao_conferido_usa_a_lista_do_sitemap_e_o_servidor_confere_a_primeira_pagina():
+    regioes = localidades._arvore("RJ")
+    regiao, zonas = next((r, z) for r, z in regioes.items() if z)
+    assert [z["slug"] for z in localidades.zonas("RJ", regiao)] and "RJ" not in localidades._dados().get("zonas_conferidas", [])

@@ -3311,5 +3311,31 @@
   "TO": {
    "tocantins": "Tocantins"
   }
- }
+ },
+ "nomes_zonas": {
+  "MG": {
+   "belo-horizonte-e-regiao": {
+    "barreiro": "Barreiro",
+    "grande-belo-horizonte": "Grande Belo Horizonte",
+    "ouro-preto-e-cons-lafayete": "Ouro Preto e Cons. Lafayete",
+    "pampulha": "Pampulha",
+    "regiao-de-ipatinga": "Região de Ipatinga",
+    "regiao-de-sete-lagoas": "Região de Sete Lagoas",
+    "venda-nova": "Venda Nova",
+    "zona-centro-sul": "Zona Centro-sul",
+    "zona-da-mata": "Zona da Mata",
+    "zona-leste": "Zona Leste",
+    "zona-nordeste": "Zona Nordeste",
+    "zona-noroeste": "Zona Noroeste",
+    "zona-norte": "Zona Norte",
+    "zona-oeste": "Zona Oeste"
+   },
+   "regiao-de-governador-valadares-e-teofilo-otoni": {
+    "manhuacu": "Manhuaçu"
+   }
+  }
+ },
+ "zonas_conferidas": [
+  "MG"
+ ]
 }

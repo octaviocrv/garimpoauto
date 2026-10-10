@@ -153,3 +153,74 @@ def test_pausa_do_ver_mais_pode_ser_menor_que_a_normal():
     relogio.agora += 10
     cursor.esperar((2.0, 4.0))  # a pessoa demorou 10 s para clicar
     assert len(relogio.esperas) == 1
+
+
+# --- a OLX responde o Brasil todo quando não conhece o local ------------------------
+
+BH = "belo-horizonte-e-regiao"
+
+
+def ads_de(uf, ids):
+    return [anuncio_cru(str(i), locationDetails={"municipality": "Cidade", "neighbourhood": "X", "uf": uf}) for i in ids]
+
+
+def pagina_de(uf, ids, total=50):
+    return RespostaFalsa(200, html_com_ads(ads_de(uf, ids), total))
+
+
+def test_zona_que_a_olx_nao_serve_recua_para_a_regiao_e_avisa():
+    busca = Busca(texto="civic", estado="MG", regiao=BH, zona="barreiro")
+    cursor, sessao, _ = abrir([pagina_de("SP", range(1, 6)), pagina_de("MG", range(10, 14))], busca)
+    pag = cursor.proxima()
+    assert [u.split("carros-vans-e-utilitarios")[1] for u in sessao.urls_de_listagem] == [
+        f"/estado-mg/{BH}/barreiro?q=civic&sf=1", f"/estado-mg/{BH}?q=civic&sf=1",
+    ]
+    assert [a.external_id for a in pag.anuncios] == ["10", "11", "12", "13"]  # nada do Brasil todo entrou
+    assert "zona" not in pag.na_origem and "regiao" in pag.na_origem
+    assert pag.nao_resolvidos == ["a zona barreiro"] and pag.numero == 1
+
+
+def test_recua_ate_o_estado_se_a_regiao_tambem_nao_for_servida():
+    busca = Busca(texto="civic", estado="MG", regiao=BH, zona="barreiro")
+    cursor, sessao, _ = abrir([pagina_de("SP", [1]), pagina_de("RJ", [2]), pagina_de("MG", [3])], busca)
+    pag = cursor.proxima()
+    assert len(sessao.urls_de_listagem) == 3 and sessao.urls_de_listagem[-1].endswith("/estado-mg?q=civic&sf=1")
+    assert [a.external_id for a in pag.anuncios] == ["3"]
+    assert "regiao" not in pag.na_origem and "zona" not in pag.na_origem
+    assert pag.nao_resolvidos == ["a zona barreiro", "a região belo-horizonte-e-regiao"]  # na ordem em que foram caindo
+
+
+def test_cidade_que_a_olx_nao_serve_volta_a_ser_filtro_local():
+    busca = Busca(texto="civic", estado="MG", cidade="Contagem")
+    certos = [anuncio_cru("20", locationDetails={"municipality": "Contagem", "neighbourhood": "X", "uf": "MG"}),
+              anuncio_cru("21", locationDetails={"municipality": "Betim", "neighbourhood": "X", "uf": "MG"})]
+    cursor, sessao, _ = abrir([pagina_de("SP", [1]), RespostaFalsa(200, html_com_ads(certos, 2))], busca)
+    pag = cursor.proxima()
+    assert sessao.urls_de_listagem[0].endswith("/grande-belo-horizonte/contagem?q=civic&sf=1")
+    assert sessao.urls_de_listagem[1].endswith(f"/estado-mg/{BH}/grande-belo-horizonte?q=civic&sf=1")
+    assert [a.external_id for a in pag.anuncios] == ["20"]  # o filtro de cidade voltou a valer
+    assert "cidade" not in pag.na_origem and pag.nao_resolvidos == ["a cidade Contagem"]
+    assert pag.cortados_por_filtro == {"cidade": 1}
+
+
+def test_local_servido_de_verdade_nao_gasta_leitura_a_mais():
+    busca = Busca(texto="civic", estado="MG", regiao=BH, zona="barreiro")
+    cursor, sessao, relogio = abrir([pagina_de("MG", range(1, 4))], busca)
+    pag = cursor.proxima()
+    assert len(sessao.urls_de_listagem) == 1 and relogio.esperas == []
+    assert {"regiao", "zona"} <= set(pag.na_origem) and pag.nao_resolvidos == []
+
+
+def test_sem_estado_nao_tem_o_que_conferir():
+    cursor, sessao, _ = abrir([pagina_de("SP", [1]), pagina_de("MG", [2])], Busca(texto="civic"))
+    assert [a.external_id for a in cursor.proxima().anuncios] == ["1"] and len(sessao.urls_de_listagem) == 1
+
+
+def test_o_recuo_vale_para_as_paginas_seguintes():
+    busca = Busca(texto="civic", estado="MG", regiao=BH, zona="barreiro")
+    p1 = RespostaFalsa(200, html_com_ads(ads_de("MG", range(1, 4)), 8))
+    cursor, sessao, _ = abrir([pagina_de("SP", [9]), p1, pagina_de("MG", range(4, 7), 8)], busca)
+    cursor.proxima()
+    cursor.proxima()
+    assert f"/estado-mg/{BH}?" in sessao.urls_de_listagem[-1] and "o=2" in sessao.urls_de_listagem[-1]
+    assert "barreiro" not in sessao.urls_de_listagem[-1]  # a página 2 já sai sem a zona que a OLX não serve

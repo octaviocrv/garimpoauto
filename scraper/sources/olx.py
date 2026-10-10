@@ -457,8 +457,8 @@ def _degrau_km_min(km: int) -> Optional[int]:
 
 
 def resolver_local(busca: Busca) -> tuple[Optional[str], set[str], list[str]]:
-    """O que a OLX entende de região e cidade. Devolve (caminho depois de /estado-xx, filtros resolvidos
-    na origem, o que não foi entendido). O caminho é "regiao", ou "regiao/zona/cidade" quando a OLX tem
+    """O que a OLX entende de região, zona e cidade. Devolve (caminho depois de /estado-xx, filtros resolvidos
+    na origem, o que não foi entendido). O caminho é "regiao", ou "regiao/zona" quando há zona, "regiao/zona/cidade" quando a OLX tem
     página da cidade. Região que a OLX não conhece NUNCA vai na URL (a OLX devolveria o Brasil todo sem
     avisar). Cidade sem página própria continua filtrada depois da coleta."""
     uf, caminho, resolvidos, nao = busca.estado, None, set(), []
@@ -473,11 +473,22 @@ def resolver_local(busca: Busca) -> tuple[Optional[str], set[str], list[str]]:
             resolvidos.add("regiao")
         else:
             nao.append(f"a região {busca.regiao}")
+    zona = None
+    if busca.zona and regiao:
+        if not localidades.tem_dados(uf):
+            zona = busca.zona.strip("/")
+        else:
+            zona = localidades.achar_zona(uf, regiao, busca.zona)
+        if zona:
+            caminho = f"{regiao}/{zona}"
+            resolvidos.add("zona")
+        else:
+            nao.append(f"a zona {busca.zona}")
     if busca.cidade:
         achada = localidades.achar_cidade(uf, busca.cidade) if uf else None
-        if achada and (regiao is None or regiao == achada[0]):
+        if achada and (regiao is None or regiao == achada[0]) and (zona is None or zona == achada[1]):
             caminho = "/".join(achada)
-            resolvidos.update({"regiao", "cidade"} if regiao else {"cidade"})
+            resolvidos.update({"cidade"} | ({"regiao"} if regiao else set()) | ({"zona"} if zona else set()))
         else:
             if not achada and uf:  # sem estado nem dá para procurar a cidade na lista da OLX
                 nao.append(f"a cidade {busca.cidade}")
@@ -485,7 +496,10 @@ def resolver_local(busca: Busca) -> tuple[Optional[str], set[str], list[str]]:
     return caminho, resolvidos, nao
 
 
-def montar_url(busca: Busca, pagina: int = 1, *, codigos: Optional[dict[str, str]] = None) -> str:
+_RESOLVER = object()  # montar_url resolve o local sozinho, a menos que quem chama já tenha decidido
+
+
+def montar_url(busca: Busca, pagina: int = 1, *, codigos: Optional[dict[str, str]] = None, local: Any = _RESOLVER) -> str:
     """Monta a URL de listagem só com os filtros da Busca que a OLX aceita: estado, região, ano,
     preço, km, câmbio, combustível, tipo de anunciante, ordenação e (com `codigos`) marca, modelo
     e versão. Cidade fica para filtrar_local. O km vai como o degrau da OLX que cobre o pedido (a OLX só
@@ -494,7 +508,8 @@ def montar_url(busca: Busca, pagina: int = 1, *, codigos: Optional[dict[str, str
     caminho = URL_BASE
     if busca.estado:
         caminho += f"/estado-{busca.estado.lower()}"
-        local = resolver_local(busca)[0]
+        if local is _RESOLVER:
+            local = resolver_local(busca)[0]
         if local:
             caminho += f"/{local}"
 
@@ -740,6 +755,9 @@ class CursorOlx:
         self._ignorar: tuple[str, ...] = ()
         self._na_origem: list[str] = []
         self._nao_resolvidos: list[str] = []
+        self._local: Optional[str] = None  # caminho de região, zona ou cidade na URL
+        self._base_resolvidos: set[str] = set()  # marca, modelo e versão
+        self._locais_resolvidos: set[str] = set()  # região, zona e cidade que foram para a URL
 
     def esperar(self, pausa: Optional[tuple[float, float]] = None) -> None:
         """Pausa da 2ª página em diante. A 1ª não espera. `pausa` (mínimo, máximo) troca a de LimitesBusca."""
@@ -749,6 +767,34 @@ class CursorOlx:
         falta = alvo - (self._relogio() - self._ultimo_pedido)
         if falta > 0:
             self._dormir(falta)
+
+    def _respondeu_o_brasil_todo(self, itens: list[dict]) -> bool:
+        """Com região, zona ou cidade na URL, todo anúncio tem que ser do estado pedido."""
+        if not (self._local and self.busca.estado):
+            return False
+        uf = self.busca.estado.upper()
+        return any(
+            (u := ((i.get("locationDetails") or {}).get("uf") or "").upper()) and u != uf for i in itens
+        )
+
+    def _recompor(self) -> None:
+        resolvidos = self._base_resolvidos | self._locais_resolvidos
+        self._ignorar = (*_FILTROS_NA_URL, *resolvidos)
+        self._na_origem = _filtros_na_origem(self.busca, resolvidos)
+
+    def _recuar(self) -> None:
+        """Tira o último nível do caminho (cidade, depois zona, depois região). O que saiu volta a ser filtro
+        local e o resultado avisa."""
+        partes = (self._local or "").split("/")[:-1]
+        self._local = "/".join(partes) or None
+        niveis = {"regiao": 1, "zona": 2, "cidade": 3}
+        ficaram = {n for n in self._locais_resolvidos if len(partes) >= niveis[n]}
+        pedido = {"regiao": ("a região", self.busca.regiao), "zona": ("a zona", self.busca.zona), "cidade": ("a cidade", self.busca.cidade)}
+        for n in ("regiao", "zona", "cidade"):
+            if n in self._locais_resolvidos - ficaram:
+                self._nao_resolvidos.append(f"{pedido[n][0]} {pedido[n][1]}")
+        self._locais_resolvidos = ficaram
+        self._recompor()
 
     def proxima(self) -> PaginaBusca:
         if self.terminou:
@@ -767,15 +813,25 @@ class CursorOlx:
                 codigos, resolvidos, self._nao_resolvidos = resolver_codigos(
                     sessao, self.busca, _SemPausa(), self._relogio  # type: ignore[arg-type]
                 )
-                self._codigos, self._ignorar = codigos, (*_FILTROS_NA_URL, *resolvidos)
-                self._na_origem = _filtros_na_origem(self.busca, resolvidos)
-            itens, total, erro = _baixar_com_cuidado(
-                sessao, montar_url(self.busca, pagina, codigos=self._codigos),
-                inicio=self._relogio(), tempo_max=self.limites.tempo_max_segundos,
-                tentativas_bloqueio=self.limites.tentativas_bloqueio,
-                backoff_base=self.limites.backoff_base_segundos,
-                dormir=self._dormir, relogio=self._relogio,
-            )
+                self._codigos = codigos
+                self._local, locais_ok, _ = resolver_local(self.busca)
+                self._locais_resolvidos = {n for n in ("regiao", "zona", "cidade") if n in locais_ok}
+                self._base_resolvidos = resolvidos - self._locais_resolvidos
+                self._nao_resolvidos = list(self._nao_resolvidos)
+                self._recompor()
+            while True:
+                itens, total, erro = _baixar_com_cuidado(
+                    sessao, montar_url(self.busca, pagina, codigos=self._codigos, local=self._local),
+                    inicio=self._relogio(), tempo_max=self.limites.tempo_max_segundos,
+                    tentativas_bloqueio=self.limites.tentativas_bloqueio,
+                    backoff_base=self.limites.backoff_base_segundos,
+                    dormir=self._dormir, relogio=self._relogio,
+                )
+                if itens is None or not self._respondeu_o_brasil_todo(itens):
+                    break
+                # A OLX não conhecia esse local e respondeu o Brasil todo sem avisar. Recua um nível e pede de novo.
+                self._recuar()
+                self._dormir(random.uniform(*self.limites.pausa_entre_paginas_segundos))
         finally:
             self._ultimo_pedido = self._relogio()
             if gerenciador is not None:

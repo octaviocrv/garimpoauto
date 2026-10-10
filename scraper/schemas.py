@@ -178,6 +178,7 @@ class Busca(BaseModel):
     ordenar: str = ORDEM_PADRAO
     estado: Optional[str] = None  # sigla; vazio = Brasil todo
     regiao: Optional[str] = None  # slug da OLX, ex.: belo-horizonte-e-regiao (exige estado)
+    zona: Optional[str] = None  # slug da zona dentro da região, ex.: barreiro (exige região)
     cidade: Optional[str] = None
 
     @field_validator("texto")
@@ -188,7 +189,7 @@ class Busca(BaseModel):
             raise ValueError("texto da busca não pode ser vazio")
         return v
 
-    @field_validator("marca", "modelo", "versao", "regiao", "cidade", mode="before")
+    @field_validator("marca", "modelo", "versao", "regiao", "zona", "cidade", mode="before")
     @classmethod
     def _vazio_vira_none(cls, v: Any) -> Any:
         if isinstance(v, str):
@@ -243,6 +244,8 @@ class Busca(BaseModel):
                 raise ValueError(f"{menor} ({a}) maior que {maior} ({b})")
         if self.regiao and not self.estado:
             raise ValueError("regiao exige estado")
+        if self.zona and not self.regiao:
+            raise ValueError("zona exige regiao")
         return self
 
 

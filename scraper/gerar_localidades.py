@@ -6,6 +6,8 @@ Uso:
     .venv/bin/python gerar_localidades.py [UF ...]          baixa a árvore (sem UF, todos os estados)
     .venv/bin/python gerar_localidades.py --nomes [UF ...]  guarda o nome de cada região, com acento,
                                                             lido do título da página da própria OLX
+    .venv/bin/python gerar_localidades.py --zonas UF [UF ...]  o mesmo para as zonas de cada região (são
+                                                            centenas em alguns estados, por isso só os UFs pedidos)
 """
 
 import json
@@ -64,7 +66,42 @@ def nomes(ufs: list[str]) -> None:
                 DESTINO.write_text(json.dumps(resultado, ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8")
 
 
+def nomes_das_zonas(ufs: list[str]) -> None:
+    """Nome de cada zona (com acento) lido do título da página dela. Só dos estados pedidos. O sitemap lista
+    zonas que a OLX não serve (a página responde o Brasil todo, e o título vem sem lugar nenhum): essas ficam
+    sem nome e saem da lista de zonas do estado."""
+    resultado = json.loads(DESTINO.read_text(encoding="utf-8"))
+    guardados = resultado.setdefault("nomes_zonas", {})
+    primeiro = True
+    with FetcherSession(impersonate="chrome", stealthy_headers=True, timeout=60, retries=1) as s:
+        for uf in ufs:
+            for regiao, zonas in resultado["estados"].get(uf, {}).items():
+                for zona in zonas:
+                    if zona in guardados.get(uf, {}).get(regiao, {}):
+                        continue
+                    if not primeiro:
+                        time.sleep(random.uniform(5, 9))
+                    primeiro = False
+                    url = f"https://www.olx.com.br/autos-e-pecas/carros-vans-e-utilitarios/estado-{uf.lower()}/{regiao}/{zona}?q=xqzwvkjhpqrt"
+                    r = s.get(url)
+                    titulo = re.search(r"<title>([^<]*)", r.html_content)
+                    achou = re.search(rf"à venda(?: -| em| no| na| nos| nas) (.+), {uf}\s*$", titulo.group(1)) if titulo else None
+                    if r.status != 200 or not achou:
+                        print(uf, regiao, zona, "sem nome (HTTP", r.status, ")", flush=True)
+                        continue
+                    guardados.setdefault(uf, {}).setdefault(regiao, {})[zona] = achou.group(1).strip()
+                    print(uf, regiao, zona, "=", achou.group(1).strip(), flush=True)
+                    DESTINO.write_text(json.dumps(resultado, ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8")
+            # Zona sem nome no título é zona que a OLX não serve (ela responde o Brasil todo), então some da lista.
+            conferidas = resultado.setdefault("zonas_conferidas", [])
+            if uf not in conferidas:
+                conferidas.append(uf)
+            DESTINO.write_text(json.dumps(resultado, ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8")
+
+
 def main() -> None:
+    if sys.argv[1:2] == ["--zonas"]:
+        return nomes_das_zonas([u.upper() for u in sys.argv[2:]])
     if sys.argv[1:2] == ["--nomes"]:
         return nomes([u.upper() for u in sys.argv[2:]] or UFS)
     ufs = [u.upper() for u in sys.argv[1:]] or UFS

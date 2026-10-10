@@ -19,7 +19,7 @@ from schemas import Anuncio, Aviso, Busca, Funil, ResultadoBusca
 _ORDEM_CHAVE = (
     "texto", "marca", "modelo", "versao", "ano_min", "ano_max",
     "preco_min", "preco_max", "km_min", "km_max", "cambio", "combustivel", "anunciante",
-    "estado", "regiao", "cidade", "ordenar",
+    "estado", "regiao", "zona", "cidade", "ordenar",
 )
 FILTROS = _ORDEM_CHAVE[1:]
 

@@ -49,6 +49,10 @@ def nome_regiao(uf: str, slug: str) -> str:
     nome = _dados().get("nomes", {}).get(uf.upper(), {}).get(slug)
     if nome:
         return nome
+    return _nome_do_endereco(slug)
+
+
+def _nome_do_endereco(slug: str) -> str:
     minusculas = {"e", "de", "da", "do", "das", "dos"}
     palavras = ["região" if p == "regiao" else p for p in slug.split("-")]
     return " ".join(p if (p in minusculas or p == "região") and i else p.capitalize() for i, p in enumerate(palavras))
@@ -93,3 +97,39 @@ def achar_cidade(uf: Optional[str], texto: str) -> Optional[tuple[str, str, str]
         if _sem_simbolos(local) == alvo
     ]
     return achados[0] if len(achados) == 1 else None
+
+
+def _zonas_validas(uf: str, regiao: str) -> list[str]:
+    """Zonas da região que a OLX serve de verdade. O sitemap traz zonas que a OLX responde com o Brasil todo,
+    então nos estados já conferidos (gerar_localidades.py --zonas) só valem as que têm nome coletado.
+    Nos outros estados a lista é a do sitemap, e a conferência da primeira página protege a busca."""
+    todas = list(_arvore(uf).get(regiao, {}))
+    if uf.upper() not in _dados().get("zonas_conferidas", []):
+        return todas
+    nomes = _dados().get("nomes_zonas", {}).get(uf.upper(), {}).get(regiao, {})
+    return [z for z in todas if z in nomes]
+
+
+def nome_zona(uf: str, regiao: str, slug: str) -> str:
+    """Nome da zona para mostrar. Vem do título da OLX quando já foi coletado (gerar_localidades.py
+    --zonas); senão é montado a partir do endereço, às vezes sem acento."""
+    return _dados().get("nomes_zonas", {}).get(uf.upper(), {}).get(regiao, {}).get(slug) or _nome_do_endereco(slug)
+
+
+def zonas(uf: str, regiao: str) -> list[dict[str, str]]:
+    """As zonas que a OLX tem dentro de uma região, para o seletor da tela."""
+    return sorted(
+        ({"slug": z, "nome": nome_zona(uf, regiao, z)} for z in _zonas_validas(uf, regiao)),
+        key=lambda z: _sem_simbolos(z["nome"]),
+    )
+
+
+def achar_zona(uf: Optional[str], regiao: str, texto: str) -> Optional[str]:
+    """O endereço da zona (slug) dentro da região, pelo slug ou pelo nome. None se a região não tem essa zona."""
+    alvo = _sem_simbolos(texto)
+    if not alvo:
+        return None
+    for slug in _zonas_validas(uf or "", regiao):
+        if alvo in (_sem_simbolos(slug), _sem_simbolos(nome_zona(uf or "", regiao, slug))):
+            return slug
+    return None
