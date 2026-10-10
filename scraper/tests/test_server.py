@@ -36,7 +36,7 @@ class CursorFalso:
             self.fonte.esperas += 1
             self.fonte.pausas.append(pausa)
 
-    def proxima(self):
+    def proxima(self, repeticoes=None, espera_repeticao=None):
         f = self.fonte
         n = self.numero + 1
         with f._lock:

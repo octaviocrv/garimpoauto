@@ -80,6 +80,10 @@ MAX_PAGINAS_SOB_DEMANDA = _do_ambiente("GARIMPO_MAX_PAGINAS_SOB_DEMANDA", 70, in
 # Pausa entre páginas quando a pessoa clica em "Ver mais" (o clique já espaça os pedidos). Dois
 # números, ex.: "2,4". A leitura de várias páginas seguidas (stream) usa a pausa de LimitesBusca.
 PAUSA_VER_MAIS_SEGUNDOS = _do_ambiente("GARIMPO_PAUSA_VER_MAIS_SEGUNDOS", (2.0, 4.0), _par)
+# Falha do "Ver mais" da página 2 em diante: quantas repetições e quanto esperar entre elas (dois números).
+# A pessoa está olhando a tela, então é curto. A página 1 e o stream usam os de LimitesBusca.
+REPETICOES_VER_MAIS = _do_ambiente("GARIMPO_REPETICOES_VER_MAIS", 1, int)
+ESPERA_REPETICAO_VER_MAIS_SEGUNDOS = _do_ambiente("GARIMPO_ESPERA_REPETICAO_VER_MAIS_SEGUNDOS", (5.0, 10.0), _par)
 # Origens liberadas no CORS, separadas por vírgula. Por padrão só o Vite local.
 CORS_ORIGENS = [
     o.strip()

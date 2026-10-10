@@ -24,7 +24,9 @@ class Cursor(Protocol):
 
     def esperar(self, pausa: Optional[tuple[float, float]] = None) -> None: ...
 
-    def proxima(self) -> PaginaBusca: ...
+    def proxima(
+        self, repeticoes: Optional[int] = None, espera_repeticao: Optional[tuple[float, float]] = None,
+    ) -> PaginaBusca: ...
 
 
 @runtime_checkable

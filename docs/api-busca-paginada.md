@@ -75,6 +75,7 @@ A zona é uma divisão da região, e a OLX a aceita no caminho: `estado-mg/belo-
 
 - **Seletor:** `GET /zonas?estado=MG&regiao=belo-horizonte-e-regiao` devolve `{"estado", "regiao", "zonas": [{"slug", "nome"}, ...]}`. A região é obrigatória (sem ela, 422 com "Pra escolher a zona, escolhe a região primeiro."). Região sem zonas devolve lista vazia. Os nomes com acento estão coletados para Minas. Nos outros estados o nome sai do endereço (às vezes sem acento) até rodar `gerar_localidades.py --zonas UF`.
 - **`zona`:** parâmetro novo de `/buscar`, `/buscar/pagina` e `/buscar/stream`. Aceita o `slug` ou o nome da zona. Só vale junto com `regiao`. Zona sem região dá 422 com a mesma frase acima. Zona que não existe naquela região dá 422 com "Não achei essa zona, escolhe uma da lista?" e a busca nem começa.
+- **Só MG tem as zonas conferidas.** Em Minas (`zonas_conferidas` no `localidades.json`) o seletor mostra só as zonas que a OLX serve de verdade e com o nome certo. **Os outros estados usam a lista crua do sitemap**, que traz zonas que a OLX responde com o Brasil todo e nomes às vezes sem acento. Isso só muda quando alguém roda `gerar_localidades.py --zonas UF` para aquele estado. Até lá, em outro estado, uma zona da lista pode não existir de verdade. A proteção da primeira página (abaixo) evita carro de outro estado na lista, mas a busca recua para a região e avisa com `filtro_aproximado`.
 - **Com zona:** o `total_na_fonte`, a frase `informacao` e a paginação são os da zona, e `filtros_na_origem` traz `"zona"` junto de `"regiao"`.
 - **Só entram zonas que a OLX serve.** O sitemap lista zonas que a OLX responde com o **Brasil todo**. Em Minas, só a região de BH tem zonas de verdade (14 de 37, mais Manhuaçu em Governador Valadares), e as outras 22 ficam fora da lista. Nos demais estados as zonas ainda são as do sitemap, até rodar `gerar_localidades.py --zonas UF`.
 - **Proteção na primeira página:** quando a busca tem região, zona ou cidade, o servidor confere o estado dos anúncios que chegaram. Se vier outro estado, a OLX não conhecia o local e respondeu o Brasil todo. O servidor recua um nível (cidade, depois zona, depois região), pede de novo, volta a filtrar aquele nível depois da coleta e avisa com o `filtro_aproximado` ("Não achei a zona X na lista da OLX..."). Nenhum anúncio de outro estado chega na lista.
@@ -93,6 +94,24 @@ Entre uma página e outra, anúncios novos entram no topo e empurram a lista. Re
 - **Repetição:** coberta. O mesmo `listId` que reaparece na página seguinte é descartado, e o mesmo carro anunciado de novo por outra loja vem marcado em `repetido_de` (e não some).
 - **Omissão:** não coberta. Se um anúncio é renovado e sobe para uma página que a pessoa já passou, ele não aparece nessa sessão. Também pode escapar um anúncio quando outro sai do ar e a lista anda para cima. É raro e some ao usar `atualizar=1`, que recomeça a busca na hora.
 - Uma página que só traz repetidos encerra a busca, com o aviso "A página só tinha anúncios repetidos".
+
+## Quando a OLX falha no meio
+Falha é 403, 429, 500, captcha, página sem os dados, JSON fora do formato, timeout ou rede que caiu. Em todos os casos a resposta é a mesma.
+- **`falhou: true`**, sem anúncios nessa página. As páginas já lidas ficam guardadas e contam em `entregues`.
+- **`proxima_pagina`** é a mesma página que falhou. A tela pede de novo e o servidor tenta ela outra vez.
+- **Texto:** "Não consegui buscar mais agora, tenta de novo daqui a pouco?" (da página 2 em diante) ou "Não achei esse carro agora, tenta de novo?" (na página 1). O motivo técnico só vem com `dev=1`.
+- **Repetição no "Ver mais" (página 2 em diante):** 1 repetição só, depois de 5 a 10 segundos. Muda com `GARIMPO_REPETICOES_VER_MAIS` e `GARIMPO_ESPERA_REPETICAO_VER_MAIS_SEGUNDOS`.
+- **Página 1 e `/buscar/stream`:** 2 repetições, com espera crescente (cerca de 20 e 40 segundos).
+- **Lista parcial nunca passa por completa.** Em `/buscar` e no stream o `fim` traz `falha_fonte` e o aviso "A OLX não respondeu direito no meio da busca, então a lista pode estar incompleta."
+
+### Página vazia no meio
+A OLX lista de 92% a 96% do que conta. Por isso página vazia não é sempre o fim.
+- **Abaixo de 80% do total lido:** conta como falha e dá pra tentar de novo.
+- **Segunda vez vazia na mesma página:** encerra a busca, com a frase "Achei N carros. A OLX fala em X, mas só mostra esses."
+- **Busca sem nenhum carro** (total 0) continua sendo vazia de verdade, sem falha.
+
+### Anúncio fora do formato
+Um anúncio só é marcado como visto depois da página inteira ser lida. Se um deles quebrar a leitura, a nova tentativa não perde os que vieram antes dele.
 
 ## E o `/buscar/stream`?
 Continua igual para a tela de hoje (eventos `pagina`, `fim` e `erro`, mesmos campos). Por dentro agora ele lê as páginas da mesma sessão que o "Ver mais". Duas diferenças boas: se a pessoa fecha a tela ou cancela, o servidor para de ler (antes a coleta ia até o fim), e a falha no meio guarda as páginas boas e a busca seguinte continua de onde parou.

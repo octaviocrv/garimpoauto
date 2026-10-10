@@ -43,6 +43,8 @@ TOTAL_ADS = "total_ads"
 MAX_PAGINAS = "max_paginas"
 PAGINA_VAZIA = "pagina_vazia"
 BLOQUEIO = "bloqueio"
+# Fração do total da OLX abaixo da qual uma página vazia não é tida como o fim (medido: ela lista 92% a 96%).
+LISTADO_MINIMO = 0.8
 TEMPO_MAXIMO = "tempo_maximo"
 
 # Códigos que a própria OLX usa nos filtros da listagem de carros.
@@ -554,13 +556,18 @@ def _baixar_com_cuidado(
     backoff_base: float,
     dormir: Callable[[float], None],
     relogio: Callable[[], float],
+    espera_fixa: Optional[tuple[float, float]] = None,
 ) -> tuple[Optional[list[dict]], Optional[int], Optional[str]]:
     """Baixa uma página. Em 403, 429 ou página sem "ads", espera cada vez mais e tenta de novo,
-    no máximo `tentativas_bloqueio` vezes. Devolve (itens, totalOfAds, erro)."""
+    no máximo `tentativas_bloqueio` vezes. `espera_fixa` (mínimo, máximo) troca a espera crescente por
+    um sorteio nesse intervalo. Devolve (itens, totalOfAds, erro)."""
     erro = "sem resposta"
     for tentativa in range(tentativas_bloqueio + 1):
         if tentativa > 0:
-            espera = backoff_base * (2 ** (tentativa - 1)) * random.uniform(1.0, 1.5)
+            if espera_fixa is not None:
+                espera = random.uniform(*espera_fixa)
+            else:
+                espera = backoff_base * (2 ** (tentativa - 1)) * random.uniform(1.0, 1.5)
             if relogio() - inicio + espera > tempo_max:
                 return None, None, f"{erro} (sem tempo para tentar de novo)"
             dormir(espera)
@@ -748,6 +755,7 @@ class CursorOlx:
         self._vistos: set[str] = set()
         self._carros: dict[tuple, str] = {}
         self._acumulado = 0
+        self._vazia_em: Optional[int] = None  # página vazia que já pareceu bloqueio
         self._total_ads: Optional[int] = None
         self._ultimo_pedido: Optional[float] = None
         self._tamanho_pagina: Optional[int] = None  # quantos anúncios a página 1 trouxe (a OLX manda 50)
@@ -777,6 +785,13 @@ class CursorOlx:
             (u := ((i.get("locationDetails") or {}).get("uf") or "").upper()) and u != uf for i in itens
         )
 
+    def _vazia_suspeita(self, pagina: int) -> bool:
+        """Página vazia que parece bloqueio: a OLX lista de 92% a 96% do que conta, então vazia com bem menos
+        que isso lido é estranho. Só desconfia uma vez por página, para uma busca que acaba cedo mesmo não
+        ficar presa pedindo de novo."""
+        total = self._total_ads
+        return bool(total) and self._vazia_em != pagina and self._acumulado < total * LISTADO_MINIMO
+
     def _recompor(self) -> None:
         resolvidos = self._base_resolvidos | self._locais_resolvidos
         self._ignorar = (*_FILTROS_NA_URL, *resolvidos)
@@ -796,7 +811,11 @@ class CursorOlx:
         self._locais_resolvidos = ficaram
         self._recompor()
 
-    def proxima(self) -> PaginaBusca:
+    def proxima(
+        self, repeticoes: Optional[int] = None, espera_repeticao: Optional[tuple[float, float]] = None,
+    ) -> PaginaBusca:
+        """`repeticoes` e `espera_repeticao` valem só para esta leitura e trocam a repetição de
+        LimitesBusca (o "Ver mais" usa menos e espera pouco). Sem eles, vale o de sempre."""
         if self.terminou:
             raise RuntimeError("a busca já acabou")
         pagina = self.numero + 1
@@ -823,9 +842,9 @@ class CursorOlx:
                 itens, total, erro = _baixar_com_cuidado(
                     sessao, montar_url(self.busca, pagina, codigos=self._codigos, local=self._local),
                     inicio=self._relogio(), tempo_max=self.limites.tempo_max_segundos,
-                    tentativas_bloqueio=self.limites.tentativas_bloqueio,
+                    tentativas_bloqueio=self.limites.tentativas_bloqueio if repeticoes is None else repeticoes,
                     backoff_base=self.limites.backoff_base_segundos,
-                    dormir=self._dormir, relogio=self._relogio,
+                    dormir=self._dormir, relogio=self._relogio, espera_fixa=espera_repeticao,
                 )
                 if itens is None or not self._respondeu_o_brasil_todo(itens):
                     break
@@ -849,14 +868,28 @@ class CursorOlx:
         if self._tamanho_pagina is None:
             self._tamanho_pagina = len(itens)
         novos: list[Anuncio] = []
+        da_pagina: set[str] = set()
         for item in itens:
             id_ = str(item["listId"])
-            if id_ in self._vistos:  # anúncio que entrou no ar e empurrou a lista: já vimos, não repete
+            if id_ in self._vistos or id_ in da_pagina:  # anúncio que entrou no ar e empurrou a lista: já vimos, não repete
                 continue
-            self._vistos.add(id_)
+            da_pagina.add(id_)
             novos.append(normalizar(item))
+        self._vistos |= da_pagina  # só depois da página inteira: se um anúncio quebrar, a nova tentativa não perde os outros
         marcar_repetidos(novos, self._carros)
         self._acumulado += len(novos)
+
+        if not itens and self._vazia_suspeita(pagina):
+            self._vazia_em = pagina  # na segunda vez vazia na mesma página, vale como o fim
+            return PaginaBusca(
+                fonte=FONTE, numero=pagina, anuncios=[], acumulado=self._acumulado, total_ads=self._total_ads,
+                parou_por=BLOQUEIO,
+                aviso=(
+                    f"A página {pagina} veio vazia, mas a OLX fala em {self._total_ads} anúncios e só li {self._acumulado}. "
+                    f"Pode ser bloqueio sem aviso. Devolvi os {self._acumulado} anúncios que já tinha."
+                ),
+                na_origem=self._na_origem, nao_resolvidos=self._nao_resolvidos,
+            )
 
         parou_por, aviso = None, None
         if not novos:
