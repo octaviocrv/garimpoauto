@@ -8,7 +8,7 @@ import pytest
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
 
-from casamento_fipe import CasadorFipe  # noqa: E402
+from casamento_fipe import CasadorFipe, bloqueio_do_anuncio  # noqa: E402
 from schemas import Anuncio  # noqa: E402
 from sources.fipe import AnoFonte, OpcaoFonte, PrecoFonte, ReferenciaFonte  # noqa: E402
 from tests.apoio_banco import RelogioBanco, novo_armazem, zerar_banco_de_teste  # noqa: E402
@@ -125,3 +125,32 @@ def test_dado_faltando_nao_casa_e_resultado_fica_guardado(banco):
     assert primeiro == segundo
     assert primeiro.confianca == "sem_candidato"
     assert primeiro.codigo_fipe is None
+
+
+@pytest.mark.parametrize(("titulo", "bloqueio"), [
+    ("Veículo em preparação", "anuncio_promocional"),
+    ("Gol 1.0 por apenas entrada", "anuncio_promocional"),
+])
+def test_propaganda_e_marcada_sem_consultar_catalogo(banco, titulo, bloqueio):
+    anuncio = carro("propaganda", titulo, 2016, "1.0", 4)
+    resultado = CasadorFipe(CatalogoFixture(), banco, ano_atual=2026).casar(anuncio)
+    assert resultado.bloqueio == bloqueio
+    assert resultado.codigo_fipe is None
+
+
+def test_km_incoerente_com_ano_e_marcado_sem_esconder_o_anuncio(banco):
+    anuncio = carro("km", "Gol Trendline 1.0", 2016, "1.0", 4)
+    anuncio.km = 500
+    assert bloqueio_do_anuncio(anuncio, 2026) == "km_incoerente"
+    resultado = CasadorFipe(CatalogoFixture(), banco, ano_atual=2026).casar(anuncio)
+    assert resultado.bloqueio == "km_incoerente"
+    assert resultado.codigo_fipe is None
+
+
+def test_preco_abaixo_de_metade_da_fipe_fica_marcado(banco):
+    anuncio = carro("barato", "Gol Geração VI Trendline 1.0 8V Total Flex Mec. 4P", 2016, "1.0", 4)
+    anuncio.preco = 10000
+    resultado = CasadorFipe(CatalogoFixture(), banco, ano_atual=2026).casar(anuncio)
+    assert resultado.confianca == "alta"
+    assert resultado.codigo_fipe == "005384-8"
+    assert resultado.preco_estranho is True

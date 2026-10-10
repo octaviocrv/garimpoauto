@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from difflib import SequenceMatcher
 import hashlib
 import json
@@ -66,6 +67,21 @@ def hash_entrada(a: Anuncio) -> str:
         a.cambio, a.portas, a.preco, a.km,
     ]
     return hashlib.sha256(json.dumps(dados, ensure_ascii=False).encode()).hexdigest()
+
+
+def bloqueio_do_anuncio(a: Anuncio, ano_atual: Optional[int] = None) -> Optional[str]:
+    titulo = normalizar(a.titulo)
+    frases_promocionais = (
+        "em preparacao", "consulte o valor", "valor da entrada", "apenas entrada", "so entrada",
+    )
+    if any(frase in titulo for frase in frases_promocionais):
+        return "anuncio_promocional"
+    if a.ano is None or a.km is None:
+        return None
+    atual = ano_atual if ano_atual is not None else datetime.now().year
+    if a.ano > atual + 1 or (atual - a.ano >= 2 and a.km < 1000):
+        return "km_incoerente"
+    return None
 
 
 def _marca_base(texto: str) -> str:
@@ -144,9 +160,13 @@ def _motivo(confianca: ConfiancaFipe, pontuacao: float, margem: float) -> str:
 
 
 class CasadorFipe:
-    def __init__(self, catalogo: CatalogoFipe, armazem: Armazem, maximo_candidatos_anos: int = 4) -> None:
+    def __init__(
+        self, catalogo: CatalogoFipe, armazem: Armazem, maximo_candidatos_anos: int = 4,
+        ano_atual: Optional[int] = None,
+    ) -> None:
         self.catalogo, self.armazem = catalogo, armazem
         self.maximo_candidatos_anos = maximo_candidatos_anos
+        self.ano_atual = ano_atual
 
     def escolher(self, a: Anuncio) -> Optional[EscolhaFipe]:
         if not a.marca or not a.modelo or a.ano is None or not a.combustivel:
@@ -201,6 +221,12 @@ class CasadorFipe:
                 motivo=guardado["motivo"], bloqueio=guardado["bloqueio"],
                 preco_estranho=bool(guardado["preco_estranho"]),
             )
+        bloqueio = bloqueio_do_anuncio(a, self.ano_atual)
+        if bloqueio:
+            motivo = "Anúncio promocional" if bloqueio == "anuncio_promocional" else "Quilometragem incoerente com o ano"
+            resultado = CasamentoFipe(None, None, None, None, "sem_candidato", motivo, bloqueio=bloqueio)
+            self.armazem.fipe_salvar_casamento(a.source, a.external_id, entrada, resultado.para_banco())
+            return resultado
         escolha = self.escolher(a)
         if escolha is None:
             resultado = CasamentoFipe(None, None, None, None, "sem_candidato", "Nenhum candidato compatível")
@@ -216,6 +242,7 @@ class CasadorFipe:
             resultado = CasamentoFipe(
                 escolha.referencia.codigo, preco.codigo_fipe, float(preco.preco), preco.mes_referencia,
                 escolha.confianca, escolha.motivo,
+                preco_estranho=a.preco is not None and a.preco < float(preco.preco) * 0.5,
             )
         self.armazem.fipe_salvar_casamento(a.source, a.external_id, entrada, resultado.para_banco())
         return resultado
