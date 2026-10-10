@@ -28,3 +28,7 @@ core.*
 
 # Configuracao local do Claude Code
 .claude/
+
+# Segredos do banco (modelo em .env.example)
+.env
+!.env.example

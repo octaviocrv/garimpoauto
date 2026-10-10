@@ -41,6 +41,7 @@ class Anuncio:
     anunciante_profissional: Optional[bool] = None
     nota_anunciante: Optional[float] = None  # nota do Google (0 a 5), só de anunciante profissional
     imagens: list[str] = field(default_factory=list)  # só os links
+    novo: bool = False  # apareceu desde a última busca igual (só com o banco ligado e depois da 1ª busca)
     incompleto: bool = False
     campos_faltando: list[str] = field(default_factory=list)
     # Item cru da fonte, já sem nome nem telefone de anunciante (vai para raw_listings).

@@ -785,6 +785,33 @@ class CursorOlx:
             (u := ((i.get("locationDetails") or {}).get("uf") or "").upper()) and u != uf for i in itens
         )
 
+    def exportar(self) -> dict[str, Any]:
+        """O que o cursor sabe da busca, em tipos simples (JSON), para o servidor guardar no banco."""
+        return {
+            "numero": self.numero, "terminou": self.terminou, "vistos": sorted(self._vistos),
+            "carros": [[list(chave), id_] for chave, id_ in self._carros.items()],
+            "acumulado": self._acumulado, "total_ads": self._total_ads, "tamanho_pagina": self._tamanho_pagina,
+            "vazia_em": self._vazia_em, "codigos": self._codigos, "ignorar": list(self._ignorar),
+            "na_origem": list(self._na_origem), "nao_resolvidos": list(self._nao_resolvidos), "local": self._local,
+            "base_resolvidos": sorted(self._base_resolvidos), "locais_resolvidos": sorted(self._locais_resolvidos),
+        }
+
+    def restaurar(self, estado: dict[str, Any]) -> None:
+        """Volta ao ponto de um `exportar()`, mesmo em outro processo. A próxima página sai como se a
+        busca nunca tivesse parado, sem repetir anúncio. Depois de restaurar, a pausa entre pedidos conta
+        a partir de agora."""
+        self.numero, self.terminou = estado["numero"], estado["terminou"]
+        self._vistos = set(estado["vistos"])
+        self._carros = {tuple(chave): id_ for chave, id_ in estado["carros"]}
+        self._acumulado, self._total_ads = estado["acumulado"], estado["total_ads"]
+        self._tamanho_pagina, self._vazia_em = estado["tamanho_pagina"], estado["vazia_em"]
+        self._codigos, self._ignorar = estado["codigos"], tuple(estado["ignorar"])
+        self._na_origem, self._nao_resolvidos = list(estado["na_origem"]), list(estado["nao_resolvidos"])
+        self._local = estado["local"]
+        self._base_resolvidos, self._locais_resolvidos = set(estado["base_resolvidos"]), set(estado["locais_resolvidos"])
+        if self.numero > 0:
+            self._ultimo_pedido = self._relogio()
+
     def _vazia_suspeita(self, pagina: int) -> bool:
         """Página vazia que parece bloqueio: a OLX lista de 92% a 96% do que conta, então vazia com bem menos
         que isso lido é estranho. Só desconfia uma vez por página, para uma busca que acaba cedo mesmo não

@@ -1,0 +1,33 @@
+# Banco do Garimpo Auto (MariaDB). É só do projeto: porta 3390 em 127.0.0.1, banco garimpo_auto,
+# usuário próprio e dados num volume próprio. Não usa nem encosta nos bancos da empresa.
+#
+# Subir:   docker-compose up -d banco
+# Parar:   docker-compose stop banco
+# As senhas ficam no .env desta pasta (fora do git). Modelo em .env.example.
+name: garimpo_auto
+
+services:
+  banco:
+    image: mariadb:11.4
+    container_name: garimpo_auto_banco
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: garimpo_auto
+      MARIADB_USER: ${GARIMPO_DB_USUARIO:-garimpo}
+      MARIADB_PASSWORD: ${GARIMPO_DB_SENHA:?defina GARIMPO_DB_SENHA no .env}
+      MARIADB_ROOT_PASSWORD: ${GARIMPO_DB_ROOT_SENHA:?defina GARIMPO_DB_ROOT_SENHA no .env}
+      TZ: UTC
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    ports:
+      - "127.0.0.1:${GARIMPO_DB_PORTA:-3390}:3306"
+    volumes:
+      - garimpo_auto_dados:/var/lib/mysql
+      - ./docker/mariadb/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  garimpo_auto_dados:

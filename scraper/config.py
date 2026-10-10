@@ -7,9 +7,15 @@ da busca sobrescreve por cima: LimitesBusca(max_paginas=3) usa 3 páginas e o re
 """
 
 import os
+from pathlib import Path
 from typing import Callable
 
+from dotenv import load_dotenv
+
 from pydantic import BaseModel, Field, model_validator
+
+# O .env fica na raiz do projeto, fora do git. O que já está no ambiente de verdade tem prioridade.
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 # Padrão de estado só para o server.py usar. O coletor nunca lê isto.
 ESTADO_PADRAO = os.environ.get("GARIMPO_ESTADO_PADRAO", "mg")
@@ -84,6 +90,11 @@ PAUSA_VER_MAIS_SEGUNDOS = _do_ambiente("GARIMPO_PAUSA_VER_MAIS_SEGUNDOS", (2.0, 
 # A pessoa está olhando a tela, então é curto. A página 1 e o stream usam os de LimitesBusca.
 REPETICOES_VER_MAIS = _do_ambiente("GARIMPO_REPETICOES_VER_MAIS", 1, int)
 ESPERA_REPETICAO_VER_MAIS_SEGUNDOS = _do_ambiente("GARIMPO_ESPERA_REPETICAO_VER_MAIS_SEGUNDOS", (5.0, 10.0), _par)
+# Banco do Garimpo Auto (MariaDB ou MySQL), ex.: mysql://usuario:senha@127.0.0.1:3390/garimpo_auto.
+# Sem ele o servidor guarda o cache só em memória, como antes.
+DATABASE_URL = _do_ambiente("GARIMPO_DATABASE_URL", None, str)
+# Com o banco fora do ar, de quanto em quanto tempo o servidor confere se ele voltou (sem travar a busca).
+BANCO_CONFERE_SEGUNDOS = _do_ambiente("GARIMPO_BANCO_CONFERE_SEGUNDOS", 30.0, float)
 # Origens liberadas no CORS, separadas por vírgula. Por padrão só o Vite local.
 CORS_ORIGENS = [
     o.strip()
