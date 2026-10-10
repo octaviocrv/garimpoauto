@@ -75,6 +75,8 @@ class LimitesBusca(BaseModel):
 
 # Quanto tempo uma busca pronta fica no cache em memória (20 minutos).
 CACHE_TTL_SEGUNDOS = _do_ambiente("GARIMPO_CACHE_TTL_SEGUNDOS", 1200.0, float)
+# Até que página o "Ver mais" vai numa busca só (a OLX mostra 50 anúncios por página).
+MAX_PAGINAS_SOB_DEMANDA = _do_ambiente("GARIMPO_MAX_PAGINAS_SOB_DEMANDA", 30, int)
 # Origens liberadas no CORS, separadas por vírgula. Por padrão só o Vite local.
 CORS_ORIGENS = [
     o.strip()

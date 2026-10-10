@@ -21,6 +21,9 @@ from __future__ import annotations
 import json
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturoTimeout
+from datetime import datetime, timezone
 from typing import Any, Iterator, Optional
 
 from fastapi import Depends, FastAPI, Query, Request
@@ -30,13 +33,14 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import ValidationError
 
 import config
-from busca import chave_busca, filtros_locais, montar_resultado
+from busca import aviso_filtro_aproximado, chave_busca, filtros_locais, montar_resultado, texto_informacao
 from config import LimitesBusca
-from schemas import Anuncio, Busca, PaginaBusca, ResultadoBusca
+from schemas import Anuncio, Aviso, Busca, PaginaBusca, ResultadoBusca
 from sources import olx
 from sources.base import Fonte
 
 MSG_ERRO = "Não achei esse carro agora, tenta de novo?"
+MSG_MAIS_FALHOU = "Não consegui buscar mais agora, tenta de novo daqui a pouco?"
 MSG_PEDIDO = "Esse pedido de busca não está certo, confere os filtros?"
 ESPERA_PING = 15.0  # segundos sem novidade até mandar um sinal de vida no stream
 
@@ -78,113 +82,205 @@ def sse(evento: str, dados: Any) -> str:
     return f"event: {evento}\ndata: {json.dumps(dados, ensure_ascii=False)}\n\n"
 
 
-class Coleta:
-    """Uma coleta em andamento ou pronta. Quem pede a mesma busca divide a mesma Coleta."""
+class SessaoBusca:
+    """Uma busca guardada por chave: as páginas já lidas e o cursor da fonte para ler a próxima.
+    Quem pede a mesma busca divide a sessão, e página lida nunca é baixada de novo. A trava deixa
+    uma leitura por vez por busca, então pedidos iguais e simultâneos esperam em vez de repetir."""
 
-    def __init__(self) -> None:
-        self.cond = threading.Condition()
+    def __init__(self, chave: str, fonte: Fonte, busca: Busca, limites: LimitesBusca, teto: int, semaforo: threading.Semaphore) -> None:
+        self.chave, self.fonte, self.busca, self.limites, self.teto = chave, fonte, busca, limites, teto
+        self.semaforo = semaforo
+        self.trava = threading.Lock()
+        self.cursor: Any = None
         self.paginas: list[PaginaBusca] = []
-        self.resultado: Optional[ResultadoBusca] = None
-        self.quebrou = False
-        self.valida_ate = 0.0  # preenchido quando termina
+        self.tempos: list[float] = []  # segundos que cada página levou (pausa e leitura)
+        self.quando: list[datetime] = []  # hora em que cada página foi lida
+        self.valida_ate: Optional[float] = None  # começa a contar quando a 1ª página chega
 
     @property
     def terminou(self) -> bool:
-        return self.resultado is not None or self.quebrou
+        return bool(self.paginas) and self.paginas[-1].parou_por is not None
 
     def vigente(self, agora: float) -> bool:
-        return not self.terminou or agora < self.valida_ate
+        return self.valida_ate is None or agora < self.valida_ate
 
-    def proxima(self, indice: int, espera: float) -> Optional[PaginaBusca]:
-        """Página `indice`, esperando até `espera` segundos. None se acabou ou se o tempo estourou
-        (confira `terminou` e o tamanho de `paginas` para distinguir)."""
-        with self.cond:
-            self.cond.wait_for(lambda: indice < len(self.paginas) or self.terminou, timeout=espera)
-            return self.paginas[indice] if indice < len(self.paginas) else None
+    def pagina(self, n: int, ttl: float) -> tuple[PaginaBusca, bool]:
+        """Página `n` (a partir de 1) e se veio do cache. Lê da fonte só o que falta, na ordem. Se
+        a fonte falhar devolve uma página com parou_por "bloqueio" que NÃO é guardada (pedir de novo
+        tenta ler essa mesma página). Se a busca acabou antes de `n`, devolve a última página."""
+        with self.trava:
+            do_cache = n <= len(self.paginas)
+            while len(self.paginas) < n and not self.terminou:
+                inicio = time.monotonic()
+                try:
+                    if self.cursor is None:
+                        self.cursor = self.fonte.abrir(self.busca, self.limites, teto=self.teto)
+                    self.cursor.esperar()  # pausa fora do semáforo, para não travar a busca dos outros
+                    with self.semaforo:  # só uma leitura real por vez
+                        pag = self.cursor.proxima()
+                except Exception as e:  # resposta estranha, falha de rede fora do retry, etc.
+                    ultima = self.paginas[-1] if self.paginas else None
+                    pag = PaginaBusca(
+                        fonte=self.fonte.FONTE, numero=len(self.paginas) + 1, anuncios=[],
+                        acumulado=ultima.acumulado if ultima else 0, total_ads=ultima.total_ads if ultima else None,
+                        parou_por=olx.BLOQUEIO,
+                        aviso=f"erro inesperado na pagina {len(self.paginas) + 1} ({type(e).__name__}: {e})",
+                    )
+                if pag.parou_por == olx.BLOQUEIO:
+                    return pag, False
+                self.paginas.append(pag)
+                self.tempos.append(time.monotonic() - inicio)
+                self.quando.append(datetime.now(timezone.utc))
+                if len(self.paginas) == 1:
+                    self.valida_ate = time.monotonic() + ttl
+            return self.paginas[min(n, len(self.paginas)) - 1], do_cache
 
 
 class Servico:
-    """Cache em memória, coleta única por busca e uma coleta real por vez."""
+    """Sessões de busca em memória, com a chave de busca e o TTL, e uma leitura real por vez."""
 
-    def __init__(self, fonte: Fonte, ttl: float, limites: Optional[LimitesBusca] = None) -> None:
-        self.fonte, self.ttl, self.limites = fonte, ttl, limites
+    def __init__(self, fonte: Fonte, ttl: float, limites: Optional[LimitesBusca] = None, teto: int = config.MAX_PAGINAS_SOB_DEMANDA) -> None:
+        self.fonte, self.ttl, self.limites, self.teto = fonte, ttl, limites or LimitesBusca(), teto
         self.trava = threading.Lock()
         self.semaforo = threading.Semaphore(1)
-        self.cache: dict[str, Coleta] = {}
+        self.cache: dict[str, SessaoBusca] = {}
 
-    def max_paginas(self) -> int:
-        return (self.limites or LimitesBusca()).max_paginas
-
-    def obter(self, busca: Busca, atualizar: bool = False) -> tuple[Coleta, bool]:
-        """(coleta, veio_do_cache). `atualizar` ignora uma coleta pronta e busca de novo. Se a mesma
-        busca ainda está sendo coletada, divide essa coleta em vez de começar outra."""
+    def obter(self, busca: Busca, atualizar: bool = False) -> SessaoBusca:
+        """A sessão da busca. `atualizar` joga fora a sessão guardada e começa outra, a menos que
+        ela esteja lendo uma página agora (aí divide essa leitura)."""
         chave, agora = chave_busca(busca), time.monotonic()
         with self.trava:
-            self.cache = {k: c for k, c in self.cache.items() if c.vigente(agora)}
-            coleta = self.cache.get(chave)
-            if coleta is not None and atualizar and coleta.terminou:
-                coleta = None
-            if coleta is None:
-                coleta = self.cache[chave] = Coleta()
-                threading.Thread(target=self._rodar, args=(chave, coleta, busca), daemon=True).start()
-                return coleta, False
-            return coleta, coleta.terminou
+            self.cache = {k: s for k, s in self.cache.items() if s.vigente(agora)}
+            sessao = self.cache.get(chave)
+            if sessao is not None and atualizar and not sessao.trava.locked():
+                sessao = None
+            if sessao is None:
+                sessao = self.cache[chave] = SessaoBusca(chave, self.fonte, busca, self.limites, self.teto, self.semaforo)
+            return sessao
 
-    def _rodar(self, chave: str, coleta: Coleta, busca: Busca) -> None:
-        try:
-            with self.semaforo:  # busca diferente espera aqui
-                resultado = self._coletar(coleta, busca)
-            with coleta.cond:
-                coleta.resultado = resultado
-                coleta.valida_ate = time.monotonic() + self.ttl
-                coleta.cond.notify_all()
-            if resultado.motivo_parada == "falha_fonte":
-                self._esquecer(chave, coleta)  # falha não fica no cache
-        except Exception:
-            with coleta.cond:
-                coleta.quebrou = True
-                coleta.cond.notify_all()
-            self._esquecer(chave, coleta)
+    def pagina(self, sessao: SessaoBusca, n: int) -> tuple[PaginaBusca, bool]:
+        pag, do_cache = sessao.pagina(n, self.ttl)
+        if pag.parou_por == olx.BLOQUEIO and not sessao.paginas:
+            with self.trava:  # falha na 1ª página não fica no cache
+                if self.cache.get(sessao.chave) is sessao:
+                    del self.cache[sessao.chave]
+        return pag, do_cache
 
-    def _esquecer(self, chave: str, coleta: Coleta) -> None:
-        with self.trava:
-            if self.cache.get(chave) is coleta:
-                del self.cache[chave]
 
-    def _coletar(self, coleta: Coleta, busca: Busca) -> ResultadoBusca:
-        limites = self.limites or LimitesBusca()
-        inicio = time.monotonic()
-        anuncios: list[Anuncio] = []
-        cortados: dict[str, int] = {}
-        paginas = coletados = 0
-        total: Optional[int] = None
-        na_origem: list[str] = []
-        nao_resolvidos: list[str] = []
+def resultado_da_sessao(
+    sessao: SessaoBusca, n: int, limites: LimitesBusca, forcado: Optional[str] = None, falha: Optional[PaginaBusca] = None,
+) -> ResultadoBusca:
+    """Fecha o resultado das `n` primeiras páginas da sessão (funil, motivo e avisos)."""
+    paginas = sessao.paginas[:n]
+    cortados: dict[str, int] = {}
+    for p in paginas:
+        for nome, qtd in p.cortados_por_filtro.items():
+            cortados[nome] = cortados.get(nome, 0) + qtd
+    referencia = falha or (paginas[-1] if paginas else None)
+    if falha is not None:
+        motivo, detalhe = "falha_fonte", falha.aviso
+    elif forcado is not None:
+        motivo, detalhe = forcado, None
+    elif paginas and paginas[-1].parou_por is not None:
+        motivo, detalhe = olx._MOTIVOS[paginas[-1].parou_por], paginas[-1].aviso
+    else:
         motivo, detalhe = "falha_fonte", "a busca terminou sem motivo registrado"
-        try:
-            for pag in self.fonte.buscar_paginas(busca, limites):
-                if pag.parou_por != olx.BLOQUEIO:
-                    paginas += 1
-                anuncios.extend(pag.anuncios)
-                coletados += pag.coletados
-                for nome, qtd in pag.cortados_por_filtro.items():
-                    cortados[nome] = cortados.get(nome, 0) + qtd
-                if pag.total_ads is not None:
-                    total = pag.total_ads
-                na_origem, nao_resolvidos = pag.na_origem, pag.nao_resolvidos
-                if pag.parou_por is not None:
-                    motivo, detalhe = olx._MOTIVOS[pag.parou_por], pag.aviso
-                with coleta.cond:
-                    coleta.paginas.append(pag)
-                    coleta.cond.notify_all()
-        except Exception as e:  # falha no meio: devolve o que já tem
-            motivo = "falha_fonte"
-            detalhe = f"erro inesperado na pagina {paginas + 1} ({type(e).__name__}: {e})"
-        return montar_resultado(
-            self.fonte.FONTE, anuncios, paginas, time.monotonic() - inicio, total, coletados,
-            cortados, motivo, limites, detalhe, na_origem, nao_resolvidos, filtros_locais(busca, na_origem),
-            busca=busca,
-        )
+    na_origem = referencia.na_origem if referencia else []
+    resultado = montar_resultado(
+        sessao.fonte.FONTE, [a for p in paginas for a in p.anuncios], len(paginas), sum(sessao.tempos[:n]),
+        referencia.total_ads if referencia else None, sum(p.coletados for p in paginas), cortados, motivo,
+        limites, detalhe, na_origem, referencia.nao_resolvidos if referencia else [],
+        filtros_locais(sessao.busca, na_origem), busca=sessao.busca,
+    )
+    if paginas:
+        resultado.coletado_em = sessao.quando[len(paginas) - 1]  # hora em que foi coletado, não a de agora
+    return resultado
+
+
+def percorrer(servico: Servico, sessao: SessaoBusca, limites: LimitesBusca, com_ping: bool) -> Iterator[tuple]:
+    """Lê as páginas da sessão em ordem, até acabar, falhar ou bater os tetos de `limites` (o
+    de páginas e o de tempo). Gera ("espera",) enquanto aguarda (se `com_ping`), ("pagina", PaginaBusca)
+    a cada página e por fim ("fim", ResultadoBusca, veio_so_do_cache)."""
+    inicio, n, do_cache_tudo = time.monotonic(), 0, True
+    forcado: Optional[str] = None
+    falha: Optional[PaginaBusca] = None
+    executor = ThreadPoolExecutor(max_workers=1) if com_ping else None
+    try:
+        while True:
+            if executor is None:
+                pag, do_cache = servico.pagina(sessao, n + 1)
+            else:
+                futuro = executor.submit(servico.pagina, sessao, n + 1)
+                while True:
+                    try:
+                        pag, do_cache = futuro.result(timeout=ESPERA_PING)
+                        break
+                    except FuturoTimeout:
+                        yield ("espera",)
+            if pag.parou_por == olx.BLOQUEIO:
+                falha = pag
+                break
+            do_cache_tudo = do_cache_tudo and do_cache
+            n += 1
+            yield ("pagina", pag)
+            if pag.parou_por is not None:
+                break
+            if n >= limites.max_paginas:
+                forcado = "teto_paginas"
+                break
+            if time.monotonic() - inicio >= limites.tempo_max_segundos:
+                forcado = "teto_tempo"
+                break
+    finally:
+        if executor is not None:
+            executor.shutdown(wait=False)
+    yield ("fim", resultado_da_sessao(sessao, n, limites, forcado, falha), do_cache_tudo)
+
+
+def pagina_resposta(sessao: SessaoBusca, n: int, pag: PaginaBusca, do_cache: bool, dev: bool) -> dict[str, Any]:
+    """Resposta do "Ver mais": uma página, o total da fonte, quanto já foi entregue e se tem mais."""
+    falhou = pag.parou_por == olx.BLOQUEIO
+    alem_do_fim = not falhou and pag.numero != n  # pediu uma página depois da última
+    ate = len(sessao.paginas) if alem_do_fim else (n - 1 if falhou else n)
+    lidas = sessao.paginas[:ate]
+    entregues = sum(len(p.anuncios) for p in lidas)
+    cortados = sum(sum(p.cortados_por_filtro.values()) for p in lidas)
+    terminou = not falhou and pag.parou_por is not None
+    tem_mais = not terminou
+    no_teto = terminou and pag.parou_por == olx.MAX_PAGINAS
+    avisos = []
+    if pag.nao_resolvidos:
+        avisos.append(aviso_filtro_aproximado(sessao.fonte.FONTE, pag.nao_resolvidos, len(lidas), sessao.teto))
+    if falhou:
+        avisos.append(Aviso(
+            codigo="fonte_parcial",
+            mensagem=MSG_ERRO if not lidas else MSG_MAIS_FALHOU,
+            detalhe_tecnico=pag.aviso or "sem detalhe",
+        ))
+    corpo: dict[str, Any] = {
+        "pagina": n,
+        "anuncios": [] if (falhou or alem_do_fim) else [_anuncio_json(a) for a in pag.anuncios],
+        "tem_mais": tem_mais,
+        "proxima_pagina": None if terminou else (n if falhou else n + 1),
+        "entregues": entregues,
+        "coletados": pag.acumulado,
+        "total_na_fonte": pag.total_ads,
+        "cortados_por_filtro": dict(pag.cortados_por_filtro) if not (falhou or alem_do_fim) else {},
+        "motivo_parada": olx._MOTIVOS[pag.parou_por] if terminou else None,
+        "falhou": falhou,
+        "informacao": (
+            (MSG_ERRO if not lidas else MSG_MAIS_FALHOU) if falhou
+            else texto_informacao(entregues, pag.total_ads, tem_mais, cortados, no_teto)
+        ),
+        "avisos": _avisos_json(avisos, dev),
+        "filtros_na_origem": pag.na_origem,
+        "filtros_locais": filtros_locais(sessao.busca, pag.na_origem),
+        "busca": sessao.busca.model_dump(mode="json"),
+        "estado_aplicado": sessao.busca.estado or "todos",
+        "coletado_em": sessao.quando[min(n, len(sessao.quando)) - 1].isoformat() if sessao.quando else None,
+        "do_cache": do_cache,
+    }
+    return corpo
 
 
 def criar_app(
@@ -193,13 +289,14 @@ def criar_app(
     estado_padrao: str = config.ESTADO_PADRAO,
     limites: Optional[LimitesBusca] = None,
     cors_origens: Optional[list[str]] = None,
+    max_paginas_demanda: int = config.MAX_PAGINAS_SOB_DEMANDA,
 ) -> FastAPI:
     app = FastAPI(title="Garimpo Auto")
     app.add_middleware(
         CORSMiddleware, allow_origins=cors_origens if cors_origens is not None else config.CORS_ORIGENS,
         allow_methods=["GET"], allow_headers=["*"],
     )
-    servico = Servico(fonte, ttl, limites)
+    servico = Servico(fonte, ttl, limites, max_paginas_demanda)
     app.state.servico = servico
 
     @app.exception_handler(RequestValidationError)
@@ -246,37 +343,47 @@ def criar_app(
     def saude() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.get("/buscar/pagina")
+    def pagina(
+        busca: Busca = Depends(pedido), pagina: int = Query(1, ge=1, le=1000), dev: int = 0, atualizar: int = 0,
+    ) -> JSONResponse:
+        """Uma página por vez, para o "Ver mais". Pede a 1 e depois a `proxima_pagina` que vier na
+        resposta. Página já lida volta do cache na hora. Use atualizar=1 só na página 1."""
+        sessao = servico.obter(busca, atualizar == 1)
+        pag, do_cache = servico.pagina(sessao, pagina)
+        return JSONResponse(pagina_resposta(sessao, pagina, pag, do_cache, dev == 1))
+
     @app.get("/buscar")
     def buscar(busca: Busca = Depends(pedido), dev: int = 0, atualizar: int = 0) -> JSONResponse:
-        coleta, do_cache = servico.obter(busca, atualizar == 1)
-        with coleta.cond:
-            coleta.cond.wait_for(lambda: coleta.terminou)
-        if coleta.resultado is None:
+        sessao = servico.obter(busca, atualizar == 1)
+        resultado, do_cache = None, False
+        try:
+            for evento in percorrer(servico, sessao, servico.limites, com_ping=False):
+                if evento[0] == "fim":
+                    resultado, do_cache = evento[1], evento[2]
+        except Exception:
+            resultado = None
+        if resultado is None:
             return JSONResponse({"erro": MSG_ERRO}, status_code=500)
-        return JSONResponse(resultado_json(coleta.resultado, dev == 1, do_cache))
+        return JSONResponse(resultado_json(resultado, dev == 1, do_cache))
 
     @app.get("/buscar/stream")
     def stream(busca: Busca = Depends(pedido), dev: int = 0, atualizar: int = 0) -> StreamingResponse:
-        coleta, do_cache = servico.obter(busca, atualizar == 1)
+        sessao = servico.obter(busca, atualizar == 1)
 
         def eventos() -> Iterator[str]:
-            i = 0
-            while True:
-                pag = coleta.proxima(i, ESPERA_PING)
-                if pag is not None:
-                    yield sse("pagina", pagina_json(pag, servico.max_paginas()))
-                    i += 1
-                elif coleta.terminou and i >= len(coleta.paginas):
-                    break
-                else:
-                    yield ": aguardando\n\n"  # sinal de vida enquanto espera na fila
-            r = coleta.resultado
-            if r is None:
+            try:
+                for evento in percorrer(servico, sessao, servico.limites, com_ping=True):
+                    if evento[0] == "espera":
+                        yield ": aguardando\n\n"  # sinal de vida enquanto espera a vez ou a OLX
+                    elif evento[0] == "pagina":
+                        yield sse("pagina", pagina_json(evento[1], servico.limites.max_paginas))
+                    else:
+                        fim = resultado_json(evento[1], dev == 1, evento[2])
+                        fim.pop("anuncios")  # já foram nos eventos "pagina"
+                        yield sse("fim", fim)
+            except Exception:
                 yield sse("erro", {"mensagem": MSG_ERRO})
-                return
-            fim = resultado_json(r, dev == 1, do_cache)
-            fim.pop("anuncios")  # já foram nos eventos "pagina"
-            yield sse("fim", fim)
 
         return StreamingResponse(
             eventos(), media_type="text/event-stream",

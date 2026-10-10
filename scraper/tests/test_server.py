@@ -27,8 +27,8 @@ from tests.test_olx import anuncio_cru  # noqa: E402
 class CursorFalso:
     """Uma busca da fonte falsa andando uma página por chamada."""
 
-    def __init__(self, fonte, busca):
-        self.fonte, self.busca = fonte, busca
+    def __init__(self, fonte, busca, teto=None):
+        self.fonte, self.busca, self.teto = fonte, busca, teto
         self.numero, self.terminou = 0, False
 
     def esperar(self):
@@ -60,10 +60,11 @@ class CursorFalso:
             base = abs(hash(self.busca.texto)) % 100000 * 100
             ads = [olx.normalizar(anuncio_cru(base + n * 10 + k, seller={"name": "Fulano"})) for k in (1, 2)]
             ultima = n == f.paginas
-            self.numero, self.terminou = n, ultima
+            no_teto = not ultima and self.teto is not None and n >= self.teto
+            self.numero, self.terminou = n, ultima or no_teto
             return PaginaBusca(
                 fonte=f.FONTE, numero=n, anuncios=ads, acumulado=2 * n, total_ads=f.total,
-                parou_por=olx.TOTAL_ADS if ultima else None, coletados=2,
+                parou_por=olx.TOTAL_ADS if ultima else (olx.MAX_PAGINAS if no_teto else None), coletados=2,
             )
         finally:
             with f._lock:
@@ -87,7 +88,7 @@ class FonteFalsa:
         self.max_simultaneas = 0
 
     def abrir(self, busca, limites=None, *, teto=None):
-        return CursorFalso(self, busca)
+        return CursorFalso(self, busca, teto)
 
     def buscar(self, busca, limites=None):
         raise AssertionError("o servidor usa abrir")
@@ -208,7 +209,10 @@ def test_mesma_busca_simultanea_espera_a_coleta_em_andamento():
     for t in ts:
         t.join(10)
     assert len(fonte.buscas) == 1
-    assert len(respostas) == 2 and respostas[0] == respostas[1]
+    assert len(respostas) == 2
+    sem_origem = [{**r, "do_cache": None} for r in respostas]
+    assert sem_origem[0] == sem_origem[1]  # a mesma coleta
+    assert sorted(r["do_cache"] for r in respostas) == [False, True]  # quem esperou recebeu do cache
 
 
 def test_busca_diferente_espera_na_fila_so_uma_coleta_por_vez():
@@ -266,15 +270,30 @@ def test_detalhe_tecnico_so_com_dev():
     assert "detalhe_tecnico" not in fim_sem["avisos"][0] and "detalhe_tecnico" in fim_com["avisos"][0]
 
 
-def test_falha_da_fonte_no_meio_devolve_o_que_juntou_e_nao_fica_no_cache():
+def test_falha_da_fonte_no_meio_devolve_o_que_juntou():
     c, fonte = cliente(FonteFalsa(paginas=4, falha_apos=1))
     r = c.get("/buscar", params={"texto": "gol"})
     assert r.status_code == 200
     j = r.json()
     assert len(j["anuncios"]) == 2 and j["motivo_parada"] == "falha_fonte"
     assert "fonte_parcial" in [a["codigo"] for a in j["avisos"]]
-    c.get("/buscar", params={"texto": "gol"})
-    assert len(fonte.buscas) == 2  # falha não é guardada
+
+
+def test_falha_no_meio_guarda_as_paginas_boas_e_a_busca_seguinte_continua_de_onde_parou():
+    c, fonte = cliente(FonteFalsa(paginas=4, falha_apos=1, falhas=1))  # falha uma vez e depois volta
+    primeira = c.get("/buscar", params={"texto": "gol"}).json()
+    assert primeira["motivo_parada"] == "falha_fonte" and len(primeira["anuncios"]) == 2
+    segunda = c.get("/buscar", params={"texto": "gol"}).json()
+    assert segunda["motivo_parada"] == "acabaram_paginas" and len(segunda["anuncios"]) == 8
+    paginas = [p for _, p in fonte.paginas_pedidas]
+    assert paginas.count(1) == 1 and len(fonte.buscas) == 1  # a página 1 não foi baixada de novo
+
+
+def test_falha_na_primeira_pagina_nao_fica_no_cache():
+    c, fonte = cliente(FonteFalsa(paginas=3, falha_apos=0, falhas=1))
+    assert c.get("/buscar", params={"texto": "gol"}).json()["motivo_parada"] == "falha_fonte"
+    assert c.get("/buscar", params={"texto": "gol"}).json()["motivo_parada"] == "acabaram_paginas"
+    assert len(fonte.buscas) == 2  # abriu a busca de novo
 
 
 def test_excecao_da_fonte_no_meio_tambem_vira_falha_fonte():
@@ -416,3 +435,155 @@ def test_resposta_com_os_campos_novos_continua_sem_dado_de_anunciante():
     c, _ = cliente()
     texto = c.get("/buscar", params={"texto": "gol"}).text.lower()
     assert '"raw"' not in texto and "seller" not in texto and "fulano" not in texto
+
+
+# --- "Ver mais": /buscar/pagina, uma página por vez -----------------------------
+
+
+def pagina(c, n, **extra):
+    return c.get("/buscar/pagina", params={"texto": "gol", "pagina": n, **extra}).json()
+
+
+def test_primeira_pagina_traz_total_entregues_e_se_tem_mais():
+    c, _ = cliente(FonteFalsa(paginas=3, total=6))
+    j = pagina(c, 1)
+    assert j["pagina"] == 1 and len(j["anuncios"]) == 2
+    assert (j["total_na_fonte"], j["entregues"], j["tem_mais"], j["proxima_pagina"]) == (6, 2, True, 2)
+    assert j["falhou"] is False and j["motivo_parada"] is None and j["do_cache"] is False
+    assert j["estado_aplicado"] == "MG" and j["busca"]["ordenar"] == "recentes" and j["coletado_em"]
+    assert j["informacao"] == "Mostrando 2 de 6 carros. Toca em Ver mais pra ver o resto."
+
+
+def test_ver_mais_ate_o_fim_e_a_ultima_pagina_diz_que_acabou():
+    c, _ = cliente(FonteFalsa(paginas=3, total=6))
+    paginas = [pagina(c, n) for n in (1, 2, 3)]
+    assert [p["entregues"] for p in paginas] == [2, 4, 6]
+    assert [p["tem_mais"] for p in paginas] == [True, True, False]
+    assert paginas[2]["proxima_pagina"] is None and paginas[2]["motivo_parada"] == "acabaram_paginas"
+    assert paginas[2]["informacao"] == "Achei 6 carros. Esses são todos."
+    ids = [a["external_id"] for p in paginas for a in p["anuncios"]]
+    assert len(ids) == len(set(ids)) == 6
+
+
+def test_pagina_ja_lida_volta_do_cache_e_nunca_baixa_de_novo():
+    c, fonte = cliente()
+    pagina(c, 1)
+    segunda = pagina(c, 2)
+    de_novo = pagina(c, 2)
+    pagina(c, 1)
+    assert segunda["do_cache"] is False and de_novo["do_cache"] is True
+    assert [p for _, p in fonte.paginas_pedidas] == [1, 2]
+    assert de_novo["anuncios"] == segunda["anuncios"] and de_novo["coletado_em"] == segunda["coletado_em"]
+
+
+def test_so_a_primeira_pagina_sai_sem_pausa():
+    c, fonte = cliente()
+    pagina(c, 1)
+    assert fonte.esperas == 0
+    pagina(c, 2)
+    assert fonte.esperas == 1
+
+
+def test_pedir_pagina_adiante_le_as_do_meio_em_ordem_sem_repetir():
+    c, fonte = cliente(FonteFalsa(paginas=5, total=10))
+    j = pagina(c, 3)
+    assert j["pagina"] == 3 and j["entregues"] == 6
+    assert [p for _, p in fonte.paginas_pedidas] == [1, 2, 3]
+
+
+def test_depois_do_fim_nao_volta_anuncio_e_diz_que_nao_tem_mais():
+    c, fonte = cliente(FonteFalsa(paginas=2, total=4))
+    pagina(c, 2)
+    j = pagina(c, 9)
+    assert j["anuncios"] == [] and j["tem_mais"] is False and j["proxima_pagina"] is None
+    assert j["entregues"] == 4 and len(fonte.paginas_pedidas) == 2
+
+
+def test_falha_na_pagina_nao_apaga_as_anteriores_e_pedir_de_novo_tenta_a_mesma():
+    c, fonte = cliente(FonteFalsa(paginas=4, total=8, falha_apos=1, falhas=1))
+    assert pagina(c, 1)["falhou"] is False
+    ruim = pagina(c, 2)
+    assert ruim["falhou"] is True and ruim["anuncios"] == [] and ruim["entregues"] == 2
+    assert ruim["tem_mais"] is True and ruim["proxima_pagina"] == 2
+    assert [a["codigo"] for a in ruim["avisos"]] == ["fonte_parcial"]
+    assert ruim["informacao"] == server.MSG_MAIS_FALHOU
+    certa = pagina(c, 2)
+    assert certa["falhou"] is False and len(certa["anuncios"]) == 2 and certa["entregues"] == 4
+    assert [p for _, p in fonte.paginas_pedidas] == [1, 2, 2, ]  # a 1 não foi lida de novo
+
+
+def test_falha_logo_na_primeira_pagina_usa_a_mensagem_de_sempre():
+    c, _ = cliente(FonteFalsa(falha_apos=0))
+    j = pagina(c, 1)
+    assert j["falhou"] is True and j["informacao"] == server.MSG_ERRO and j["proxima_pagina"] == 1
+    assert j["avisos"][0]["mensagem"] == server.MSG_ERRO
+
+
+def test_ver_mais_e_o_stream_dividem_as_mesmas_paginas():
+    c, fonte = cliente(FonteFalsa(paginas=3, total=6))
+    pagina(c, 1)
+    pagina(c, 2)
+    ev = eventos(c.get("/buscar/stream", params={"texto": "gol"}).text)
+    assert [n for n, _ in ev] == ["pagina", "pagina", "pagina", "fim"]
+    assert sorted(p for _, p in fonte.paginas_pedidas) == [1, 2, 3]  # só a 3 foi lida de novo
+    assert ev[-1][1]["paginas_lidas"] == 3 and ev[-1][1]["do_cache"] is False
+    assert pagina(c, 3)["do_cache"] is True
+
+
+def test_teto_de_paginas_do_ver_mais_diz_que_a_busca_e_grande_e_nao_corta_calado():
+    c, _ = cliente(FonteFalsa(paginas=9, total=18), max_paginas_demanda=2)
+    pagina(c, 1)
+    j = pagina(c, 2)
+    assert j["tem_mais"] is False and j["motivo_parada"] == "teto_paginas" and j["entregues"] == 4
+    assert j["informacao"].startswith("Mostrei 4 de 18 carros.") and "refina" in j["informacao"]
+
+
+def test_atualizar_na_pagina_1_busca_de_novo_e_o_cache_passa_a_ser_o_novo():
+    c, fonte = cliente()
+    pagina(c, 1)
+    nova = pagina(c, 1, atualizar=1)
+    assert nova["do_cache"] is False and len(fonte.buscas) == 2
+    assert pagina(c, 1)["do_cache"] is True and len(fonte.buscas) == 2
+
+
+def test_ordenacao_e_filtro_diferentes_nao_dividem_paginas():
+    c, fonte = cliente()
+    pagina(c, 1)
+    pagina(c, 1, ordenar="relevancia")
+    pagina(c, 1, ano_min=2010)
+    assert len(fonte.buscas) == 3
+
+
+def test_cache_das_paginas_vence_no_mesmo_tempo_de_antes():
+    c, fonte = cliente(ttl=0.0)
+    pagina(c, 1)
+    pagina(c, 1)
+    assert len(fonte.buscas) == 2
+
+
+def test_pagina_tem_validacao_e_nunca_vaza_dado_de_anunciante():
+    c, _ = cliente()
+    assert c.get("/buscar/pagina", params={"texto": "gol", "pagina": 0}).status_code == 422
+    assert c.get("/buscar/pagina", params={"texto": "gol", "pagina": "x"}).json() == {"erro": server.MSG_PEDIDO}
+    texto = c.get("/buscar/pagina", params={"texto": "gol"}).text.lower()
+    assert '"raw"' not in texto and "fulano" not in texto and "seller" not in texto
+
+
+def test_detalhe_tecnico_da_falha_so_com_dev():
+    c, _ = cliente(FonteFalsa(falha_apos=0))
+    assert "detalhe_tecnico" not in pagina(c, 1)["avisos"][0]
+    assert "detalhe_tecnico" in pagina(c, 1, dev=1)["avisos"][0]
+
+
+@pytest.mark.parametrize("args,esperado", [
+    ((50, 1413, True, 0, False), "Mostrando 50 de 1.413 carros. Toca em Ver mais pra ver o resto."),
+    ((50, None, True, 0, False), "Mostrando 50 carros. Toca em Ver mais pra ver o resto."),
+    ((1, 1, False, 0, False), "Achei 1 carro. Esses são todos."),
+    ((0, 0, False, 0, False), "Não achei nenhum carro com esses filtros. Que tal afrouxar algum?"),
+    ((20, 40, True, 5, False), "Mostrando 20 de 40 carros. Toca em Ver mais pra ver o resto. Alguns ficaram de fora dos filtros que você pôs."),
+    ((1500, 28839, False, 0, True), "Mostrei 1.500 de 28.839 carros. Essa busca é grande demais pra mostrar tudo, refina por ano ou preço pra ver os outros."),
+])
+def test_texto_de_informacao_no_tom_do_garimpo(args, esperado):
+    from busca import texto_informacao
+    frase = texto_informacao(*args)
+    assert frase == esperado and not any(ch in frase for ch in "—–;:")

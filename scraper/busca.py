@@ -116,6 +116,40 @@ def filtrar_local(
 # ---------------------------------------------------------------------------
 
 
+def aviso_filtro_aproximado(fonte: str, nao_resolvidos: Sequence[str], paginas: int, teto: int) -> Aviso:
+    """Filtro (marca, modelo ou versão) que a fonte não entendeu e que só vale depois da coleta."""
+    nome, quais = fonte.upper(), " e ".join(nao_resolvidos)
+    return Aviso(
+        codigo="filtro_aproximado",
+        mensagem=f"Não achei {quais} na lista da {nome}, então filtrei por aqui. Pode ter ficado algum carro de fora.",
+        detalhe_tecnico=(
+            f"sem código na {nome} para: {quais}. Filtro aplicado só depois da coleta, "
+            f"nas {paginas} páginas lidas (teto {teto})"
+        ),
+    )
+
+
+def _milhar(n: int) -> str:
+    return f"{n:,}".replace(",", ".")
+
+
+def texto_informacao(entregues: int, total: Optional[int], tem_mais: bool, cortados: int, parou_no_teto: bool) -> str:
+    """Frase curta para a tela dizer quanto já mostrou, sem esconder que tem mais. `entregues` é o que a
+    pessoa já recebeu, `total` o que a fonte diz ter, `cortados` quantos os filtros daqui tiraram."""
+    corte = " Alguns ficaram de fora dos filtros que você pôs." if cortados else ""
+    if entregues == 0 and not tem_mais:
+        return "Não achei nenhum carro com esses filtros. Que tal afrouxar algum?"
+    de = f" de {_milhar(total)}" if total else ""
+    if tem_mais:
+        return f"Mostrando {_milhar(entregues)}{de} carros. Toca em Ver mais pra ver o resto.{corte}"
+    if parou_no_teto:
+        return (
+            f"Mostrei {_milhar(entregues)}{de} carros. Essa busca é grande demais pra mostrar tudo, "
+            f"refina por ano ou preço pra ver os outros.{corte}"
+        )
+    return f"Achei {_milhar(entregues)} {'carro' if entregues == 1 else 'carros'}. Esses são todos.{corte}"
+
+
 def _avisos(
     fonte: str, funil: Funil, motivo: str, paginas: int, tempo: float,
     limites: LimitesBusca, detalhe_falha: Optional[str], nao_resolvidos: Sequence[str] = (),
@@ -147,15 +181,7 @@ def _avisos(
             detalhe_tecnico=f"{execucao}, coletados {funil.coletados}. {detalhe_falha or 'sem detalhe'}",
         ))
     if nao_resolvidos:
-        quais = " e ".join(nao_resolvidos)
-        avisos.append(Aviso(
-            codigo="filtro_aproximado",
-            mensagem=f"Não achei {quais} na lista da {nome}, então filtrei por aqui. Pode ter ficado algum carro de fora.",
-            detalhe_tecnico=(
-                f"sem código na {nome} para: {quais}. Filtro aplicado só depois da coleta, "
-                f"nas {paginas} páginas lidas (teto {limites.max_paginas})"
-            ),
-        ))
+        avisos.append(aviso_filtro_aproximado(fonte, nao_resolvidos, paginas, limites.max_paginas))
     referencia = funil.total_na_fonte if funil.total_na_fonte is not None else funil.coletados
     if referencia > limites.limiar_muitos_resultados:
         avisos.append(Aviso(
