@@ -13,3 +13,18 @@ Páginas reais coletadas em 10 de outubro de 2026, guardadas só com o que o col
 | `olx_listagem.html` | página antiga com 5 anúncios, usada nos primeiros testes |
 
 Bloqueio nunca foi visto de verdade. Os testes simulam com 403, 429 e página sem `ads`.
+
+## Fixtures da FIPE
+
+A pasta `fipe/` guarda respostas reais da fipe.online lidas em 10 de outubro de 2026.
+
+- `referencias.json`
+- `marcas.json`
+- `modelos_volkswagen.json`
+- `anos_gol_trendline_1_0.json`
+- `anos_gol_novo_1_0_2p.json`
+- `anos_gol_comfortline_1_6.json`
+- `preco_gol_trendline_1_0_2016.json`
+
+Elas confirmam que o código `2016-5` significa ano 2016 e combustível Flex, e que o preço devolvido
+vem como texto em reais. Os testes nunca chamam a fonte real.

@@ -459,6 +459,33 @@ class Armazem:
 
         return self._usar(f)
 
+    def fipe_salvar_estado(self, referencia: str, tipo: str, chave: str, estado: dict[str, Any]) -> None:
+        texto = json.dumps(estado, ensure_ascii=False)
+
+        def f(cur: Any) -> None:
+            self._fipe_marcar_cache(cur, referencia, tipo, chave, texto)
+
+        self._usar(f)
+
+    def fipe_anuncios_para_aquecer(self, limite_paginas: int = 200) -> list[Anuncio]:
+        """Anúncios das páginas ainda guardadas, sem repetir. O script decide a prioridade."""
+        def f(cur: Any) -> list[Anuncio]:
+            cur.execute(
+                "SELECT conteudo FROM busca_pagina ORDER BY coletada_em DESC, sessao_id, numero LIMIT %s",
+                (limite_paginas,),
+            )
+            vistos: set[tuple[str, str]] = set()
+            anuncios: list[Anuncio] = []
+            for linha in cur.fetchall():
+                for anuncio in pagina_de_json(linha["conteudo"]).anuncios:
+                    chave = (anuncio.source, anuncio.external_id)
+                    if chave not in vistos:
+                        vistos.add(chave)
+                        anuncios.append(anuncio)
+            return anuncios
+
+        return self._usar(f)
+
     # -- sessões de busca ----------------------------------------------------
 
     def espiar(self, chave_hash: str, ttl_orfa: float) -> Optional[tuple[int, Optional[datetime]]]:

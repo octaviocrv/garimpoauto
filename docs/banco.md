@@ -67,7 +67,7 @@ Sem o banco ligado o servidor continua funcionando, só que guardando tudo na me
 
 ## As tabelas
 
-O banco tem 5 tabelas. Toda tabela tem um **id** (a chave primária): é o que identifica cada linha e não se repete.
+O banco tem 13 tabelas. As tabelas de busca vencem. As tabelas FIPE continuam guardadas entre as buscas.
 
 ### `busca_sessao`: a busca em andamento
 
@@ -127,6 +127,22 @@ Lista as migrations (mudanças no formato do banco) que já foram aplicadas. Vej
 | **`versao`** | Nome do arquivo da migration (ex.: `001_cache_de_busca`) |
 | `aplicada_em` | Quando foi aplicada |
 
+### Tabelas FIPE
+
+| Tabela | O que guarda |
+|---|---|
+| `fipe_referencia` | Os meses de referência conhecidos |
+| `fipe_marca` | As marcas de cada mês |
+| `fipe_modelo` | As versões de modelo de cada marca |
+| `fipe_ano` | Os anos e combustíveis de cada versão |
+| `fipe_preco` | O preço consultado por versão, ano e mês |
+| `fipe_cache_estado` | Quais listas já foram carregadas e o ponto do aquecimento |
+| `fipe_casamento` | O resultado do casamento de cada anúncio |
+| `fipe_requisicao_dia` | Quantas chamadas foram reservadas em cada dia |
+
+Essas tabelas não se ligam à sessão da busca. Quando uma sessão vence, o catálogo e os casamentos
+continuam disponíveis para a próxima página.
+
 ## Como as tabelas se ligam
 
 Sim, o banco é **relacional**: as tabelas se ligam por campos em comum, e dá para cruzar uma com a outra. O MariaDB é um banco desse tipo.
@@ -185,6 +201,7 @@ Na prática:
 
 - `001_cache_de_busca.sql`: sessão, páginas e execução.
 - `002_vistos.sql`: o que a busca já viu.
+- `003_fipe.sql`: catálogo mensal, casamentos e orçamento da FIPE.
 
 **Como funcionam:**
 
@@ -204,7 +221,7 @@ Ele diz o que aplicou, ou "nenhuma, já estava em dia". Se não conseguir falar 
 
 **Para mudar o banco:**
 
-- Crie um arquivo novo com o próximo número (ex.: `003_historico_de_preco.sql`).
+- Crie um arquivo novo com o próximo número (ex.: `004_historico_de_preco.sql`).
 - **Nunca edite uma migration que já foi aplicada.** Mudança nova é arquivo novo.
 - Prefira migrations pequenas, uma mudança por arquivo.
 - Rode `migrar.py` e confira com `show tables`.
