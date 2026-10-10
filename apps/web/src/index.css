@@ -171,6 +171,7 @@ a:focus-visible { outline: 3px solid #14b8a6; outline-offset: 3px; }
   background:
     radial-gradient(ellipse 70% 34% at 50% -8%, rgba(0, 240, 255, 0.1), transparent 70%),
     #050708;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
   isolation: isolate;
 }
 
@@ -244,8 +245,8 @@ a:focus-visible { outline: 3px solid #14b8a6; outline-offset: 3px; }
 
 .search-console__mascot img {
   height: 100%;
-  mix-blend-mode: screen;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center bottom;
   width: 100%;
 }
 

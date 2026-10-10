@@ -140,7 +140,7 @@ function Card({ a, sinais = SEM_SINAIS, agora, novo, demo, analise, onGarimpar }
             <span className="rounded-md border border-white/15 px-2 py-1 text-gray-400">{T.destaque}</span>
           )}
         </div>
-        <div className="mt-auto grid grid-cols-[1fr_auto] gap-2 pt-4">
+        <div className="mt-auto flex flex-col gap-2 pt-4">
           <button
             type="button"
             onClick={() => onGarimpar(a)}
@@ -152,11 +152,9 @@ function Card({ a, sinais = SEM_SINAIS, agora, novo, demo, analise, onGarimpar }
             href={a.url}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={T.verAnuncio}
-            title={T.verAnuncio}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-gray-400 transition-colors hover:border-cyan-300/30 hover:text-cyan-200"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 text-sm font-semibold text-gray-300 transition-colors hover:border-cyan-300/30 hover:bg-cyan-300/[0.04] hover:text-cyan-200"
           >
-            <ArrowUpRight size={17} aria-hidden="true" />
+            Acessar o anúncio <ArrowUpRight size={16} aria-hidden="true" />
           </a>
         </div>
       </div>

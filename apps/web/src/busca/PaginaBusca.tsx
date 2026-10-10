@@ -116,7 +116,7 @@ export function PaginaBusca() {
               <p className="mb-3 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">
                 <Sparkles size={14} aria-hidden="true" /> Radar de oportunidades
               </p>
-              <h1 id="search-title" className="max-w-2xl text-3xl font-extrabold leading-[1.08] tracking-[-0.045em] text-white sm:text-4xl">
+              <h1 id="search-title" className="max-w-2xl font-sans text-3xl font-extrabold leading-[1.08] tracking-[-0.045em] text-white sm:text-4xl">
                 Encontre o carro certo.<br /><span className="text-cyan-300">Antes de todo mundo.</span>
               </h1>
               <p className="mt-3 max-w-xl text-sm leading-relaxed text-gray-400">
@@ -125,7 +125,7 @@ export function PaginaBusca() {
             </div>
             <div className="search-console__mascot" aria-hidden="true">
               <div className="search-console__scan" />
-              <img src="/mascot/han-fullbody.jpeg" alt="" />
+              <img src="/mascot/hiro-full-body.svg" alt="" />
             </div>
           </div>
 
