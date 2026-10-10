@@ -5,7 +5,7 @@ GET /buscar         ResultadoBusca completo em JSON
 GET /buscar/stream  o mesmo por SSE: um evento "pagina" por página, "fim" com funil, motivo_parada
                     e avisos, e "erro" (em tom humano) se algo quebrar
 
-Parâmetros: texto (obrigatório), marca, modelo, versao, ano_min, ano_max, preco_min, preco_max,
+Parâmetros: texto (obrigatório, mas pode vir vazio: aí é a vitrine do estado), marca, modelo, versao, ano_min, ano_max, preco_min, preco_max,
 km_min, km_max, cambio, combustivel, anunciante (particular ou profissional), ordenar (recentes,
 menor_preco ou relevancia, padrão recentes), estado, regiao, cidade, dev, atualizar (1 ignora o
 cache e coleta de novo). Estado ausente usa config.ESTADO_PADRAO, "todos" busca no Brasil
@@ -514,7 +514,7 @@ def criar_app(
         return JSONResponse({"erro": MSG_ERRO}, status_code=500)
 
     def pedido(
-        texto: str = Query(...),
+        texto: str = Query(...),  # o parâmetro é obrigatório, mas pode vir vazio (texto=): é a vitrine do estado
         marca: Optional[str] = None,
         modelo: Optional[str] = None,
         versao: Optional[str] = None,

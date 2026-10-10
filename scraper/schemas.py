@@ -166,7 +166,8 @@ def _opcao(v: Any, validas: tuple[str, ...], nome: str) -> Any:
 
 class Busca(BaseModel):
     """O que o usuário pediu. Igual para todas as fontes; cada fonte usa o que aceita na URL
-    e o resto é filtrado depois da coleta (busca.filtrar_local). Só `texto` é obrigatório."""
+    e o resto é filtrado depois da coleta (busca.filtrar_local). Só `texto` é obrigatório, mas pode ser
+    vazio: busca sem texto é a vitrine do estado (ou só os filtros, se houver)."""
 
     texto: str
     marca: Optional[str] = None
@@ -189,11 +190,8 @@ class Busca(BaseModel):
 
     @field_validator("texto")
     @classmethod
-    def _texto_nao_vazio(cls, v: str) -> str:
-        v = " ".join(v.split())
-        if not v:
-            raise ValueError("texto da busca não pode ser vazio")
-        return v
+    def _texto_sem_espacos_sobrando(cls, v: str) -> str:
+        return " ".join(v.split())  # vazio vale: é a busca sem palavra, a vitrine
 
     @field_validator("marca", "modelo", "versao", "regiao", "zona", "cidade", mode="before")
     @classmethod

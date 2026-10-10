@@ -505,7 +505,7 @@ def montar_url(busca: Busca, pagina: int = 1, *, codigos: Optional[dict[str, str
     """Monta a URL de listagem só com os filtros da Busca que a OLX aceita: estado, região, ano,
     preço, km, câmbio, combustível, tipo de anunciante, ordenação e (com `codigos`) marca, modelo
     e versão. Cidade fica para filtrar_local. O km vai como o degrau da OLX que cobre o pedido (a OLX só
-    aceita degraus) e o valor exato é aplicado depois. Parâmetros da OLX: q, o, vb/vm/vv, ps/pe,
+    aceita degraus) e o valor exato é aplicado depois. Texto vazio não manda q. Parâmetros da OLX: q, o, vb/vm/vv, ps/pe,
     rs/re, ms/me, gb, fu, f, sp/sf."""
     caminho = URL_BASE
     if busca.estado:
@@ -517,7 +517,7 @@ def montar_url(busca: Busca, pagina: int = 1, *, codigos: Optional[dict[str, str
 
     km_max = _degrau_km(busca.km_max) if busca.km_max is not None else None
     km_min = (_degrau_km_min(busca.km_min) or None) if busca.km_min else None  # degrau 0 não filtra nada
-    params: list[tuple[str, Any]] = [("q", busca.texto)]
+    params: list[tuple[str, Any]] = [("q", busca.texto)] if busca.texto else []  # sem texto, a OLX lista a categoria toda
     params += [(k, v) for k, v in (codigos or {}).items()]  # vb, vm, vv
     if pagina > 1:
         params.append(("o", pagina))

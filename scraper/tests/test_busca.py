@@ -58,8 +58,7 @@ def test_so_o_texto_e_obrigatorio():
     assert all(getattr(b, c) is None for c in ("marca", "modelo", "estado", "regiao", "cidade", "km_max"))
     with pytest.raises(ValidationError):
         Busca()
-    with pytest.raises(ValidationError):
-        Busca(texto="   ")
+    assert Busca(texto="   ").texto == ""  # vazio vale agora, é a vitrine
 
 
 def test_estado_vazio_vira_none_e_sigla_vai_para_maiuscula():
