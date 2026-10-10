@@ -173,6 +173,8 @@ a:focus-visible { outline: 3px solid #14b8a6; outline-offset: 3px; }
   isolation: isolate;
 }
 
+.search-page { overflow-x: clip; }
+
 .search-header,
 .analysis-header {
   background: rgba(5, 8, 9, 0.92);
@@ -193,6 +195,101 @@ a:focus-visible { outline: 3px solid #14b8a6; outline-offset: 3px; }
   position: relative;
 }
 
+.search-console__copy {
+  position: relative;
+  z-index: 3;
+}
+
+.search-hologram {
+  height: 430px;
+  opacity: 0.76;
+  pointer-events: none;
+  position: absolute;
+  right: -16px;
+  top: -92px;
+  width: min(760px, 66vw);
+  z-index: 0;
+}
+
+.search-hologram svg {
+  height: 100%;
+  overflow: visible;
+  width: 100%;
+}
+
+.search-hologram__scene {
+  animation: search-holo-breathe 7s ease-in-out infinite;
+  fill: none;
+  stroke: #00f0ff;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 0.9;
+  vector-effect: non-scaling-stroke;
+}
+
+.search-hologram__distant {
+  opacity: 0.24;
+  stroke-width: 0.75;
+}
+
+.search-hologram__lit {
+  filter: url(#search-holo-glow);
+  stroke: #5ffbf1;
+}
+
+.search-hologram__outline {
+  animation: search-holo-flow 18s linear infinite;
+  fill: none;
+}
+
+.search-hologram__dots,
+.search-hologram__particles {
+  fill: #a5f9fc;
+  filter: url(#search-holo-glow);
+  stroke: none;
+}
+
+.search-hologram__dots { opacity: 0.72; }
+.search-hologram__particles { opacity: 0.78; }
+
+.search-hologram__radar {
+  fill: none;
+  opacity: 0.7;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.search-hologram__data text {
+  fill: rgba(165, 249, 252, 0.72);
+  font-family: var(--mono);
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  stroke: none;
+}
+
+.search-hologram__data .search-hologram__value {
+  fill: #a5f9fc;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.search-hologram__chart {
+  stroke: #5ffbf1;
+  stroke-width: 2;
+}
+
+.search-hologram__kanji text {
+  fill: transparent;
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  opacity: 0.38;
+  stroke: #5ffbf1;
+  stroke-width: 0.6;
+}
+
 .search-console__mascot {
   height: 440px;
   overflow: hidden;
@@ -201,6 +298,7 @@ a:focus-visible { outline: 3px solid #14b8a6; outline-offset: 3px; }
   right: 0;
   top: -72px;
   width: 380px;
+  z-index: 2;
 }
 
 
@@ -450,10 +548,19 @@ a:focus-visible { outline: 3px solid #14b8a6; outline-offset: 3px; }
   50% { opacity: 0.45; transform: scale(0.75); }
 }
 
+@keyframes search-holo-breathe {
+  0%, 100% { opacity: 0.72; }
+  50% { opacity: 0.9; }
+}
+
+@keyframes search-holo-flow {
+  to { stroke-dashoffset: -80; }
+}
+
 @media (max-width: 639px) {
   .search-console { padding: 20px 16px 0; }
   .search-console__intro { min-height: 180px; }
-  .search-console__intro > div:first-child { position: relative; z-index: 2; }
+  .search-hologram { height: 320px; opacity: 0.32; right: -120px; top: -54px; width: 520px; }
   .search-console__mascot { height: 320px; opacity: 0.22; right: -20px; top: -40px; width: 280px; }
   .search-console__form { flex-direction: column; }
   .search-console__submit { min-height: 52px; }
@@ -463,6 +570,7 @@ a:focus-visible { outline: 3px solid #14b8a6; outline-offset: 3px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hs-spin, .hs-caret, .hs-sug, .hs-fade-in, .hs-rise, .search-status__pulse, .vehicle-card__pulse { animation: none; }
+  .hs-spin, .hs-caret, .hs-sug, .hs-fade-in, .hs-rise, .search-status__pulse, .vehicle-card__pulse,
+  .search-hologram__scene, .search-hologram__outline { animation: none; }
   .hs-bar, .vehicle-card, .vehicle-card img { transition: none; }
 }

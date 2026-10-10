@@ -3,6 +3,7 @@ import { ArrowLeft, CarFront, ChevronDown, Gauge, RefreshCw, Search, SlidersHori
 import { CardCarro } from './CardCarro'
 import { Diagnostico } from './Diagnostico'
 import { Garimpar } from './Garimpar'
+import { SearchHologram } from './SearchHologram'
 import { DEMO } from './fipe'
 import {
   ANUNCIANTES, CAMBIOS, COMBUSTIVEIS, ESTADOS, FILTROS_DO_RASCUNHO, ORDENS, RASCUNHO_VAZIO, montarPedidoOuVitrine,
@@ -112,7 +113,8 @@ export function PaginaBusca() {
       <main className="relative mx-auto max-w-[90rem] px-4 py-7 sm:px-5 lg:px-8 lg:py-10">
         <section className="search-console" aria-labelledby="search-title">
           <div className="search-console__intro">
-            <div>
+            <SearchHologram />
+            <div className="search-console__copy">
               <p className="mb-4 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">
                 Central de oportunidades
               </p>
