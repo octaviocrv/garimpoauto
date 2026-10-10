@@ -143,3 +143,13 @@ def test_pagina_com_um_repetido_mas_cheia_nao_encerra():
     cursor.proxima()
     p2 = cursor.proxima()
     assert p2.coletados == 4 and p2.parou_por is None
+
+
+def test_pausa_do_ver_mais_pode_ser_menor_que_a_normal():
+    cursor, _, relogio = abrir([pagina_real("olx_civic_p1"), pagina_real("olx_civic_p2")])
+    cursor.proxima()
+    cursor.esperar((2.0, 4.0))
+    assert 2.0 <= relogio.esperas[0] <= 4.0
+    relogio.agora += 10
+    cursor.esperar((2.0, 4.0))  # a pessoa demorou 10 s para clicar
+    assert len(relogio.esperas) == 1

@@ -104,7 +104,7 @@ class SessaoBusca:
     def vigente(self, agora: float) -> bool:
         return self.valida_ate is None or agora < self.valida_ate
 
-    def pagina(self, n: int, ttl: float) -> tuple[PaginaBusca, bool]:
+    def pagina(self, n: int, ttl: float, pausa: Optional[tuple[float, float]] = None) -> tuple[PaginaBusca, bool]:
         """Página `n` (a partir de 1) e se veio do cache. Lê da fonte só o que falta, na ordem. Se
         a fonte falhar devolve uma página com parou_por "bloqueio" que NÃO é guardada (pedir de novo
         tenta ler essa mesma página). Se a busca acabou antes de `n`, devolve a última página."""
@@ -115,7 +115,7 @@ class SessaoBusca:
                 try:
                     if self.cursor is None:
                         self.cursor = self.fonte.abrir(self.busca, self.limites, teto=self.teto)
-                    self.cursor.esperar()  # pausa fora do semáforo, para não travar a busca dos outros
+                    self.cursor.esperar(pausa)  # pausa fora do semáforo, para não travar a busca dos outros
                     with self.semaforo:  # só uma leitura real por vez
                         pag = self.cursor.proxima()
                 except Exception as e:  # resposta estranha, falha de rede fora do retry, etc.
@@ -158,8 +158,8 @@ class Servico:
                 sessao = self.cache[chave] = SessaoBusca(chave, self.fonte, busca, self.limites, self.teto, self.semaforo)
             return sessao
 
-    def pagina(self, sessao: SessaoBusca, n: int) -> tuple[PaginaBusca, bool]:
-        pag, do_cache = sessao.pagina(n, self.ttl)
+    def pagina(self, sessao: SessaoBusca, n: int, pausa: Optional[tuple[float, float]] = None) -> tuple[PaginaBusca, bool]:
+        pag, do_cache = sessao.pagina(n, self.ttl, pausa)
         if pag.parou_por == olx.BLOQUEIO and not sessao.paginas:
             with self.trava:  # falha na 1ª página não fica no cache
                 if self.cache.get(sessao.chave) is sessao:
@@ -350,7 +350,7 @@ def criar_app(
         """Uma página por vez, para o "Ver mais". Pede a 1 e depois a `proxima_pagina` que vier na
         resposta. Página já lida volta do cache na hora. Use atualizar=1 só na página 1."""
         sessao = servico.obter(busca, atualizar == 1)
-        pag, do_cache = servico.pagina(sessao, pagina)
+        pag, do_cache = servico.pagina(sessao, pagina, config.PAUSA_VER_MAIS_SEGUNDOS)  # o clique já espaça os pedidos
         return JSONResponse(pagina_resposta(sessao, pagina, pag, do_cache, dev == 1))
 
     @app.get("/buscar")

@@ -31,9 +31,10 @@ class CursorFalso:
         self.fonte, self.busca, self.teto = fonte, busca, teto
         self.numero, self.terminou = 0, False
 
-    def esperar(self):
+    def esperar(self, pausa=None):
         if self.numero > 0:
             self.fonte.esperas += 1
+            self.fonte.pausas.append(pausa)
 
     def proxima(self):
         f = self.fonte
@@ -82,6 +83,7 @@ class FonteFalsa:
         self.buscas = []  # uma entrada por busca aberta
         self.paginas_pedidas = []  # (texto, página) de cada leitura real
         self.esperas = 0
+        self.pausas = []  # a pausa pedida em cada espera (None = a normal da busca)
         self.entrou = threading.Event()
         self._lock = threading.Lock()
         self._ativas = 0
@@ -587,3 +589,13 @@ def test_texto_de_informacao_no_tom_do_garimpo(args, esperado):
     from busca import texto_informacao
     frase = texto_informacao(*args)
     assert frase == esperado and not any(ch in frase for ch in "—–;:")
+
+
+def test_ver_mais_usa_a_pausa_curta_e_o_stream_a_normal():
+    c, fonte = cliente(FonteFalsa(paginas=4, total=8))
+    pagina(c, 1)
+    pagina(c, 2)
+    assert fonte.pausas == [(2.0, 4.0)]
+    c2, fonte2 = cliente(FonteFalsa(paginas=3, total=6))
+    c2.get("/buscar/stream", params={"texto": "gol"})
+    assert fonte2.pausas == [None, None]  # None: pausa de LimitesBusca (6 a 14 s)

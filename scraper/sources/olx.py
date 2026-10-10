@@ -708,11 +708,11 @@ class CursorOlx:
         self._na_origem: list[str] = []
         self._nao_resolvidos: list[str] = []
 
-    def esperar(self) -> None:
-        """Pausa da 2ª página em diante. A 1ª não espera."""
+    def esperar(self, pausa: Optional[tuple[float, float]] = None) -> None:
+        """Pausa da 2ª página em diante. A 1ª não espera. `pausa` (mínimo, máximo) troca a de LimitesBusca."""
         if self._ultimo_pedido is None:
             return
-        alvo = random.uniform(*self.limites.pausa_entre_paginas_segundos)
+        alvo = random.uniform(*(pausa or self.limites.pausa_entre_paginas_segundos))
         falta = alvo - (self._relogio() - self._ultimo_pedido)
         if falta > 0:
             self._dormir(falta)
