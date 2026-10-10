@@ -73,10 +73,34 @@ Busca "fiat argo" em MG, mais recentes, páginas 1 a 30 com a pausa normal, sem 
 - **O total da OLX fica um pouco acima do que ela lista:** 1.411 a 1.413 no fim, contra 1.360 listados (cerca de 3,6% a menos). Não sei explicar a diferença. Pode ser anúncio que sai do ar durante a leitura ou item contado e não listado. O total oscilou entre 1.411 e 1.413 durante a leitura.
 - **Total confere com o site:** a página 1 mostra "1 - 50 de 1.413 resultados" no texto, e nós lemos `totalOfAds` 1.413.
 - **Repetido por lista deslocada apareceu de verdade:** 5 páginas vieram com 49 novos em vez de 50 (um anúncio já visto reapareceu), e o tratamento por `listId` descartou todos.
-- **Teto da OLX:** não apareceu nenhum nesta busca, porque a lista acabou antes (página 28). Para buscas muito grandes (como "onix", 28 mil) o teto continua desconhecido além da página 30.
+- **Teto da OLX:** não apareceu nenhum nesta busca, porque a lista acabou antes (página 28). Veja os testes de confiança abaixo para buscas gigantes.
 - **Ajuste feito por causa do teste:** página menor que a 1ª agora conta como a última, em vez de gastar uma leitura extra para descobrir.
 
 ## Tempos medidos (OLX real)
 - Página 1: cerca de 2 s (1,8 s no teste pelo servidor).
 - Página já lida: cerca de 20 ms.
 - Página 2 clicada logo depois da 1: cerca de 8 s (a pausa de 6 a 14 s valendo).
+
+## Testes de confiança (10 de outubro de 2026)
+
+### 1. Os dados batem com o anúncio no site?
+Sim. Peguei 10 anúncios da página 1 de "fiat argo" em MG e abri a página de cada um. Em **10 de 10** bateram id, preço, ano, km e cidade. O MCP de detalhe da OLX não serve para essa conferência (devolve o valor da parcela como se fosse o preço e não traz ano nem km), então a conferência foi feita lendo a própria página do anúncio.
+
+### 2. De onde vem a diferença entre o total da OLX e o que ela lista?
+Não é culpa da coleta. A OLX **conta mais anúncios do que entrega** nas páginas, e isso aparece sempre que a busca é grande:
+
+| Busca (MG) | Total que a OLX diz | Listados até a página vazia |
+|---|---|---|
+| fiat argo, tudo | 1.411 a 1.413 | 1.360 (96,4%) |
+| fiat argo, ano 2026 | 404 | 394 |
+| fiat argo, ano 2025 | 425 | 390 (a página 8 veio com 40 e a 9 vazia) |
+| fiat argo, 2023, 2022, 2021, 2020, 2019, 2018 | 139, 92, 73, 76, 41, 50 | todos |
+| onix, tudo | 3.357 | 3.237 (96,4%) |
+
+- Buscas pequenas (até cerca de 140 resultados) listam tudo. Nas grandes sobram uns 3% a 8%.
+- Cortar a busca em fatias por ano não recupera quase nada (a soma das fatias listou 1.366 contra 1.360).
+- Não é anúncio agrupado (`matchingAds` vem vazio), não é item sem `listId` (só propaganda sem id) e não é repetido nosso (no máximo 1 por página, e todos eram repetidos de verdade).
+- O que falta é anúncio contado no total e que a OLX não serve em página nenhuma. Não sei o motivo, só que acontece do lado dela.
+
+### 3. Existe teto de páginas?
+Não apareceu um teto fixo. Em "onix" (MG, 3.357 resultados) a OLX serve até a **página 65**, que vem com 37 anúncios (3.237 no total). A página 66 em diante responde 200 com a lista vazia e nenhuma mensagem (sem erro, sem bloqueio). Páginas 30 e 60 vieram cheias. Ou seja, a lista acaba sozinha, perto de 96% do total. O padrão `GARIMPO_MAX_PAGINAS_SOB_DEMANDA=30` corta a busca antes disso em buscas grandes.
