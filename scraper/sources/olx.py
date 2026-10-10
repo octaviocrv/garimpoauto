@@ -216,6 +216,15 @@ def _imagens(ad: dict) -> list[str]:
     return links
 
 
+def _nota_do_anunciante(ad: dict, profissional: Optional[bool]) -> Optional[float]:
+    """Nota do Google do anunciante (de 0 a 5). Só vale para anunciante profissional.
+    De particular, ou se o valor não for um número entre 0 e 5, devolve None."""
+    nota = ad.get("userGoogleRating")
+    if profissional is not True or isinstance(nota, bool) or not isinstance(nota, (int, float)):
+        return None
+    return float(nota) if 0 <= nota <= 5 else None
+
+
 def normalizar(ad: dict) -> Anuncio:
     """Item cru da OLX -> modelo único. Campo vazio vira None, nada é inventado."""
     props = _propriedades(ad)
@@ -228,6 +237,10 @@ def normalizar(ad: dict) -> Anuncio:
         cidade, bairro = _texto(cidade), _texto(resto)
 
     portas = _numero(props.get("doors"))
+    profissional = ad.get("professionalAd") if isinstance(ad.get("professionalAd"), bool) else None
+    raw = _sem_dados_de_anunciante(ad)
+    if profissional is not True:
+        raw.pop("userGoogleRating", None)  # nota de particular não é guardada, nem no item cru
     anuncio = Anuncio(
         source=FONTE,
         external_id=str(ad["listId"]),
@@ -246,11 +259,10 @@ def normalizar(ad: dict) -> Anuncio:
         bairro=bairro,
         estado=_texto(local.get("uf")),
         publicado_em=_data(ad.get("date")),
-        anunciante_profissional=ad.get("professionalAd")
-        if isinstance(ad.get("professionalAd"), bool)
-        else None,
+        anunciante_profissional=profissional,
+        nota_anunciante=_nota_do_anunciante(ad, profissional),
         imagens=_imagens(ad),
-        raw=_sem_dados_de_anunciante(ad),
+        raw=raw,
     )
     return anuncio.marcar_completude()
 

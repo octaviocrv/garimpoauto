@@ -30,6 +30,7 @@ class Anuncio:
     estado: Optional[str] = None  # sigla, ex.: "MG"
     publicado_em: Optional[datetime] = None  # data do anúncio na fonte, em UTC
     anunciante_profissional: Optional[bool] = None
+    nota_anunciante: Optional[float] = None  # nota do Google (0 a 5), só de anunciante profissional
     imagens: list[str] = field(default_factory=list)  # só os links
     incompleto: bool = False
     campos_faltando: list[str] = field(default_factory=list)

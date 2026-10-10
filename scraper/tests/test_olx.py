@@ -125,6 +125,7 @@ class ExtratorOffline(unittest.TestCase):
         self.assertEqual((a.cambio, a.combustivel, a.cor, a.portas), ("Automático", "Flex", "Preto", 4))
         self.assertEqual((a.cidade, a.bairro, a.estado), ("Belo Horizonte", "Dona Clara", "MG"))
         self.assertIs(a.anunciante_profissional, True)
+        self.assertEqual(a.nota_anunciante, 4.2)
         self.assertEqual(a.publicado_em.tzinfo, timezone.utc)
         self.assertTrue(a.imagens and all(i.startswith("https://") for i in a.imagens))
         self.assertFalse(a.incompleto)
@@ -168,6 +169,29 @@ class Normalizacao(unittest.TestCase):
         saida = json.dumps(olx.normalizar(cru).raw).lower()
         for proibido in ("fulano", "31999990000", "31988887777", "transactionalsellername"):
             self.assertNotIn(proibido, saida)
+
+    def test_nota_do_anunciante_so_de_profissional(self):
+        prof = olx.normalizar(anuncio_cru(10, professionalAd=True, userGoogleRating=4.6))
+        self.assertEqual(prof.nota_anunciante, 4.6)
+        self.assertEqual(prof.raw["userGoogleRating"], 4.6)
+        inteira = olx.normalizar(anuncio_cru(11, professionalAd=True, userGoogleRating=5))
+        self.assertEqual(inteira.nota_anunciante, 5.0)
+        self.assertIsInstance(inteira.nota_anunciante, float)
+
+        particular = olx.normalizar(anuncio_cru(12, professionalAd=False, userGoogleRating=4.9))
+        self.assertIsNone(particular.nota_anunciante)
+        self.assertNotIn("userGoogleRating", particular.raw)  # descartada também do item cru
+
+        sem_tipo = olx.normalizar(anuncio_cru(13, professionalAd=None, userGoogleRating=4.9))
+        self.assertIsNone(sem_tipo.nota_anunciante)
+        self.assertNotIn("userGoogleRating", sem_tipo.raw)
+
+    def test_nota_invalida_ou_ausente_vira_none(self):
+        for valor in (None, "4.5", True, 7, -1):
+            a = olx.normalizar(anuncio_cru(20, professionalAd=True, userGoogleRating=valor))
+            self.assertIsNone(a.nota_anunciante, valor)
+        sem_campo = olx.normalizar(anuncio_cru(21, professionalAd=True))
+        self.assertIsNone(sem_campo.nota_anunciante)
 
     def test_montar_url_com_filtros(self):
         url = olx.montar_url(
