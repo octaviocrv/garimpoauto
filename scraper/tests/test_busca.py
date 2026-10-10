@@ -94,11 +94,15 @@ def test_url_sem_estado_e_brasil_todo():
     assert "estado-" not in url
 
 
-def test_url_com_regiao_e_sem_filtros_locais():
-    b = Busca(texto="onix", estado="MG", regiao="belo-horizonte-e-regiao",
-              marca="Chevrolet", modelo="Onix", cidade="Contagem")
+def test_url_com_regiao_e_so_o_que_a_olx_nao_aceita_fica_de_fora():
+    b = Busca(texto="onix", estado="MG", regiao="belo-horizonte-e-regiao", marca="Chevrolet", modelo="Onix", cidade="Belo Horizonte")
     url = olx.montar_url(b)
-    assert url == f"{olx.URL_BASE}/estado-mg/belo-horizonte-e-regiao?q=onix&sf=1"  # marca/modelo/cidade não vão
+    assert url == f"{olx.URL_BASE}/estado-mg/belo-horizonte-e-regiao?q=onix&sf=1"  # marca e modelo só entram com os códigos, a cidade da capital não tem página
+
+
+def test_url_com_cidade_que_a_olx_tem_vai_ate_a_cidade():
+    b = Busca(texto="onix", estado="MG", regiao="belo-horizonte-e-regiao", cidade="Contagem")
+    assert olx.montar_url(b) == f"{olx.URL_BASE}/estado-mg/belo-horizonte-e-regiao/grande-belo-horizonte/contagem?q=onix&sf=1"
 
 
 @pytest.mark.parametrize("pedido, degrau", [(60000, "60000"), (55000, "60000"), (1, "5000"), (0, "0"), (99000, "100000"), (450000, "500000"), (160001, "180000")])

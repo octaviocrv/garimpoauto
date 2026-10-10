@@ -30,6 +30,7 @@ from urllib.parse import quote, urlencode
 from scrapling.fetchers import FetcherSession
 from scrapling.parser import Selector
 
+import localidades
 from busca import filtrar_local_contando, filtros_locais, marcar_repetidos, montar_resultado, normalizar_texto
 from config import LimitesBusca
 from schemas import Anuncio, Busca, PaginaBusca, ResultadoBusca
@@ -390,8 +391,8 @@ def _listar(sessao: Any, caminho: str, ritmo: _Ritmo, relogio: Callable[[], floa
 def resolver_codigos(
     sessao: Any, busca: Busca, ritmo: _Ritmo, relogio: Callable[[], float],
 ) -> tuple[dict[str, str], set[str], list[str]]:
-    """Acha os códigos que a OLX usa para a marca, o modelo e a versão pedidos.
-    Devolve (códigos vb/vm/vv, filtros resolvidos de vez, o que não foi entendido).
+    """Acha os códigos que a OLX usa para a marca, o modelo e a versão pedidos, e confere a região e a
+    cidade (veja resolver_local). Devolve (códigos vb/vm/vv, filtros resolvidos de vez, o que não foi entendido).
     Um filtro "resolvido de vez" não precisa mais do filtro local."""
     codigos: dict[str, str] = {}
     resolvidos: set[str] = set()
@@ -433,7 +434,9 @@ def resolver_codigos(
                 resolvidos.add("modelo")
         else:
             nao.append(f"a versão {versao_texto}")
-    return codigos, resolvidos, nao
+
+    _, local_resolvido, local_nao = resolver_local(busca)  # região e cidade, sem pedido nenhum à OLX
+    return codigos, resolvidos | local_resolvido, nao + local_nao
 
 
 # ---------------------------------------------------------------------------
@@ -453,6 +456,35 @@ def _degrau_km_min(km: int) -> Optional[int]:
     return max((d for d in _DEGRAUS_KM if d <= km), default=None)
 
 
+def resolver_local(busca: Busca) -> tuple[Optional[str], set[str], list[str]]:
+    """O que a OLX entende de região e cidade. Devolve (caminho depois de /estado-xx, filtros resolvidos
+    na origem, o que não foi entendido). O caminho é "regiao", ou "regiao/zona/cidade" quando a OLX tem
+    página da cidade. Região que a OLX não conhece NUNCA vai na URL (a OLX devolveria o Brasil todo sem
+    avisar). Cidade sem página própria continua filtrada depois da coleta."""
+    uf, caminho, resolvidos, nao = busca.estado, None, set(), []
+    regiao = None
+    if busca.regiao:
+        if not localidades.tem_dados(uf):
+            regiao = busca.regiao.strip("/")  # sem a lista da OLX, confia no que veio
+        else:
+            regiao = localidades.achar_regiao(uf, busca.regiao)
+        if regiao:
+            caminho = regiao
+            resolvidos.add("regiao")
+        else:
+            nao.append(f"a região {busca.regiao}")
+    if busca.cidade:
+        achada = localidades.achar_cidade(uf, busca.cidade) if uf else None
+        if achada and (regiao is None or regiao == achada[0]):
+            caminho = "/".join(achada)
+            resolvidos.update({"regiao", "cidade"} if regiao else {"cidade"})
+        else:
+            if not achada and uf:  # sem estado nem dá para procurar a cidade na lista da OLX
+                nao.append(f"a cidade {busca.cidade}")
+            # cidade de outra região ou sem página própria: segue a região (se tiver) e filtra a cidade aqui
+    return caminho, resolvidos, nao
+
+
 def montar_url(busca: Busca, pagina: int = 1, *, codigos: Optional[dict[str, str]] = None) -> str:
     """Monta a URL de listagem só com os filtros da Busca que a OLX aceita: estado, região, ano,
     preço, km, câmbio, combustível, tipo de anunciante, ordenação e (com `codigos`) marca, modelo
@@ -462,8 +494,9 @@ def montar_url(busca: Busca, pagina: int = 1, *, codigos: Optional[dict[str, str
     caminho = URL_BASE
     if busca.estado:
         caminho += f"/estado-{busca.estado.lower()}"
-        if busca.regiao:
-            caminho += f"/{busca.regiao.strip('/')}"
+        local = resolver_local(busca)[0]
+        if local:
+            caminho += f"/{local}"
 
     km_max = _degrau_km(busca.km_max) if busca.km_max is not None else None
     km_min = (_degrau_km_min(busca.km_min) or None) if busca.km_min else None  # degrau 0 não filtra nada
@@ -799,7 +832,7 @@ def abrir(
 def _filtros_na_origem(busca: Busca, resolvidos: set[str]) -> list[str]:
     """Nomes dos filtros pedidos que a OLX aplicou na própria busca."""
     pedidos = [
-        ("estado", busca.estado), ("regiao", busca.regiao),
+        ("estado", busca.estado),
         ("ano", busca.ano_min if busca.ano_min is not None else busca.ano_max),
         ("preco", busca.preco_min if busca.preco_min is not None else busca.preco_max),
         ("cambio", busca.cambio), ("combustivel", busca.combustivel), ("anunciante", busca.anunciante),

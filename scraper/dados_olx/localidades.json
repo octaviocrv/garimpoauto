@@ -1,0 +1,3315 @@
+{
+ "estados": {
+  "AC": {
+   "acre": {
+    "outras-cidades": [],
+    "rio-branco": []
+   }
+  },
+  "AL": {
+   "alagoas": {
+    "maceio": [
+     "gruta-de-lourdes",
+     "feitosa",
+     "clima-bom",
+     "jacintinho",
+     "jatiuca",
+     "santa-amelia",
+     "mangabeiras",
+     "santos-dumont",
+     "tabuleiro-do-martins",
+     "cruz-das-almas",
+     "santa-lucia",
+     "poco",
+     "barro-duro",
+     "serraria",
+     "petropolis",
+     "benedito-bentes",
+     "ponta-grossa",
+     "prado",
+     "cidade-universitaria",
+     "ponta-verde",
+     "centro",
+     "antares",
+     "farol"
+    ],
+    "outras-cidades": [
+     "arapiraca",
+     "marechal-deodoro",
+     "rio-largo"
+    ]
+   }
+  },
+  "AM": {
+   "leste-do-amazonas": {
+    "regiao-do-centro-amazonense": [],
+    "regiao-do-norte-amazonense": [],
+    "regiao-do-sudoeste-amazonense": [],
+    "regiao-do-sul-amazonense": []
+   },
+   "regiao-de-manaus": {
+    "manaus": [
+     "lirio-do-vale",
+     "colonia-santo-antonio",
+     "coroado",
+     "centro",
+     "cachoeirinha",
+     "armando-mendes",
+     "compensa",
+     "cidade-nova",
+     "santa-etelvina",
+     "ponta-negra",
+     "zumbi-dos-palmares",
+     "planalto",
+     "paz",
+     "alvorada",
+     "sao-jorge",
+     "flores",
+     "sao-francisco",
+     "jorge-teixeira",
+     "chapada",
+     "parque-10-de-novembro",
+     "petropolis",
+     "pc-14-de-janeiro",
+     "redencao",
+     "japiim",
+     "monte-das-oliveiras",
+     "nossa-senhora-das-gracas",
+     "colonia-terra-nova",
+     "distrito-ind",
+     "adrianopolis",
+     "santo-antonio",
+     "nova-esperanca",
+     "taruma",
+     "sao-jose-operario",
+     "aleixo",
+     "tancredo-neves",
+     "dom-pedro"
+    ],
+    "outras-cidades": [
+     "caapiranga"
+    ]
+   }
+  },
+  "AP": {
+   "amapa": {
+    "macapa": [
+     "central"
+    ],
+    "outras-cidades": []
+   }
+  },
+  "BA": {
+   "grande-salvador": {
+    "grande-salvador": [
+     "mata-de-sao-joao",
+     "vera-cruz",
+     "camacari",
+     "simoes-filho",
+     "candeias",
+     "lauro-de-freitas",
+     "dias-davila"
+    ],
+    "outras-cidades": [],
+    "salvador": [
+     "boca-do-rio",
+     "liberdade",
+     "cabula",
+     "ondina",
+     "itaigara",
+     "boa-vista-do-lobato",
+     "engenho-velho-de-brotas",
+     "cajazeiras",
+     "mata-escura",
+     "cosme-de-farias",
+     "garcia",
+     "ribeira",
+     "caminho-de-areia",
+     "rio-vermelho",
+     "federacao",
+     "acupe-de-brotas",
+     "paralela",
+     "imbui",
+     "alphaville",
+     "patamares",
+     "trobogy",
+     "7-de-abril",
+     "sao-marcos",
+     "stella-maris",
+     "pernambues",
+     "pituba",
+     "jaguaribe",
+     "caminho-das-arvores",
+     "periperi",
+     "centro",
+     "mussurunga",
+     "plataforma",
+     "pituacu",
+     "brotas",
+     "narandiba",
+     "horto-florestal",
+     "iapi",
+     "itapua",
+     "santa-cruz",
+     "cabula-vi",
+     "campinas-de-brotas",
+     "uruguai",
+     "valeria",
+     "stiep",
+     "comercio",
+     "matatu",
+     "jardim-cajazeiras",
+     "sao-caetano",
+     "candeal",
+     "costa-azul",
+     "barbalho",
+     "amaralina",
+     "graca",
+     "paripe",
+     "barra",
+     "sussuarana",
+     "jardim-das-margaridas",
+     "barreiras",
+     "piraja",
+     "fazenda-grande-do-retiro",
+     "castelo-branco"
+    ]
+   },
+   "regiao-de-feira-de-santana-e-alagoinhas": {
+    "todas-as-cidades": [
+     "feira-de-santana",
+     "alagoinhas"
+    ]
+   },
+   "regiao-de-juazeiro-e-jacobina": {
+    "todas-as-cidades": [
+     "juazeiro"
+    ]
+   },
+   "regiao-de-vitoria-da-conquista-e-barreiras": {
+    "todas-as-cidades": [
+     "vitoria-da-conquista"
+    ]
+   },
+   "sul-da-bahia": {
+    "todas-as-cidades": [
+     "porto-seguro",
+     "itabuna",
+     "ilheus"
+    ]
+   }
+  },
+  "CE": {
+   "fortaleza-e-regiao": {
+    "fortaleza": [
+     "jangurussu",
+     "floresta",
+     "praia-de-iracema",
+     "manuel-satiro",
+     "eng-luciano-cavalcante",
+     "joquei-clube",
+     "aerolandia",
+     "quintino-cunha",
+     "cajazeiras",
+     "joao-xxiii",
+     "barra-do-ceara",
+     "farias-brito",
+     "montese",
+     "pici",
+     "vila-velha",
+     "sao-gerardo",
+     "aldeota",
+     "pref-jose-walter",
+     "parangaba",
+     "lagoa-redonda",
+     "antonio-bezerra",
+     "parque-iracema",
+     "sao-joao-do-taupe",
+     "fatima",
+     "itaperi",
+     "cidade-dos-funcionarios",
+     "dionisio-torres",
+     "vicente-pinzon",
+     "passare",
+     "mondubim",
+     "joaquim-tavora",
+     "granja-portugal",
+     "centro",
+     "maraponga",
+     "cidade-2000",
+     "alvaro-weyne",
+     "vila-uniao",
+     "democrito-rocha",
+     "cambeba",
+     "messejana",
+     "guararapes",
+     "benfica",
+     "serrinha",
+     "antonio-diogo",
+     "bom-jardim",
+     "granja-lisboa",
+     "jose-bonifacio",
+     "jose-de-alencar",
+     "bela-vista",
+     "jardim-das-oliveiras",
+     "bonsucesso",
+     "jardim-iracema",
+     "jacarecanga",
+     "sapiranga",
+     "cj-ceara",
+     "coco",
+     "barroso",
+     "cristo-redentor",
+     "paupina",
+     "edson-queiroz",
+     "damas",
+     "parque-genibau",
+     "papicu",
+     "curio",
+     "parquelandia",
+     "henrique-jorge",
+     "canindezinho",
+     "meireles",
+     "monte-castelo"
+    ],
+    "grande-fortaleza": [
+     "caucaia",
+     "maranguape",
+     "pacatuba",
+     "itaitinga",
+     "maracanau",
+     "eusebio",
+     "horizonte",
+     "aquiraz"
+    ],
+    "outras-cidades": []
+   },
+   "regiao-de-juazeiro-do-norte-e-sobral": {}
+  },
+  "DF": {
+   "distrito-federal-e-regiao": {
+    "brasilia": [
+     "ra-xvii---riacho-fundo-i",
+     "ra-xv---recanto-das-emas",
+     "ra-x---guara",
+     "ra-xii---samambaia",
+     "ra-viii---nucleo-bandeirante",
+     "ra-xiv---sao-sebastiao",
+     "ra-iv---brazlandia",
+     "ra-vi---planaltina",
+     "ra-vii---paranoa",
+     "ra-xxx---vicente-pires",
+     "ra-xx---aguas-claras",
+     "ra-xix---candangolandia",
+     "ra-ix---ceilandia",
+     "ra-xxiv---park-way",
+     "ra-xxii---sudoeste-e-octogonal",
+     "ra-v---sobradinho",
+     "ra-xi---cruzeiro",
+     "ra-xxvii---jardim-botanico",
+     "ra-ii---gama",
+     "ra-xviii---lago-norte",
+     "ra-xxviii---itapoa",
+     "ra-i---brasilia",
+     "ra-xxi---riacho-fundo-ii",
+     "ra-xiii---santa-maria",
+     "ra-xvi---lago-sul",
+     "ra-iii---taguatinga"
+    ],
+    "outras-cidades": [
+     "formosa",
+     "novo-gama",
+     "valparaiso-de-goias",
+     "cidade-ocidental",
+     "santo-antonio-do-descoberto",
+     "luziania",
+     "aguas-lindas-de-goias"
+    ]
+   }
+  },
+  "ES": {
+   "norte-do-espirito-santo": {
+    "afonso-claudio-e-regiao": [
+     "domingos-martins"
+    ],
+    "guarapari-e-regiao": [
+     "guarapari"
+    ],
+    "outras-cidades": [
+     "serra",
+     "viana",
+     "cariacica"
+    ],
+    "regiao-de-colatina-e-nova-venecia": [
+     "colatina"
+    ],
+    "regiao-de-linhares-e-sao-mateus": [
+     "aracruz",
+     "linhares",
+     "sao-mateus"
+    ],
+    "santa-teresa-e-regiao": [],
+    "vila-velha": [
+     "praia-da-costa",
+     "gloria",
+     "jockey-de-itaparica",
+     "terra-vermelha",
+     "cobilandia",
+     "vale-encantado",
+     "soteco",
+     "pontal-das-garcas",
+     "argolas",
+     "centro",
+     "itapua",
+     "ataide",
+     "divino-espirito-santo",
+     "santa-ines",
+     "coqueiral-de-itaparica",
+     "jardim-marilandia",
+     "praia-de-itaparica",
+     "santos-dumont",
+     "aribiri"
+    ],
+    "vitoria": [
+     "praia-do-canto",
+     "bento-ferreira",
+     "santa-lucia",
+     "enseada-do-sua",
+     "centro",
+     "jardim-camburi",
+     "mata-da-praia",
+     "jardim-da-penha",
+     "maruipe"
+    ]
+   },
+   "sul-do-espirito-santo": {
+    "afonso-claudio-e-regiao": [],
+    "cachoeiro-de-itapemirim-e-regiao-sul": [
+     "cachoeiro-de-itapemirim"
+    ],
+    "guarapari-e-regiao": []
+   }
+  },
+  "GO": {
+   "grande-goiania-e-anapolis": {
+    "grande-goiania": [
+     "aparecida-de-goiania",
+     "aragoiania",
+     "bela-vista-de-goias",
+     "goianira",
+     "hidrolandia",
+     "senador-canedo",
+     "trindade"
+    ],
+    "outras-cidades": [
+     "alexania",
+     "anapolis",
+     "campestre-de-goias",
+     "santa-barbara-de-goias",
+     "vianopolis"
+    ],
+    "regiao-campinas": [
+     "cidade-jardim",
+     "st-campinas",
+     "st-coimbra",
+     "st-dos-funcionarios",
+     "vila-adelia",
+     "vila-santa-rita"
+    ],
+    "regiao-central": [
+     "st-leste-vila-nova",
+     "st-aeroporto",
+     "st-central",
+     "st-leste-universitario",
+     "st-morais",
+     "st-oeste",
+     "st-sul"
+    ],
+    "regiao-leste": [
+     "jd-novo-mundo"
+    ],
+    "regiao-macambira-e-cascavel": [
+     "st-andreia"
+    ],
+    "regiao-mendanha": [
+     "jardim-nova-esperanca",
+     "vila-joao-vaz"
+    ],
+    "regiao-noroeste": [
+     "res-recanto-do-bosque",
+     "st-parque-tremendao"
+    ],
+    "regiao-norte": [
+     "res-aldeia-do-vale",
+     "santa-genoveva",
+     "st-goiania-2"
+    ],
+    "regiao-oeste": [
+     "cj-vera-cruz",
+     "parque-oeste-ind"
+    ],
+    "regiao-sudeste": [
+     "jardins-verona",
+     "park-lozandes",
+     "res-g-g-clube",
+     "vila-alto-da-gloria"
+    ],
+    "regiao-sudoeste": [
+     "jardim-europa",
+     "jardim-atlantico",
+     "jardim-presidente",
+     "res-solar-bougainville",
+     "parque-anhanguera-ii",
+     "st-faicalville",
+     "st-sudoeste",
+     "vila-dos-alpes",
+     "vila-lucy",
+     "vila-maua",
+     "vila-rosa"
+    ],
+    "regiao-sul": [
+     "alto-da-gloria",
+     "jardim-america",
+     "jardim-goias",
+     "parque-amazonia",
+     "st-pedro-ludovico",
+     "st-bela-vista",
+     "st-bueno",
+     "st-marista",
+     "st-nova-suica"
+    ],
+    "vale-do-meia-ponte": [
+     "jardim-balneario-meia-ponte",
+     "st-urias-magalhaes"
+    ]
+   },
+   "regiao-de-rio-verde-e-caldas-novas": {
+    "todas-as-cidades": [
+     "corumbaiba",
+     "rio-verde"
+    ]
+   }
+  },
+  "MA": {
+   "regiao-de-imperatriz-e-caxias": {
+    "todas-as-cidades": [
+     "timon",
+     "imperatriz"
+    ]
+   },
+   "regiao-de-sao-luis": {
+    "outras-cidades": [
+     "sao-jose-de-ribamar",
+     "mata-sao-jose-de-ribamar",
+     "paco-do-lumiar"
+    ],
+    "sao-luis": [
+     "jardim-sao-cristovao",
+     "jardim-renascenca",
+     "vinhais",
+     "recanto-verde",
+     "cruzeiro-do-anil",
+     "cohama",
+     "cidade-olimpica",
+     "angelim",
+     "cohab-anil-iii",
+     "fatima",
+     "bequimao",
+     "anil",
+     "ponta-dareia",
+     "cidade-operaria",
+     "vila-embratel",
+     "cohab-anil-i",
+     "forquilha",
+     "calhau",
+     "jardim-sao-cristovao-ii",
+     "olho-dagua",
+     "centro",
+     "turu",
+     "sao-francisco",
+     "anjo-da-gda"
+    ]
+   }
+  },
+  "MG": {
+   "belo-horizonte-e-regiao": {
+    "barreiro": [
+     "flavio-marques-lisboa",
+     "cardoso",
+     "santa-cruz",
+     "milionarios",
+     "diamante",
+     "bonsucesso",
+     "tirol",
+     "lindeia",
+     "barreiro"
+    ],
+    "grande-belo-horizonte": [
+     "esmeraldas",
+     "sao-joaquim-de-bicas",
+     "ibirite",
+     "lagoa-santa",
+     "mateus-leme",
+     "sabara",
+     "vespasiano",
+     "santa-luzia",
+     "pedro-leopoldo",
+     "jaboticatubas",
+     "igarape",
+     "juatuba",
+     "mario-campos",
+     "nova-lima",
+     "ribeirao-das-neves",
+     "betim",
+     "sarzedo",
+     "contagem",
+     "brumadinho",
+     "sao-jose-da-lapa"
+    ],
+    "ouro-preto-e-cons-lafayete": [
+     "itabirito",
+     "conselheiro-lafaiete"
+    ],
+    "pampulha": [
+     "itapoa",
+     "liberdade",
+     "castelo",
+     "pampulha",
+     "trevo",
+     "bandeirantes",
+     "sao-luiz",
+     "ceu-azul",
+     "santa-terezinha",
+     "santa-monica",
+     "santa-branca",
+     "ouro-preto",
+     "jardim-atlantico",
+     "manacas",
+     "jardim-paqueta",
+     "dona-clara",
+     "santa-amelia",
+     "santa-rosa"
+    ],
+    "regiao-de-ipatinga": [
+     "ipatinga",
+     "joao-monlevade"
+    ],
+    "regiao-de-sete-lagoas": [
+     "7-lagoas"
+    ],
+    "venda-nova": [
+     "venda-nova",
+     "jardim-comerciarios",
+     "mantiqueira",
+     "rio-branco",
+     "parque-leblon",
+     "piratininga",
+     "candelaria",
+     "copacabana",
+     "sao-joao-batista"
+    ],
+    "zona-centro-sul": [
+     "santo-agostinho",
+     "sao-pedro",
+     "sion",
+     "centro",
+     "lourdes",
+     "barro-preto",
+     "anchieta",
+     "sao-lucas",
+     "belvedere",
+     "funcionarios",
+     "santo-antonio",
+     "luxemburgo",
+     "coracao-de-jesus",
+     "santa-lucia",
+     "carmo",
+     "sao-bento",
+     "cruzeiro",
+     "serra"
+    ],
+    "zona-da-mata": [],
+    "zona-leste": [
+     "boa-vista",
+     "floresta",
+     "santa-ines",
+     "santa-efigenia",
+     "santa-teresa",
+     "sagrada-familia"
+    ],
+    "zona-nordeste": [
+     "palmares",
+     "cachoeirinha",
+     "colegio-batista",
+     "cidade-nova",
+     "renascenca",
+     "silveira",
+     "uniao",
+     "jardim-vitoria",
+     "fernao-dias",
+     "ipiranga",
+     "sao-gabriel",
+     "piraja",
+     "goiania"
+    ],
+    "zona-noroeste": [
+     "jardim-montanhes",
+     "gloria",
+     "coracao-eucaristico",
+     "alipio-de-melo",
+     "carlos-prates",
+     "santo-andre",
+     "camargos",
+     "lagoinha",
+     "dom-bosco",
+     "padre-eustaquio",
+     "california",
+     "bonfim",
+     "serrano",
+     "caicaras",
+     "jardim-alvorada",
+     "aparecida",
+     "monsenhor-messias"
+    ],
+    "zona-norte": [
+     "heliopolis",
+     "tupi",
+     "planalto",
+     "floramar",
+     "sao-bernardo"
+    ],
+    "zona-oeste": [
+     "vista-alegre",
+     "estoril",
+     "havai",
+     "gutierrez",
+     "prado",
+     "salgado-filho",
+     "palmeiras",
+     "jardim-america",
+     "grajau",
+     "calafate",
+     "betania",
+     "nova-suissa",
+     "buritis",
+     "gameleira"
+    ]
+   },
+   "regiao-de-divinopolis": {
+    "regiao-central-mineira": [],
+    "regiao-de-divinopolis-e-formiga": [
+     "divinopolis",
+     "itauna"
+    ],
+    "regiao-de-sete-lagoas": [
+     "para-de-minas"
+    ]
+   },
+   "regiao-de-governador-valadares-e-teofilo-otoni": {
+    "manhuacu": [],
+    "regiao-de-governador-valadares": [
+     "governador-valadares"
+    ],
+    "regiao-de-ipatinga": [],
+    "regiao-de-teofilo-otoni": [
+     "teofilo-otoni"
+    ],
+    "vale-do-jequitinhonha": []
+   },
+   "regiao-de-juiz-de-fora": {
+    "barbacena-e-sao-joao-del-rei": [
+     "barbacena",
+     "sao-joao-del-rey"
+    ],
+    "regiao-de-juiz-de-fora": [
+     "juiz-de-fora"
+    ],
+    "regiao-de-muriae-uba-e-vicosa": [
+     "uba"
+    ]
+   },
+   "regiao-de-montes-claros-e-diamantina": {
+    "noroeste-de-minas": [],
+    "norte-de-minas": [],
+    "regiao-de-montes-claros": [
+     "montes-claros"
+    ],
+    "regiao-de-pirapora-e-curvelo": [],
+    "vale-do-jequitinhonha": []
+   },
+   "regiao-de-pocos-de-caldas-e-varginha": {
+    "pocos-de-caldas-e-pouso-alegre": [
+     "pocos-de-caldas",
+     "pouso-alegre"
+    ],
+    "regiao-de-itajuba": [
+     "itajuba",
+     "sao-lourenco"
+    ],
+    "regiao-de-lavras": [],
+    "regiao-de-passos": [],
+    "regiao-de-varginha-e-alfenas": [
+     "varginha"
+    ]
+   },
+   "regiao-de-uberlandia-e-uberaba": {
+    "alto-paranaiba": [
+     "patos-de-minas"
+    ],
+    "triangulo-mineiro": [
+     "monte-alegre-de-minas",
+     "uberaba",
+     "araguari",
+     "uberlandia"
+    ]
+   }
+  },
+  "MS": {
+   "mato-grosso-do-sul": {
+    "campo-grande": [
+     "jardim-tijuca",
+     "caioba",
+     "centro",
+     "jardim-centro-oeste",
+     "planalto",
+     "nasser",
+     "vila-taveiropolis",
+     "amambai",
+     "taquarussu",
+     "uniao",
+     "aero-rancho",
+     "nova-lima",
+     "vila-piratininga",
+     "universitario",
+     "santo-amaro",
+     "cel-antonino",
+     "tiradentes",
+     "monte-castelo"
+    ],
+    "corumba": [],
+    "dourados": [],
+    "outras-cidades": [],
+    "tres-lagoas": []
+   }
+  },
+  "MT": {
+   "regiao-de-cuiaba": {
+    "cuiaba": [
+     "cond-f-c-res",
+     "ribeirao-do-lipa",
+     "bela-vista"
+    ],
+    "outras-cidades": [
+     "varzea-grande"
+    ]
+   },
+   "regiao-de-rondonopolis-e-sinop": {
+    "todas-as-cidades": [
+     "rondonopolis",
+     "sinop"
+    ]
+   }
+  },
+  "PA": {
+   "regiao-de-belem": {
+    "belem": [
+     "cidade-velha",
+     "coqueiro",
+     "marco",
+     "telegrafo-sem-fio",
+     "reduto",
+     "maracangalha",
+     "parque-verde",
+     "cremacao",
+     "terra-firme",
+     "condor",
+     "marambaia",
+     "campina",
+     "sao-bras",
+     "tapana",
+     "sacramenta",
+     "tenone",
+     "pedreira",
+     "jurunas",
+     "cabanagem",
+     "canudos",
+     "parque-guajara",
+     "guama",
+     "mangueirao",
+     "umarizal",
+     "batista-campos",
+     "bengui",
+     "nazare",
+     "castanheira"
+    ],
+    "outras-cidades": [
+     "marituba",
+     "ananindeua",
+     "castanhal"
+    ]
+   },
+   "regiao-de-maraba": {
+    "todas-as-cidades": [
+     "maraba",
+     "parauapebas"
+    ]
+   },
+   "regiao-de-santarem": {
+    "todas-as-cidades": [
+     "santarem"
+    ]
+   }
+  },
+  "PB": {
+   "paraiba": {
+    "campina-grande-guarabira-e-regiao": [
+     "campina-grande"
+    ],
+    "joao-pessoa": [
+     "centro",
+     "varadouro",
+     "jaguaribe",
+     "mandacaru",
+     "estados",
+     "manaira",
+     "aeroclube",
+     "bessa",
+     "miramar",
+     "brisamar",
+     "jardim-oceania",
+     "tambau",
+     "portal-do-sol",
+     "castelo-branco",
+     "altiplano-cabo-branco",
+     "paratibe",
+     "planalto-boa-esperanca",
+     "bancarios",
+     "jardim-cidade-universitaria",
+     "mucumagro",
+     "valentina-de-figueiredo",
+     "cabo-branco",
+     "tambauzinho",
+     "mangabeira",
+     "torre",
+     "gramame",
+     "funcionarios-ii",
+     "joao-paulo-ii",
+     "ernesto-geisel",
+     "cruz-das-armas",
+     "industrias",
+     "oitizeiro",
+     "cuia",
+     "cristo-redentor",
+     "jose-americo-de-almeida",
+     "varjao",
+     "alto-do-mateus"
+    ],
+    "monteiro-picui-e-regiao": [],
+    "patos-sousa-e-regiao": [],
+    "santa-rita-bayeux-e-regiao": [
+     "santa-rita",
+     "conde",
+     "cabedelo"
+    ]
+   }
+  },
+  "PE": {
+   "grande-recife": {
+    "grande-recife": [
+     "camaragibe",
+     "abreu-e-lima",
+     "jaboatao-dos-guararapes",
+     "olinda",
+     "cabo-de-santo-agostinho",
+     "paulista",
+     "igarassu",
+     "sao-lourenco-da-mata"
+    ],
+    "outras-cidades": [
+     "tamandare",
+     "gravata",
+     "ipojuca",
+     "vitoria-de-santo-antao",
+     "caruaru"
+    ],
+    "recife": [
+     "boa-vista",
+     "boa-viagem",
+     "estancia",
+     "casa-forte",
+     "cidade-universitaria",
+     "prado",
+     "tejipio",
+     "tamarineira",
+     "poco-da-panela",
+     "campo-grande",
+     "monteiro",
+     "encruzilhada",
+     "ilha-do-leite",
+     "ilha-do-retiro",
+     "imbiribeira",
+     "casa-amarela",
+     "torre",
+     "madalena",
+     "iputinga",
+     "barro",
+     "pina",
+     "espinheiro",
+     "santo-amaro",
+     "macaxeira",
+     "gracas",
+     "parnamirim",
+     "apipucos",
+     "caxanga",
+     "cordeiro"
+    ]
+   },
+   "regiao-de-petrolina-e-garanhuns": {
+    "regiao-de-sao-francisco-pernambucano": [
+     "petrolina"
+    ],
+    "regiao-do-agreste-pernambucano": [
+     "garanhuns"
+    ],
+    "regiao-do-sertao-pernambucano": []
+   }
+  },
+  "PI": {
+   "regiao-de-picos-e-floriano": {
+    "todas-as-cidades": []
+   },
+   "regiao-de-teresina-e-parnaiba": {
+    "outras-cidades": [],
+    "teresina": [
+     "santa-isabel",
+     "vermelha",
+     "ininga",
+     "centro",
+     "horto",
+     "itarare",
+     "uruguai",
+     "joquei",
+     "sao-cristovao",
+     "morada-do-sol",
+     "fatima"
+    ]
+   }
+  },
+  "PR": {
+   "regiao-de-curitiba-e-paranagua": {
+    "bairro-novo": [
+     "umbara",
+     "ganchinho",
+     "sitio-cercado"
+    ],
+    "boa-vista": [
+     "boa-vista",
+     "santa-candida",
+     "bairro-alto",
+     "taruma",
+     "barreirinha",
+     "sao-lourenco",
+     "atuba",
+     "tingui",
+     "bacacheri",
+     "pilarzinho"
+    ],
+    "boqueirao": [
+     "xaxim",
+     "boqueirao",
+     "alto-boqueirao",
+     "hauer"
+    ],
+    "cajuru": [
+     "guabirotuba",
+     "jardim-das-americas",
+     "capao-da-imbuia",
+     "uberaba",
+     "cajuru"
+    ],
+    "cidade-industrial": [
+     "cidade-industrial"
+    ],
+    "fazendinha-portao": [
+     "lindoia",
+     "portao",
+     "parolin",
+     "fanny",
+     "vila-izabel",
+     "agua-verde",
+     "guaira",
+     "campo-comprido",
+     "santa-quiteria",
+     "fazendinha",
+     "novo-mundo"
+    ],
+    "grande-curitiba": [
+     "sao-jose-dos-pinhais",
+     "fazenda-rio-grande",
+     "tijucas-do-sul",
+     "pinhais",
+     "4-barras",
+     "araucaria",
+     "piraquara",
+     "almirante-tamandare",
+     "campina-grande-do-sul",
+     "colombo",
+     "campo-largo"
+    ],
+    "matriz": [
+     "bigorrilho",
+     "centro",
+     "jardim-social",
+     "batel",
+     "ahu",
+     "prado-velho",
+     "cristo-rei",
+     "cabral",
+     "sao-francisco",
+     "juveve",
+     "centro-civico",
+     "merces",
+     "alto-da-xv",
+     "reboucas",
+     "alto-da-gloria"
+    ],
+    "outras-cidades": [
+     "guaratuba",
+     "matinhos",
+     "pontal-do-parana",
+     "paranagua"
+    ],
+    "pinheirinho": [
+     "pinheirinho",
+     "campo-de-santana",
+     "tatuquara",
+     "capao-raso"
+    ],
+    "santa-felicidade": [
+     "mossungue",
+     "campina-do-siqueira",
+     "seminario",
+     "vista-alegre",
+     "santo-inacio",
+     "sao-braz",
+     "butiatuvinha",
+     "santa-felicidade"
+    ]
+   },
+   "regiao-de-foz-do-iguacu-e-cascavel": {
+    "regiao-de-cascavel": [
+     "cascavel"
+    ],
+    "regiao-de-foz-do-iguacu": [
+     "foz-do-iguacu",
+     "toledo"
+    ]
+   },
+   "regiao-de-francisco-beltrao-e-pato-branco": {
+    "centro-sul-paranaense": [
+     "pato-branco"
+    ],
+    "sudoeste-paranaense": []
+   },
+   "regiao-de-londrina": {
+    "centro-norte-paranaense": [
+     "apucarana",
+     "arapongas"
+    ],
+    "nordeste-paranaense": [],
+    "regiao-de-londrina": [
+     "rolandia",
+     "londrina",
+     "ibipora",
+     "cambe"
+    ]
+   },
+   "regiao-de-maringa": {
+    "centro-oeste-paranaense": [
+     "cianorte",
+     "campo-mourao"
+    ],
+    "norte-paranaense": [
+     "paranavai"
+    ],
+    "oeste-paranaense": [
+     "umuarama"
+    ],
+    "regiao-de-maringa": [
+     "maringa",
+     "marialva",
+     "sarandi"
+    ]
+   },
+   "regiao-de-ponta-grossa-e-guarapuava": {
+    "regiao-de-guarapuava": [
+     "guarapuava"
+    ],
+    "regiao-de-ponta-grossa-e-telemaco-borba": [
+     "ponta-grossa"
+    ],
+    "sudeste-paranaense": []
+   }
+  },
+  "RJ": {
+   "norte-do-estado-do-rio": {
+    "aperibe": [],
+    "araruama": [
+     "praia-seca",
+     "sao-vicente-de-paula-araruama-sao-vicente-de-paula",
+     "morro-grande-araruama-morro-grande"
+    ],
+    "armacao-dos-buzios": [
+     "baia-formosa"
+    ],
+    "arraial-do-cabo": [],
+    "bom-jardim": [],
+    "bom-jesus-do-itabapoana": [],
+    "cabo-frio": [
+     "tamoios-cabo-frio-tamoios",
+     "centro",
+     "braga",
+     "vila-nova",
+     "pero"
+    ],
+    "cambuci": [],
+    "campos-dos-goytacazes": [
+     "parque-turf-club",
+     "parque-rosario",
+     "centro"
+    ],
+    "cantagalo": [],
+    "carapebus": [],
+    "cardoso-moreira": [],
+    "carmo": [],
+    "casimiro-de-abreu": [],
+    "conceicao-de-macabu": [],
+    "cordeiro": [],
+    "duas-barras": [],
+    "iguaba-grande": [],
+    "italva": [],
+    "itaocara": [],
+    "itaperuna": [],
+    "laje-do-muriae": [],
+    "macae": [
+     "lagoa",
+     "centro",
+     "jardim-aeroporto",
+     "granja-dos-cavaleiros"
+    ],
+    "macuco": [],
+    "miracema": [],
+    "natividade": [],
+    "nova-friburgo": [
+     "centro"
+    ],
+    "porciuncula": [],
+    "quissama": [],
+    "rio-das-ostras": [
+     "recreio"
+    ],
+    "santa-maria-madalena": [],
+    "santo-antonio-de-padua": [],
+    "sao-fidelis": [],
+    "sao-francisco-de-itabapoana": [],
+    "sao-joao-da-barra": [],
+    "sao-jose-de-uba": [],
+    "sao-pedro-da-aldeia": [
+     "alecrim"
+    ],
+    "sao-sebastiao-do-alto": [],
+    "saquarema": [
+     "bacaxa-saquarema-bonsucesso",
+     "mombaca"
+    ],
+    "silva-jardim": [],
+    "sumidouro": [],
+    "trajano-de-morais": [],
+    "varre-sai": []
+   },
+   "rio-de-janeiro-e-regiao": {
+    "baixada-fluminense": [
+     "seropedica",
+     "sao-joao-de-meriti",
+     "queimados",
+     "duque-de-caxias",
+     "nilopolis",
+     "itaguai",
+     "nova-iguacu",
+     "belford-roxo"
+    ],
+    "centro": [
+     "santa-teresa",
+     "catete",
+     "gloria",
+     "centro"
+    ],
+    "itaborai-e-regiao": [
+     "rio-bonito",
+     "mage",
+     "itaborai",
+     "marica"
+    ],
+    "mangaratiba": [
+     "mangaratiba"
+    ],
+    "niteroi": [
+     "icarai",
+     "rio-do-ouro",
+     "piratininga",
+     "largo-da-batalha",
+     "itaipu",
+     "pendotiba",
+     "inga",
+     "centro",
+     "fonseca",
+     "sao-francisco",
+     "barreto",
+     "santa-rosa",
+     "camboinhas"
+    ],
+    "sao-goncalo": [
+     "rio-do-ouro",
+     "jardim-catarina",
+     "alcantara",
+     "centro",
+     "rocha",
+     "bandeirantes",
+     "maria-paula",
+     "porto-da-pedra",
+     "estrela-do-norte",
+     "colubande",
+     "ze-garoto",
+     "paraiso",
+     "arsenal",
+     "7-pontes",
+     "porto-novo",
+     "nova-cidade",
+     "mutua",
+     "barro-vermelho",
+     "neves"
+    ],
+    "teresopolis-e-regiao": [
+     "teresopolis",
+     "guapimirim",
+     "cachoeiras-de-macacu"
+    ],
+    "zona-norte": [
+     "pavuna",
+     "cascadura",
+     "higienopolis",
+     "olaria",
+     "benfica",
+     "riachuelo",
+     "engenho-de-dentro",
+     "sao-cristovao",
+     "inhauma",
+     "bonsucesso",
+     "madureira",
+     "abolicao",
+     "tijuca-e-regiao",
+     "piedade",
+     "anchieta",
+     "penha",
+     "del-castilho",
+     "iraja",
+     "engenho-novo",
+     "guadalupe",
+     "vicente-de-carvalho",
+     "rocha-miranda",
+     "ramos",
+     "vigario-geral",
+     "ilha-do-governador",
+     "bento-ribeiro",
+     "tomas-coelho",
+     "cachambi",
+     "meier",
+     "pilares",
+     "vila-da-penha",
+     "vista-alegre"
+    ],
+    "zona-oeste": [
+     "recreio",
+     "santa-cruz",
+     "barra-da-tijuca",
+     "sepetiba",
+     "realengo",
+     "campinho",
+     "bangu",
+     "jacarepagua",
+     "vila-valqueire",
+     "campo-grande",
+     "guaratiba"
+    ],
+    "zona-sul": [
+     "santa-teresa",
+     "catete",
+     "gloria",
+     "laranjeiras",
+     "leblon",
+     "gavea",
+     "jardim-botanico",
+     "humaita",
+     "lagoa",
+     "urca",
+     "ipanema",
+     "flamengo",
+     "botafogo",
+     "leme",
+     "copacabana",
+     "sao-conrado"
+    ]
+   },
+   "serra-angra-dos-reis-e-regiao": {
+    "3-rios": [],
+    "angra-dos-reis": [],
+    "areal": [],
+    "barra-do-pirai": [],
+    "barra-mansa": [
+     "centro"
+    ],
+    "comendador-levy-gasparian": [],
+    "engenheiro-paulo-de-frontin": [],
+    "itatiaia": [],
+    "mendes": [],
+    "miguel-pereira": [],
+    "paraiba-do-sul": [],
+    "parati": [],
+    "paty-do-alferes": [],
+    "petropolis": [
+     "centro",
+     "quitandinha",
+     "correas",
+     "pedro-do-rio",
+     "itaipava",
+     "bingen"
+    ],
+    "pinheiral": [],
+    "pirai": [],
+    "porto-real": [],
+    "quatis": [],
+    "resende": [],
+    "rio-claro": [],
+    "rio-das-flores": [],
+    "sao-jose-do-vale-do-rio-preto": [],
+    "sapucaia": [],
+    "valenca": [],
+    "vassouras": [],
+    "volta-redonda": [
+     "jardim-amalia",
+     "retiro",
+     "aterrado",
+     "centro"
+    ]
+   }
+  },
+  "RN": {
+   "rio-grande-do-norte": {
+    "natal": [
+     "pitimbu",
+     "cidade-da-esperanca",
+     "nossa-senhora-da-apresentacao",
+     "pajucara",
+     "capim-macio",
+     "candelaria",
+     "lagoa-azul",
+     "neopolis",
+     "tirol",
+     "petropolis",
+     "potengi",
+     "lagoa-nova",
+     "nossa-senhora-de-nazare",
+     "barro-vermelho",
+     "planalto",
+     "ponta-negra",
+     "cidade-nova",
+     "alecrim",
+     "felipe-camarao"
+    ],
+    "outras-cidades": [
+     "parnamirim",
+     "extremoz",
+     "mossoro",
+     "macaiba",
+     "nisia-floresta",
+     "sao-goncalo-do-amarante"
+    ]
+   }
+  },
+  "RO": {
+   "rondonia": {
+    "outras-cidades": [],
+    "porto-velho": [
+     "agenor-de-carvalho"
+    ]
+   }
+  },
+  "RR": {
+   "roraima": {
+    "boa-vista": []
+   }
+  },
+  "RS": {
+   "regioes-de-caxias-do-sul-e-passo-fundo": {
+    "regiao-de-carazinho": [],
+    "regiao-de-caxias-do-sul": [
+     "farroupilha",
+     "bento-goncalves",
+     "caxias-do-sul"
+    ],
+    "regiao-de-erechim": [
+     "erechim"
+    ],
+    "regiao-de-gramado-e-canela": [
+     "picada-cafe",
+     "nova-petropolis",
+     "gramado",
+     "canela"
+    ],
+    "regiao-de-nao-me-toque-e-soledade": [],
+    "regiao-de-passo-fundo": [
+     "passo-fundo"
+    ],
+    "regiao-de-vacaria": []
+   },
+   "regioes-de-pelotas-rio-grande-e-bage": {
+    "regiao-de-bage": [],
+    "sudeste-rio-grandense": [
+     "pelotas",
+     "rio-grande"
+    ]
+   },
+   "regioes-de-porto-alegre-torres-e-santa-cruz-do-sul": {
+    "campus-puc": [
+     "sao-jose",
+     "jardim-botanico",
+     "bom-jesus",
+     "jardim-do-salso",
+     "jardim-carvalho",
+     "partenon",
+     "santo-antonio"
+    ],
+    "centro": [
+     "cidade-baixa",
+     "independencia",
+     "centro-historico",
+     "farroupilha",
+     "bom-fim"
+    ],
+    "extremo-sul": [
+     "restinga",
+     "hipica",
+     "santa-tereza",
+     "aberta-dos-morros"
+    ],
+    "grande-porto-alegre": [
+     "estancia-velha",
+     "esteio",
+     "guaiba",
+     "gravatai",
+     "viamao",
+     "sapiranga",
+     "eldorado-do-sul",
+     "cachoeirinha",
+     "sapucaia-do-sul",
+     "ivoti",
+     "campo-bom",
+     "nova-santa-rita",
+     "2-irmaos",
+     "sao-leopoldo",
+     "portao",
+     "alvorada",
+     "novo-hamburgo",
+     "canoas"
+    ],
+    "leste": [
+     "vila-ipiranga",
+     "boa-vista",
+     "chacara-das-pedras",
+     "protasio-alves",
+     "tres-figueiras"
+    ],
+    "moinhos-de-vento": [
+     "santa-cecilia",
+     "rio-branco",
+     "floresta",
+     "higienopolis",
+     "bela-vista",
+     "mont-serrat",
+     "petropolis",
+     "auxiliadora",
+     "moinhos-de-vento"
+    ],
+    "norte": [
+     "humaita",
+     "jardim-itu-sabara",
+     "navegantes",
+     "vila-jardim",
+     "sao-geraldo",
+     "cristo-redentor",
+     "passo-dareia",
+     "santa-maria-goretti",
+     "rubem-berta",
+     "sao-joao",
+     "passo-das-pedras",
+     "sao-sebastiao",
+     "jardim-lindoia",
+     "sarandi"
+    ],
+    "outras-cidades": [
+     "capao-da-canoa",
+     "osorio",
+     "santa-cruz-do-sul",
+     "tramandai",
+     "xangri-la",
+     "imbe",
+     "encantado",
+     "venancio-aires",
+     "sao-sebastiao-do-cai",
+     "lajeado",
+     "estrela",
+     "torres"
+    ],
+    "praia-de-belas": [
+     "azenha",
+     "medianeira",
+     "santana",
+     "praia-de-belas",
+     "menino-deus"
+    ],
+    "sul": [
+     "gloria",
+     "espirito-santo",
+     "lageado",
+     "cristal",
+     "nonoai",
+     "vila-assuncao",
+     "vila-nova",
+     "cavalhada",
+     "tristeza",
+     "camaqua",
+     "ipanema",
+     "teresopolis"
+    ],
+    "ufrgs": [
+     "lomba-do-pinheiro",
+     "agronomia"
+    ]
+   },
+   "regioes-de-santa-maria-uruguaiana-e-cruz-alta": {
+    "noroeste-do-estado": [],
+    "norte-do-estado": [],
+    "oeste-do-estado": [],
+    "regiao-de-cruz-alta-e-ijui": [],
+    "regiao-de-santa-maria": [
+     "santa-maria"
+    ]
+   }
+  },
+  "SC": {
+   "florianopolis-e-regiao": {
+    "centro": [
+     "saco-dos-limoes",
+     "centro",
+     "agronomica"
+    ],
+    "continente": [
+     "coqueiros",
+     "canto",
+     "jardim-atlantico",
+     "capoeiras",
+     "estreito",
+     "abraao",
+     "balneario"
+    ],
+    "grande-florianopolis": [
+     "palhoca",
+     "sao-jose",
+     "biguacu",
+     "santo-amaro-da-imperatriz",
+     "governador-celso-ramos"
+    ],
+    "leste": [
+     "barra-da-lagoa",
+     "pantanal",
+     "lagoa-da-conceicao",
+     "trindade",
+     "itacorubi",
+     "corrego-grande",
+     "santa-monica"
+    ],
+    "norte": [
+     "jurere",
+     "jurere-internacional",
+     "cacupe",
+     "sao-joao-do-rio-vermelho",
+     "joao-paulo",
+     "santo-antonio-de-lisboa",
+     "canasvieiras",
+     "cachoeira-do-bom-jesus",
+     "ingleses-do-rio-vermelho",
+     "vargem-grande",
+     "saco-grande"
+    ],
+    "outras-cidades": [
+     "criciuma",
+     "icara",
+     "sombrio",
+     "garopaba",
+     "laguna",
+     "ararangua",
+     "tijucas",
+     "imbituba",
+     "tubarao"
+    ],
+    "sul": [
+     "campeche",
+     "rio-tavares",
+     "carianos",
+     "morro-das-pedras",
+     "ribeirao-da-ilha"
+    ]
+   },
+   "norte-de-santa-catarina": {
+    "regiao-de-joinville-e-norte-do-estado": [
+     "sao-francisco-do-sul",
+     "joinville",
+     "mafra",
+     "itaiopolis",
+     "jaragua-do-sul",
+     "araquari",
+     "guaramirim",
+     "sao-bento-do-sul"
+    ],
+    "regiao-do-vale-do-itajai": [
+     "luiz-alves",
+     "camboriu",
+     "brusque",
+     "balneario-picarras",
+     "itapema",
+     "porto-belo",
+     "barra-velha",
+     "blumenau",
+     "botuvera",
+     "navegantes",
+     "penha",
+     "itajai",
+     "rio-do-sul",
+     "bombinhas",
+     "balneario-camboriu",
+     "gaspar"
+    ]
+   },
+   "oeste-de-santa-catarina": {
+    "regiao-de-chapeco": [
+     "chapeco"
+    ],
+    "regiao-de-joacaba": [],
+    "regiao-de-xanxere-e-concordia": [
+     "concordia"
+    ],
+    "regioes-de-curitibanos-e-c-dos-lages": [
+     "lages"
+    ]
+   }
+  },
+  "SE": {
+   "sergipe": {
+    "aracaju": [
+     "inacio-barbosa",
+     "sao-conrado",
+     "soledade",
+     "porto-dantas",
+     "santos-dumont",
+     "sao-jose",
+     "getulio-vargas",
+     "industrial",
+     "luzia",
+     "santo-antonio",
+     "aeroporto",
+     "bugio",
+     "farolandia",
+     "siqueira-campos",
+     "ponto-novo",
+     "grageru",
+     "13-de-julho",
+     "jardins",
+     "santa-maria",
+     "jose-conrado-de-araujo",
+     "coroa-do-meio",
+     "aruana",
+     "cidade-nova",
+     "18-do-forte",
+     "olaria",
+     "suissa",
+     "jabotiana",
+     "centro",
+     "atalaia"
+    ],
+    "outras-cidades": [
+     "lagarto",
+     "barra-dos-coqueiros",
+     "itabaiana",
+     "sao-cristovao",
+     "estancia",
+     "nossa-senhora-do-socorro"
+    ]
+   }
+  },
+  "SP": {
+   "baixada-santista-e-litoral-sul": {
+    "7-barras": [],
+    "bertioga": [
+     "riviera-de-sao-lourenco"
+    ],
+    "cajati": [],
+    "cananeia": [],
+    "cubatao": [],
+    "eldorado": [],
+    "guaruja": [
+     "morro-do-maluf",
+     "jardim-las-palmas",
+     "vila-alzira",
+     "loteamento-joao-batista-juliao",
+     "balneario-cidade-atlantica",
+     "barra-funda",
+     "vila-luis-antonio",
+     "centro",
+     "balneario-praia-do-pernambuco",
+     "acapulco",
+     "parque-enseada",
+     "jardim-tres-marias"
+    ],
+    "iguape": [],
+    "ilha-comprida": [],
+    "itanhaem": [
+     "balneario-sao-jorge"
+    ],
+    "itariri": [
+     "ana-dias-itariri-ana-dias"
+    ],
+    "jacupiranga": [],
+    "juquia": [],
+    "miracatu": [],
+    "mongagua": [
+     "centro"
+    ],
+    "pariquera-acu": [],
+    "pedro-de-toledo": [],
+    "peruibe": [],
+    "praia-grande": [
+     "campo-da-aviacao",
+     "cidade-ocian",
+     "solemar",
+     "jardim-imperador",
+     "vila-assuncao",
+     "vila-guilhermina",
+     "vila-mirim",
+     "vilamar",
+     "canto-do-forte",
+     "vila-caicara",
+     "vila-tupi",
+     "tude-bastos",
+     "balneario-maracana",
+     "boqueirao"
+    ],
+    "registro": [],
+    "santos": [
+     "jose-menino",
+     "chico-de-paula",
+     "centro",
+     "ponta-da-praia",
+     "macuco",
+     "vila-matias",
+     "gonzaga",
+     "campo-grande",
+     "encruzilhada",
+     "vila-belmiro",
+     "estuario",
+     "embare",
+     "pompeia",
+     "marape",
+     "boqueirao",
+     "aparecida"
+    ],
+    "sao-vicente": [
+     "centro",
+     "itarare",
+     "vila-jockei-clube",
+     "vila-cascatinha",
+     "parque-sao-vicente"
+    ]
+   },
+   "grande-campinas": {
+    "aguai": [],
+    "aguas-da-prata": [],
+    "aguas-de-lindoia": [],
+    "aguas-de-sao-pedro": [],
+    "americana": [
+     "jardim-boer-i",
+     "centro",
+     "jardim-brasilia"
+    ],
+    "amparo": [],
+    "analandia": [],
+    "araras": [],
+    "artur-nogueira": [],
+    "caconde": [],
+    "campinas": [
+     "jardim-belo-horizonte",
+     "jardim-novo-campos-eliseos",
+     "jardim-guanabara",
+     "jardim-nova-europa",
+     "vila-nova",
+     "vila-lidia",
+     "jardim-campos-eliseos",
+     "parque-alto-taquaral",
+     "swiss-park",
+     "lt-c-s-conrado",
+     "jardim-chapadao",
+     "parque-jambeiro",
+     "vila-itapura",
+     "nova-campinas",
+     "jardim-antonio-von-zuben",
+     "jardim-brasil",
+     "cidade-satelite-iris",
+     "jardim-pauliceia",
+     "loteamento-parque-sao-martinho",
+     "centro",
+     "jardim-n-senhora-auxiliadora",
+     "cidade-universitaria",
+     "sao-bernardo",
+     "vila-brandina",
+     "parque-prado",
+     "lt-res-vila-bella",
+     "parque-res-vila-uniao",
+     "vila-proost-de-souza",
+     "parque-ind",
+     "jardim-myrian-moreira-da-costa",
+     "bairro-das-palmeiras",
+     "vila-padre-manoel-de-nobrega",
+     "jardim-guarani",
+     "jardim-bela-vista",
+     "jardim-garcia",
+     "jardim-eulina",
+     "jardim-proenca",
+     "fazenda-santa-candida",
+     "parque-xangrila",
+     "fazenda-monte-d-este",
+     "vila-marieta",
+     "bosque",
+     "taquaral",
+     "jardim-das-paineiras",
+     "jardim-santa-genebra",
+     "jardim-leonor",
+     "chacara-da-barra",
+     "jardim-do-lago",
+     "parque-via-norte",
+     "jardim-ipaussurama",
+     "vila-ind",
+     "lt-res-jaguari",
+     "mansoes-santo-antonio",
+     "parque-taquaral",
+     "jardim-conceicao",
+     "parque-sao-quirino",
+     "sousas",
+     "ponte-preta",
+     "jardim-flamboyant",
+     "chacara-sao-rafael",
+     "jardim-dos-oliveiras",
+     "vila-joao-jorge",
+     "jardim-do-lago-continuacao",
+     "botafogo",
+     "jardim-paraiso",
+     "chacara-primavera",
+     "jardim-amazonas",
+     "jardim-do-trevo",
+     "cambui",
+     "loteamento-alphaville-campinas",
+     "sitios-de-recreio-gramado",
+     "bonfim",
+     "alphaville-dom-pedro"
+    ],
+    "capivari": [],
+    "casa-branca": [],
+    "charqueada": [],
+    "conchal": [],
+    "cordeiropolis": [],
+    "corumbatai": [],
+    "cosmopolis": [],
+    "descalvado": [],
+    "divinolandia": [],
+    "elias-fausto": [],
+    "engenheiro-coelho": [],
+    "espirito-santo-do-pinhal": [],
+    "estiva-gerbi": [],
+    "holambra": [],
+    "hortolandia": [
+     "parque-ortolandia",
+     "jardim-amanda-ii",
+     "jardim-res-firenze",
+     "loteamento-remanso-campineiro",
+     "jardim-amanda-i"
+    ],
+    "indaiatuba": [
+     "jardim-morada-do-sol",
+     "jardim-dos-colibris",
+     "centro",
+     "rcr-c-i-viracopos-ii",
+     "vila-castelo-branco",
+     "colinas-do-mosteiro-de-itaici",
+     "parque-res-indaia",
+     "altos-da-bela-vista",
+     "cidade-nova-i",
+     "jardim-imperial",
+     "jardim-colonial",
+     "jardim-maringa"
+    ],
+    "ipeuna": [],
+    "iracemapolis": [],
+    "itapira": [],
+    "itirapina": [],
+    "itobi": [],
+    "jaguariuna": [],
+    "leme": [],
+    "limeira": [
+     "centro"
+    ],
+    "lindoia": [],
+    "louveira": [
+     "padre-sanches"
+    ],
+    "mococa": [],
+    "mogi-guacu": [
+     "jardim-ipe-viii"
+    ],
+    "mogi-mirim": [],
+    "mombuca": [],
+    "monte-alegre-do-sul": [
+     "centro",
+     "mostardas-monte-alegre-do-sul-centro"
+    ],
+    "monte-mor": [],
+    "nova-odessa": [],
+    "paulinia": [
+     "centro"
+    ],
+    "pedreira": [],
+    "piracicaba": [
+     "vila-rezende",
+     "jardim-sao-francisco",
+     "centro",
+     "nova-america",
+     "sao-dimas",
+     "nova-piracicaba",
+     "piracicamirim",
+     "alto",
+     "campestre",
+     "santa-rosa-ipes",
+     "pauliceia",
+     "santa-terezinha",
+     "paulista",
+     "vila-independencia"
+    ],
+    "pirassununga": [],
+    "porto-ferreira": [],
+    "rafard": [],
+    "rio-claro": [
+     "centro"
+    ],
+    "rio-das-pedras": [],
+    "saltinho": [],
+    "santa-barbara-doeste": [],
+    "santa-cruz-da-conceicao": [],
+    "santa-cruz-das-palmeiras": [],
+    "santa-gertrudes": [],
+    "santa-maria-da-serra": [],
+    "santa-rita-do-passa-4": [],
+    "santo-antonio-de-posse": [],
+    "santo-antonio-do-jardim": [],
+    "sao-joao-da-boa-vista": [],
+    "sao-jose-do-rio-pardo": [],
+    "sao-pedro": [],
+    "sao-sebastiao-da-grama": [],
+    "serra-negra": [],
+    "socorro": [],
+    "sumare": [
+     "centro",
+     "lt-ind-v-zeta"
+    ],
+    "tambau": [],
+    "tapiratiba": [],
+    "valinhos": [
+     "pinheiro",
+     "chacaras-sao-bento",
+     "roncaglia",
+     "chacaras-alpina",
+     "ortizes",
+     "joapiranga",
+     "distrito-ind"
+    ],
+    "vargem-grande-do-sul": []
+   },
+   "regiao-de-bauru-e-marilia": {
+    "2-corregos": [],
+    "aguas-de-santa-barbara": [],
+    "agudos": [],
+    "alvaro-de-carvalho": [],
+    "alvinlandia": [],
+    "anhembi": [],
+    "arandu": [],
+    "arco-iris": [],
+    "arealva": [],
+    "areiopolis": [],
+    "avai": [],
+    "avare": [],
+    "balbinos": [],
+    "bariri": [],
+    "barra-bonita": [],
+    "bastos": [],
+    "bauru": [
+     "vila-aviacao",
+     "centro"
+    ],
+    "bernardino-de-campos": [],
+    "bocaina": [],
+    "bofete": [],
+    "boraceia": [],
+    "borebi": [],
+    "botucatu": [],
+    "brotas": [],
+    "cabralia-paulista": [],
+    "cafelandia": [],
+    "campos-novos-paulista": [],
+    "canitar": [],
+    "cerqueira-cesar": [],
+    "chavantes": [],
+    "conchas": [],
+    "coronel-macedo": [],
+    "duartina": [],
+    "espirito-santo-do-turvo": [],
+    "fartura": [],
+    "fernao": [],
+    "galia": [],
+    "garca": [],
+    "getulina": [],
+    "guaicara": [],
+    "guaimbe": [],
+    "guaranta": [],
+    "herculandia": [],
+    "iacanga": [],
+    "iacri": [],
+    "iaras": [],
+    "ibirarema": [],
+    "igaracu-do-tiete": [],
+    "ipaussu": [],
+    "itai": [],
+    "itaju": [],
+    "itapui": [],
+    "itatinga": [],
+    "jau": [],
+    "julio-mesquita": [],
+    "lencois-paulista": [],
+    "lins": [],
+    "lucianopolis": [],
+    "lupercio": [],
+    "macatuba": [],
+    "manduri": [],
+    "marilia": [
+     "centro"
+    ],
+    "mineiros-do-tiete": [],
+    "ocaucu": [],
+    "oleo": [],
+    "oriente": [],
+    "oscar-bressane": [],
+    "ourinhos": [],
+    "paranapanema": [],
+    "pardinho": [],
+    "paulistania": [],
+    "pederneiras": [],
+    "pereiras": [],
+    "piraju": [],
+    "pirajui": [],
+    "piratininga": [],
+    "pompeia": [],
+    "pongai": [],
+    "pratania": [],
+    "presidente-alves": [],
+    "promissao": [],
+    "queiroz": [],
+    "quintana": [],
+    "reginopolis": [],
+    "ribeirao-do-sul": [],
+    "sabino": [],
+    "salto-grande": [],
+    "santa-cruz-do-rio-pardo": [],
+    "sao-manuel": [],
+    "sao-pedro-do-turvo": [],
+    "sarutaia": [],
+    "taguai": [],
+    "taquarituba": [],
+    "tejupa": [],
+    "timburi": [],
+    "torrinha": [],
+    "tupa": [],
+    "ubirajara": [],
+    "vera-cruz": []
+   },
+   "regiao-de-presidente-prudente": {
+    "adamantina": [],
+    "alfredo-marcondes": [],
+    "alto-alegre": [],
+    "alvares-machado": [],
+    "andradina": [],
+    "anhumas": [],
+    "aracatuba": [],
+    "assis": [],
+    "avanhandava": [],
+    "barbosa": [],
+    "bento-de-abreu": [],
+    "bilac": [],
+    "birigui": [],
+    "brauna": [],
+    "brejo-alegre": [],
+    "buritama": [],
+    "caiabu": [],
+    "caiua": [],
+    "candido-mota": [],
+    "castilho": [],
+    "clementina": [],
+    "coroados": [],
+    "dracena": [],
+    "echapora": [],
+    "emilianopolis": [],
+    "estrela-do-norte": [],
+    "euclides-da-cunha-paulista": [],
+    "flora-rica": [],
+    "florida-paulista": [],
+    "florinia": [],
+    "gabriel-monteiro": [],
+    "glicerio": [],
+    "guaracai": [],
+    "guararapes": [],
+    "iepe": [],
+    "ilha-solteira": [],
+    "indiana": [],
+    "inubia-paulista": [],
+    "irapuru": [],
+    "joao-ramalho": [],
+    "junqueiropolis": [],
+    "lavinia": [],
+    "lourdes": [],
+    "lucelia": [],
+    "luiziania": [],
+    "lutecia": [],
+    "maraba-paulista": [],
+    "maracai": [],
+    "mariapolis": [],
+    "martinopolis": [],
+    "mirandopolis": [],
+    "mirante-do-paranapanema": [],
+    "monte-castelo": [],
+    "murutinga-do-sul": [],
+    "nantes": [],
+    "narandiba": [],
+    "nova-guataporanga": [],
+    "nova-independencia": [],
+    "osvaldo-cruz": [],
+    "ouro-verde": [],
+    "pacaembu": [],
+    "palmital": [],
+    "panorama": [],
+    "paraguacu-paulista": [],
+    "parapua": [],
+    "pauliceia": [],
+    "pedrinhas-paulista": [],
+    "penapolis": [],
+    "pereira-barreto": [],
+    "piacatu": [],
+    "piquerobi": [],
+    "pirapozinho": [],
+    "planalto": [],
+    "platina": [],
+    "pracinha": [],
+    "presidente-bernardes": [],
+    "presidente-epitacio": [],
+    "presidente-prudente": [],
+    "presidente-venceslau": [],
+    "quata": [],
+    "rancharia": [],
+    "regente-feijo": [],
+    "ribeirao-dos-indios": [],
+    "rinopolis": [],
+    "rosana": [],
+    "rubiacea": [],
+    "sagres": [],
+    "salmourao": [],
+    "sandovalina": [],
+    "santa-mercedes": [],
+    "santo-anastacio": [],
+    "santo-antonio-do-aracangua": [],
+    "santo-expedito": [],
+    "santopolis-do-aguapei": [],
+    "sao-joao-do-pau-dalho": [],
+    "sud-mennucci": [],
+    "suzanapolis": [],
+    "taciba": [],
+    "tarabai": [],
+    "taruma": [],
+    "teodoro-sampaio": [],
+    "tupi-paulista": [],
+    "turiuba": [],
+    "valparaiso": [],
+    "zacarias": []
+   },
+   "regiao-de-ribeirao-preto": {
+    "alto-pora-pedregulho": [],
+    "americo-brasiliense": [],
+    "aramina": [],
+    "araraquara": [
+     "centro"
+    ],
+    "barrinha": [],
+    "batatais": [],
+    "boa-esperanca-do-sul": [],
+    "borborema": [],
+    "brodowski": [],
+    "buritizal": [],
+    "cajuru": [],
+    "candia-pontal": [],
+    "candido-rodrigues": [],
+    "capivari-da-mata-ituverava": [],
+    "cassia-dos-coqueiros": [],
+    "cravinhos": [],
+    "cristais-paulista": [],
+    "dobrada": [],
+    "dourado": [],
+    "dumont": [],
+    "fernando-prestes": [],
+    "franca": [
+     "centro"
+    ],
+    "gaviao-peixoto": [],
+    "guara": [],
+    "guariba": [],
+    "guatapara": [],
+    "ibate": [],
+    "ibitinga": [],
+    "igarapava": [],
+    "ipua": [],
+    "itapolis": [],
+    "itirapua": [],
+    "ituverava": [],
+    "jaboticabal": [],
+    "jardinopolis": [],
+    "jeriquara": [],
+    "luis-antonio": [],
+    "matao": [],
+    "miguelopolis": [],
+    "monte-alto": [],
+    "morro-agudo": [],
+    "motuca": [],
+    "nova-europa": [],
+    "nuporanga": [],
+    "orlandia": [],
+    "patrocinio-paulista": [],
+    "pedregulho": [],
+    "pitangueiras": [],
+    "pontal": [],
+    "pradopolis": [],
+    "restinga": [],
+    "ribeirao-bonito": [],
+    "ribeirao-corrente": [],
+    "ribeirao-preto": [
+     "campos-eliseos",
+     "jardim-botanico",
+     "jardim-dos-hibiscos",
+     "jardim-sao-luiz",
+     "jardim-paulistano",
+     "parque-sao-sebastiao",
+     "cond-buritis",
+     "ipiranga",
+     "jardim-canada",
+     "jardim-nova-alianca-sul",
+     "centro",
+     "cond-quinta-da-boa-vista",
+     "jardim-sumare",
+     "jardim-california",
+     "vila-seixas",
+     "nova-ribeirania",
+     "jardim-america",
+     "vila-monte-alegre",
+     "jardim-maria-goretti",
+     "nova-alianca",
+     "res-e-c-palmares",
+     "jardim-palma-travassos",
+     "bosque-das-juritis",
+     "cond-garden-ville",
+     "parque-ribeirao-preto",
+     "recreio-anhanguera",
+     "vila-tiberio",
+     "ribeirania",
+     "vila-do-golf",
+     "vila-virginia",
+     "parque-ind-lagoinha",
+     "cond-chacaras-itambe",
+     "planalto-verde",
+     "city-ribeirao",
+     "parque-dos-pinus",
+     "sumarezinho",
+     "santa-cruz-do-jose-jacques",
+     "jardim-paulista",
+     "jardim-anhanguera",
+     "jardim-iraja",
+     "alto-da-boa-vista",
+     "bonfim-paulista-ribeirao-preto"
+    ],
+    "rifaina": [],
+    "rincao": [],
+    "sales-oliveira": [],
+    "santa-cruz-da-esperanca": [],
+    "santa-ernestina": [],
+    "santa-lucia": [],
+    "santa-rosa-de-viterbo": [],
+    "santo-antonio-da-alegria": [],
+    "sao-benedito-da-cachoeirinha-ituverava": [],
+    "sao-carlos": [],
+    "sao-joaquim-da-barra": [],
+    "sao-jose-da-bela-vista": [],
+    "sao-simao": [],
+    "serra-azul": [],
+    "serrana": [],
+    "sertaozinho": [],
+    "tabatinga": [],
+    "taiuva": [],
+    "taquaritinga": [
+     "vila-negri"
+    ],
+    "trabiju": [],
+    "vista-alegre-do-alto": []
+   },
+   "regiao-de-sao-jose-do-rio-preto": {
+    "3-fronteiras": [],
+    "adolfo": [],
+    "altair": [],
+    "alvares-florence": [],
+    "americo-de-campos": [],
+    "aparecida-doeste": [],
+    "ariranha": [],
+    "aspasia": [],
+    "auriflama": [],
+    "bady-bassitt": [],
+    "balsamo": [],
+    "barretos": [],
+    "bebedouro": [],
+    "cajobi": [],
+    "cardoso": [],
+    "catanduva": [],
+    "catigua": [],
+    "cedral": [],
+    "colina": [],
+    "colombia": [],
+    "cosmorama": [],
+    "dirce-reis": [],
+    "dolcinopolis": [],
+    "elisiario": [],
+    "embauba": [],
+    "estrela-doeste": [],
+    "fernandopolis": [],
+    "floreal": [],
+    "gastao-vidigal": [],
+    "general-salgado": [],
+    "guaira": [],
+    "guapiacu": [],
+    "guaraci": [],
+    "guarani-doeste": [],
+    "guzolandia": [],
+    "ibira": [],
+    "icem": [],
+    "indiapora": [],
+    "ipigua": [],
+    "irapua": [],
+    "itajobi": [],
+    "jaborandi": [],
+    "jaci": [],
+    "jales": [],
+    "jose-bonifacio": [],
+    "macaubal": [],
+    "macedonia": [],
+    "magda": [],
+    "marapoama": [],
+    "marinopolis": [],
+    "mendonca": [],
+    "meridiano": [],
+    "mesopolis": [],
+    "mira-estrela": [],
+    "mirassol": [
+     "centro",
+     "ruilandia-mirassol"
+    ],
+    "mirassolandia": [],
+    "moncoes": [],
+    "monte-aprazivel": [],
+    "monte-azul-paulista": [],
+    "neves-paulista": [],
+    "nhandeara": [],
+    "nipoa": [],
+    "nova-alianca": [],
+    "nova-canaa-paulista": [],
+    "nova-castilho": [],
+    "nova-granada": [],
+    "nova-luzitania": [],
+    "novais": [],
+    "novo-horizonte": [],
+    "olimpia": [],
+    "onda-verde": [],
+    "orindiuva": [],
+    "ouroeste": [],
+    "palestina": [],
+    "palmares-paulista": [],
+    "palmeira-doeste": [],
+    "paraiso": [],
+    "paranapua": [],
+    "parisi": [],
+    "paulo-de-faria": [],
+    "pedranopolis": [],
+    "pindorama": [],
+    "pirangi": [],
+    "poloni": [],
+    "pontalinda": [],
+    "pontes-gestal": [],
+    "populina": [],
+    "potirendaba": [],
+    "riolandia": [],
+    "rubineia": [],
+    "sales": [],
+    "santa-adelia": [],
+    "santa-albertina": [],
+    "santa-clara-doeste": [],
+    "santa-fe-do-sul": [],
+    "santa-rita-doeste": [],
+    "santa-salete": [],
+    "santana-da-ponte-pensa": [],
+    "sao-francisco": [],
+    "sao-joao-das-duas-pontes": [],
+    "sao-joao-de-iracema": [],
+    "sao-jose-do-rio-preto": [
+     "boa-vista",
+     "sao-francisco",
+     "res-gaivota-i",
+     "jardim-redentor",
+     "jardins-de-athenas",
+     "centro",
+     "vila-redentora",
+     "vila-maceno",
+     "eldorado",
+     "jardim-tarraf-ii",
+     "res-quinta-do-golfe",
+     "parque-ind",
+     "higienopolis"
+    ],
+    "sebastianopolis-do-sul": [],
+    "severinia": [],
+    "tabapua": [],
+    "tanabi": [],
+    "terra-roxa": [],
+    "turmalina": [],
+    "ubarana": [],
+    "uchoa": [],
+    "uniao-paulista": [],
+    "urania": [],
+    "urupes": [],
+    "valentim-gentil": [],
+    "viradouro": [],
+    "vitoria-brasil": [],
+    "votuporanga": []
+   },
+   "regiao-de-sorocaba": {
+    "alambari": [],
+    "angatuba": [],
+    "apiai": [],
+    "aracoiaba-da-serra": [
+     "barreirinho"
+    ],
+    "barao-de-antonina": [],
+    "barra-do-chapeu": [],
+    "barra-do-turvo": [],
+    "boituva": [
+     "novo-mundo"
+    ],
+    "bom-sucesso-de-itarare": [],
+    "buri": [],
+    "campina-do-monte-alegre": [],
+    "capao-bonito": [],
+    "capela-do-alto": [],
+    "cerquilho": [],
+    "cesario-lange": [],
+    "guapiara": [],
+    "guarei": [],
+    "ibiuna": [],
+    "ipero": [],
+    "iporanga": [],
+    "itabera": [],
+    "itaoca": [],
+    "itapetininga": [
+     "centro"
+    ],
+    "itapeva": [],
+    "itapirapua-paulista": [],
+    "itaporanga": [],
+    "itarare": [],
+    "jumirim": [],
+    "laranjal-paulista": [],
+    "nova-campina": [],
+    "piedade": [],
+    "pilar-do-sul": [],
+    "porangaba": [],
+    "porto-feliz": [],
+    "quadra": [],
+    "ribeira": [],
+    "ribeirao-branco": [],
+    "ribeirao-grande": [],
+    "riversul": [],
+    "salto-de-pirapora": [],
+    "sao-miguel-arcanjo": [],
+    "sarapui": [],
+    "sorocaba": [
+     "cajuru-do-sul",
+     "cj-hab-j-m-filho",
+     "brg-tobias",
+     "vila-lucy",
+     "vila-nova-sorocaba",
+     "jardim-sao-guilherme",
+     "wanel-ville",
+     "jardim-vera-cruz",
+     "vila-barcelona",
+     "eden",
+     "alem-ponte",
+     "jardim-emilia",
+     "jardim-novo-horizonte",
+     "vila-assis",
+     "jardim-sao-carlos",
+     "jardim-santa-rosalia",
+     "jardim-simus",
+     "parque-sao-bento",
+     "jardim-wanel-ville-v",
+     "vila-haro",
+     "jardim-europa",
+     "centro",
+     "vila-jardini",
+     "vila-trujillo",
+     "jardim-piratininga",
+     "jardim-goncalves",
+     "iporanga",
+     "jardim-america",
+     "vila-carvalho",
+     "jardim-santo-amaro",
+     "caguassu",
+     "parque-campolim",
+     "jardim-faculdade",
+     "jardim-guaruja",
+     "aparecidinha",
+     "parque-r-fazenda-imperial",
+     "vila-hortencia",
+     "vila-barao",
+     "jardim-das-azaleias"
+    ],
+    "tapirai": [],
+    "taquarivai": [],
+    "tatui": [],
+    "tiete": [],
+    "torre-de-pedra": [],
+    "votorantim": [
+     "vossoroca",
+     "capoavinha",
+     "parque-morumbi",
+     "parque-bela-vista"
+    ]
+   },
+   "sao-paulo-e-regiao": {
+    "alphaville": [],
+    "aluminio": [],
+    "aracariguama": [],
+    "aruja": [],
+    "atibaia": [
+     "recreio-estoril",
+     "centro",
+     "jardim-paulista"
+    ],
+    "barueri": [],
+    "biritiba-mirim": [],
+    "bom-jesus-dos-perdoes": [],
+    "braganca-paulista": [
+     "jardim-dr-j-m-filho"
+    ],
+    "cabreuva": [],
+    "caieiras": [
+     "cresciuma"
+    ],
+    "cajamar": [
+     "polvilho-cajamar"
+    ],
+    "campo-limpo-paulista": [
+     "vila-chacrinha"
+    ],
+    "carapicuiba": [],
+    "centro": [
+     "barra-funda",
+     "santa-cecilia",
+     "campos-eliseos",
+     "liberdade",
+     "centro",
+     "consolacao",
+     "aclimacao",
+     "republica",
+     "bela-vista",
+     "belem",
+     "cambuci",
+     "bom-retiro"
+    ],
+    "cotia": [
+     "granja-viana",
+     "paisagem-renoir",
+     "sao-paulo-ii"
+    ],
+    "diadema": [
+     "serraria",
+     "canhema",
+     "eldorado",
+     "taboao",
+     "campanario",
+     "centro",
+     "conceicao",
+     "piraporinha",
+     "casa-grande",
+     "vila-nogueira"
+    ],
+    "embu": [],
+    "embu-guacu": [],
+    "ferraz-de-vasconcelos": [],
+    "francisco-morato": [],
+    "franco-da-rocha": [],
+    "guararema": [],
+    "guarulhos": [
+     "jardim-tranquilidade",
+     "macedo",
+     "vila-augusta",
+     "cumbica",
+     "jardim-pres-dutra",
+     "cidade-jardim-cumbica",
+     "jardim-adriana",
+     "gopouva",
+     "ponte-grande",
+     "agua-chata",
+     "vila-galvao",
+     "jardim-santa-mena",
+     "centro",
+     "picanco",
+     "vila-rosalia",
+     "vila-leonor",
+     "parque-continental-ii",
+     "c-ind-s-s-paulo",
+     "jardim-vila-galvao",
+     "jardim-flor-da-montanha",
+     "vila-nova-bonsucesso"
+    ],
+    "igarata": [],
+    "itapecerica-da-serra": [],
+    "itapevi": [],
+    "itaquaquecetuba": [
+     "jardim-goncalves"
+    ],
+    "itatiba": [
+     "centro"
+    ],
+    "itu": [
+     "centro",
+     "cond-terras-de-sao-jose",
+     "bairro-campos-de-santo-antonio"
+    ],
+    "itupeva": [],
+    "jandira": [
+     "vale-do-sol"
+    ],
+    "jarinu": [],
+    "joanopolis": [],
+    "jundiai": [
+     "medeiros",
+     "recanto-quarto-centenario",
+     "ponte-de-sao-joao",
+     "jardim-ermida-ii",
+     "anhangabau",
+     "centro",
+     "engordadouro",
+     "distrito-ind"
+    ],
+    "juquitiba": [],
+    "mairinque": [],
+    "mairipora": [],
+    "maua": [
+     "jardim-zaira",
+     "parque-das-americas",
+     "parque-sao-vicente",
+     "vila-bocaina"
+    ],
+    "mogi-das-cruzes": [
+     "cezar-de-souza",
+     "varinhas",
+     "vila-oliveira",
+     "centro",
+     "parque-res-itapeti",
+     "vila-sao-paulo",
+     "jundiapeba",
+     "vila-mogilar",
+     "vila-suissa",
+     "vila-moraes",
+     "jardim-marica",
+     "mogi-moderno"
+    ],
+    "morungaba": [],
+    "nazare-paulista": [],
+    "osasco": [
+     "jaguaribe",
+     "pestana",
+     "jardim-das-flores",
+     "vila-osasco",
+     "veloso",
+     "sao-pedro",
+     "centro",
+     "padroeira",
+     "jardim-d-abril",
+     "continental",
+     "adalgisa",
+     "vila-yara",
+     "piratininga",
+     "santa-maria",
+     "cipava",
+     "umuarama",
+     "bela-vista",
+     "rochdale",
+     "novo-osasco",
+     "km-18",
+     "pres-altino",
+     "bandeiras",
+     "conceicao",
+     "ayrosa",
+     "city-bussocaba"
+    ],
+    "pedra-bela": [],
+    "pinhalzinho": [],
+    "piracaia": [],
+    "pirapora-do-bom-jesus": [],
+    "poa": [],
+    "ribeirao-pires": [
+     "suissa"
+    ],
+    "rio-grande-da-serra": [],
+    "salesopolis": [],
+    "salto": [],
+    "santa-isabel": [],
+    "santana-de-parnaiba": [],
+    "santo-andre": [
+     "vila-gilda",
+     "vila-homero-thon",
+     "paraiso",
+     "vila-metalurgica",
+     "vila-alto-de-santo-andre",
+     "parque-joao-ramalho",
+     "jardim-santo-andre",
+     "jardim-do-estadio",
+     "vila-eldizia",
+     "parque-das-nacoes",
+     "centro",
+     "vila-sao-pedro",
+     "vila-humaita",
+     "vila-scarpelli",
+     "vila-pires",
+     "jardim-las-vegas",
+     "santa-teresinha",
+     "utinga",
+     "parque-capuava",
+     "vila-luzita",
+     "vila-curuca",
+     "vila-camilopolis",
+     "vila-palmares",
+     "campestre",
+     "vila-valparaiso",
+     "vila-principe-de-gales",
+     "vila-alpina",
+     "vila-alzira",
+     "vila-guiomar",
+     "jardim-utinga",
+     "jardim",
+     "vila-floresta",
+     "vila-santa-teresa",
+     "parque-erasmo-assuncao",
+     "vila-assuncao",
+     "casa-branca",
+     "parque-novo-oratorio",
+     "santa-maria",
+     "cidade-sao-jorge",
+     "jardim-bela-vista",
+     "vila-linda",
+     "parque-oratorio",
+     "vila-bastos",
+     "vila-marina",
+     "vila-america"
+    ],
+    "sao-bernardo-do-campo": [
+     "vila-caminho-do-mar",
+     "vila-dayse",
+     "planalto",
+     "nova-petropolis",
+     "cooperativa",
+     "assuncao",
+     "demarchi",
+     "centro",
+     "vila-santa-luzia",
+     "alves-dias",
+     "jardim-do-mar",
+     "batistini",
+     "baeta-neves",
+     "alvarenga",
+     "parque-terra-nova-ii",
+     "pauliceia",
+     "dos-casa",
+     "rudge-ramos",
+     "santa-terezinha",
+     "vila-vivaldi",
+     "ferrazopolis",
+     "anchieta",
+     "montanhao"
+    ],
+    "sao-caetano-do-sul": [
+     "boa-vista",
+     "osvaldo-cruz",
+     "nova-gerty",
+     "centro",
+     "santo-antonio",
+     "fundacao",
+     "maua",
+     "santa-maria",
+     "olimpico",
+     "ceramica",
+     "jardim-sao-caetano",
+     "barcelona",
+     "santa-paula"
+    ],
+    "sao-lourenco-da-serra": [],
+    "sao-roque": [],
+    "suzano": [
+     "vila-maria-de-maggi",
+     "centro",
+     "vila-costa"
+    ],
+    "taboao-da-serra": [
+     "jardim-maria-rosa"
+    ],
+    "tambore": [],
+    "taquaral": [],
+    "tuiuti": [],
+    "vargem": [],
+    "vargem-grande-paulista": [],
+    "varzea-paulista": [],
+    "zona-leste": [
+     "belem",
+     "jardim-avelino",
+     "mooca",
+     "cidade-tiradentes",
+     "vila-curuca",
+     "sao-mateus",
+     "tatuape",
+     "vila-ema",
+     "vila-zelina",
+     "sapopemba",
+     "pari",
+     "cidade-patriarca",
+     "vila-formosa",
+     "vila-alpina",
+     "ermelino-matarazzo",
+     "cangaiba",
+     "guaianazes",
+     "bras",
+     "aricanduva",
+     "cidade-lider",
+     "sao-miguel-paulista",
+     "itaquera",
+     "penha",
+     "vila-matilde",
+     "itaim-paulista",
+     "agua-rasa",
+     "vila-prudente",
+     "jardim-analia-franco",
+     "vila-jacui",
+     "ponte-rasa",
+     "vila-carrao",
+     "arthur-alvim"
+    ],
+    "zona-norte": [
+     "jardim-sao-paulo---norte",
+     "lauzane-paulista",
+     "vila-guilherme",
+     "santana",
+     "tremembe",
+     "vila-maria",
+     "horto-florestal",
+     "tucuruvi",
+     "perus",
+     "vila-nova-cachoeirinha",
+     "jardim-franca",
+     "santa-terezinha",
+     "brasilandia",
+     "limao",
+     "vila-gustavo",
+     "mandaqui",
+     "casa-verde",
+     "vila-medeiros",
+     "parada-inglesa",
+     "imirim",
+     "freguesia-do-o",
+     "agua-fria",
+     "jacana"
+    ],
+    "zona-oeste": [
+     "barra-funda",
+     "vila-madalena",
+     "pompeia",
+     "parque-dos-principes",
+     "jaguara",
+     "alto-da-lapa",
+     "pirituba",
+     "pinheiros",
+     "pacaembu",
+     "higienopolis",
+     "jaragua",
+     "perdizes",
+     "rio-pequeno",
+     "parque-sao-domingos",
+     "butanta",
+     "vila-sao-francisco",
+     "jardim-bonfiglioli",
+     "caxingui",
+     "tatuape",
+     "vila-leopoldina",
+     "sumare",
+     "vila-romana",
+     "lapa",
+     "raposo-tavares",
+     "jaguare",
+     "alto-de-pinheiros",
+     "agua-branca"
+    ],
+    "zona-sul": [
+     "aclimacao",
+     "cambuci",
+     "real-parque",
+     "vila-olimpia",
+     "brooklin",
+     "socorro",
+     "saude",
+     "parelheiros",
+     "cupece",
+     "vila-das-merces",
+     "itaim-bibi",
+     "interlagos",
+     "capao-redondo",
+     "cidade-ademar",
+     "jardim-da-saude",
+     "jabaquara",
+     "paraiso",
+     "vila-mariana",
+     "jardim-sao-luiz",
+     "ibirapuera-jd-luzitania",
+     "campo-grande",
+     "jardim-guedala",
+     "jardins",
+     "cerqueira-cesar",
+     "chacara-santo-antonio",
+     "moema",
+     "sacoma",
+     "vila-sonia",
+     "jardim-aeroporto",
+     "cidade-jardim",
+     "vila-santa-catarina",
+     "planalto-paulista",
+     "cidade-dutra",
+     "jardim-leonor",
+     "jardim-angela",
+     "morumbi",
+     "grajau",
+     "granja-julieta",
+     "jardim-prudencia",
+     "vila-monumento",
+     "pedreira",
+     "jardim-morumbi",
+     "campo-limpo",
+     "santo-amaro",
+     "ipiranga",
+     "vila-mascote",
+     "guarapiranga",
+     "sao-joao-climaco",
+     "vila-andrade",
+     "jardim-marajoara",
+     "vila-nova-conceicao",
+     "campo-belo"
+    ]
+   },
+   "vale-do-paraiba-e-litoral-norte": {
+    "aparecida": [],
+    "arapei": [],
+    "areias": [],
+    "bananal": [],
+    "cacapava": [
+     "chacaras-encosta-de-sao-carlos"
+    ],
+    "cachoeira-paulista": [],
+    "campos-do-jordao": [],
+    "canas": [],
+    "caraguatatuba": [
+     "indaia",
+     "martim-de-sa",
+     "massaguacu"
+    ],
+    "cruzeiro": [],
+    "cunha": [],
+    "guaratingueta": [],
+    "ilhabela": [],
+    "jacarei": [
+     "jardim-santa-maria",
+     "loteamento-villa-branca",
+     "loteamento-mirante-do-vale",
+     "jardim-jacinto",
+     "centro",
+     "jardim-california",
+     "parque-santo-antonio",
+     "cidade-jardim",
+     "jardim-paraiba"
+    ],
+    "jambeiro": [],
+    "lagoinha": [],
+    "lavrinhas": [],
+    "lorena": [],
+    "monteiro-lobato": [],
+    "natividade-da-serra": [],
+    "paraibuna": [],
+    "pindamonhangaba": [
+     "centro"
+    ],
+    "piquete": [],
+    "potim": [],
+    "queluz": [],
+    "redencao-da-serra": [],
+    "roseira": [],
+    "santa-branca": [],
+    "santo-antonio-do-pinhal": [],
+    "sao-bento-do-sapucai": [],
+    "sao-jose-do-barreiro": [],
+    "sao-jose-dos-campos": [
+     "urbanova",
+     "cj-res-t-e-u-marco",
+     "jardim-das-colinas",
+     "chacaras-reunidas",
+     "campos-de-sao-jose",
+     "jardim-sao-dimas",
+     "eugenio-de-mello",
+     "floradas-de-sao-jose",
+     "centro",
+     "parque-res-aquarius",
+     "vila-ema",
+     "jardim-augusta",
+     "parque-res-flamboyant",
+     "res-bosque-dos-ipes",
+     "jardim-oswaldo-cruz",
+     "cidade-morumbi",
+     "jardim-america",
+     "jardim-oriente",
+     "vila-adyana",
+     "cidade-vista-verde",
+     "cj-res-esplanada-sol",
+     "bosque-dos-eucaliptos",
+     "vila-ind",
+     "vila-do-tesouro",
+     "santana",
+     "jardim-ismenia",
+     "parque-ind",
+     "palmeiras-de-sao-jose",
+     "jardim-portugal",
+     "jardim-uira",
+     "royal-park",
+     "jardim-esplanada",
+     "jardim-santa-julia",
+     "jardim-torrao-de-ouro",
+     "jardim-sul",
+     "vila-zizinha",
+     "jardim-bela-vista",
+     "jardim-das-industrias",
+     "jardim-satelite",
+     "res-uniao",
+     "jardim-paulista",
+     "jardim-alvorada",
+     "monte-castelo"
+    ],
+    "sao-luiz-do-paraitinga": [],
+    "sao-sebastiao": [
+     "sao-francisco-da-praia-sao-sebastiao-sao-francisco-da-praia",
+     "maresias-sao-sebastiao-centro"
+    ],
+    "silveiras": [],
+    "taubate": [
+     "jardim-das-nacoes",
+     "piracangagua",
+     "barranco",
+     "centro",
+     "jardim-marlene-miranda",
+     "parque-senhor-do-bonfim",
+     "vila-sao-jose",
+     "vila-jaboticabeira"
+    ],
+    "tremembe": [],
+    "ubatuba": [
+     "picinguaba-ubatuba",
+     "centro"
+    ]
+   }
+  },
+  "TO": {
+   "tocantins": {
+    "outras-cidades": [
+     "araguaina",
+     "porto-nacional"
+    ],
+    "palmas": [
+     "graciosa-orla-14",
+     "plano-diretor-norte",
+     "plano-diretor-sul"
+    ]
+   }
+  }
+ },
+ "fonte": "https://www.olx.com.br/{uf}/sitemap1.xml",
+ "gerado_em": "2026-10-10T12:36:20+00:00",
+ "nomes": {
+  "AC": {
+   "acre": "Acre"
+  },
+  "AL": {
+   "alagoas": "Alagoas"
+  },
+  "AM": {
+   "leste-do-amazonas": "Leste do Amazonas e região",
+   "regiao-de-manaus": "Manaus e região"
+  },
+  "AP": {
+   "amapa": "Amapá"
+  },
+  "BA": {
+   "grande-salvador": "Salvador e região",
+   "regiao-de-feira-de-santana-e-alagoinhas": "Feira de Santana, Barreiras e região",
+   "regiao-de-juazeiro-e-jacobina": "Juazeiro, Jacobina e região",
+   "regiao-de-vitoria-da-conquista-e-barreiras": "Vitória da Conquista",
+   "sul-da-bahia": "Sul da Bahia"
+  },
+  "CE": {
+   "fortaleza-e-regiao": "Fortaleza e região",
+   "regiao-de-juazeiro-do-norte-e-sobral": "Juazeiro do Norte, Sobral e região"
+  },
+  "DF": {
+   "distrito-federal-e-regiao": "Distrito Federal e região"
+  },
+  "ES": {
+   "norte-do-espirito-santo": "Norte do Espírito Santo e região",
+   "sul-do-espirito-santo": "Sul do Espírito Santo e região"
+  },
+  "GO": {
+   "grande-goiania-e-anapolis": "Goiânia, Anápolis e região",
+   "regiao-de-rio-verde-e-caldas-novas": "Rio Verde, Caldas Novas e região"
+  },
+  "MA": {
+   "regiao-de-imperatriz-e-caxias": "Imperatriz, Caxias e região",
+   "regiao-de-sao-luis": "São Luís e região"
+  },
+  "MG": {
+   "belo-horizonte-e-regiao": "Belo Horizonte e região",
+   "regiao-de-divinopolis": "Divinópolis e região",
+   "regiao-de-governador-valadares-e-teofilo-otoni": "Governador Valadares, Teófilo Otoni e região",
+   "regiao-de-juiz-de-fora": "Juiz de Fora e região",
+   "regiao-de-montes-claros-e-diamantina": "Montes Claros, Diamantina e região",
+   "regiao-de-pocos-de-caldas-e-varginha": "Poços de Caldas, Varginha e região",
+   "regiao-de-uberlandia-e-uberaba": "Uberlândia, Uberaba e região"
+  },
+  "MS": {
+   "mato-grosso-do-sul": "Mato Grosso do Sul"
+  },
+  "MT": {
+   "regiao-de-cuiaba": "Cuiabá e região",
+   "regiao-de-rondonopolis-e-sinop": "Rondonópolis, Sinop e região"
+  },
+  "PA": {
+   "regiao-de-belem": "Belém",
+   "regiao-de-maraba": "Marabá e região",
+   "regiao-de-santarem": "Santarém e região"
+  },
+  "PB": {
+   "paraiba": "Paraíba"
+  },
+  "PE": {
+   "grande-recife": "Grande Recife e região",
+   "regiao-de-petrolina-e-garanhuns": "Petrolina, Garanhuns e região"
+  },
+  "PI": {
+   "regiao-de-picos-e-floriano": "Picos, Floriano e região",
+   "regiao-de-teresina-e-parnaiba": "Teresina, Parnaíba e região"
+  },
+  "PR": {
+   "regiao-de-curitiba-e-paranagua": "Curitiba e região",
+   "regiao-de-foz-do-iguacu-e-cascavel": "Foz do Iguaçu, Cascavel e região",
+   "regiao-de-francisco-beltrao-e-pato-branco": "Francisco Beltrão, Pato Branco e região",
+   "regiao-de-londrina": "Londrina e região",
+   "regiao-de-maringa": "Maringá e região",
+   "regiao-de-ponta-grossa-e-guarapuava": "Ponta Grossa, Guarapuava e região"
+  },
+  "RJ": {
+   "norte-do-estado-do-rio": "Norte do Estado e Região dos Lagos",
+   "rio-de-janeiro-e-regiao": "Rio de Janeiro e região",
+   "serra-angra-dos-reis-e-regiao": "Serra, Angra dos Reis e região"
+  },
+  "RN": {
+   "rio-grande-do-norte": "Rio Grande do Norte"
+  },
+  "RO": {
+   "rondonia": "Rondônia"
+  },
+  "RR": {
+   "roraima": "Roraima"
+  },
+  "RS": {
+   "regioes-de-caxias-do-sul-e-passo-fundo": "Caxias do Sul e região",
+   "regioes-de-pelotas-rio-grande-e-bage": "Pelotas, Bagé, Rio Grande e região",
+   "regioes-de-porto-alegre-torres-e-santa-cruz-do-sul": "Porto Alegre e região",
+   "regioes-de-santa-maria-uruguaiana-e-cruz-alta": "Santa Maria, Cruz Alta e região"
+  },
+  "SC": {
+   "florianopolis-e-regiao": "Florianópolis e região",
+   "norte-de-santa-catarina": "Norte de Santa Catarina e região",
+   "oeste-de-santa-catarina": "Oeste de Santa Catarina"
+  },
+  "SE": {
+   "sergipe": "Sergipe"
+  },
+  "SP": {
+   "baixada-santista-e-litoral-sul": "Baixada Santista e Litoral Sul",
+   "grande-campinas": "Grande Campinas e região",
+   "regiao-de-bauru-e-marilia": "Bauru, Marília e região",
+   "regiao-de-presidente-prudente": "Presidente Prudente e região",
+   "regiao-de-ribeirao-preto": "Ribeirão Preto e região",
+   "regiao-de-sao-jose-do-rio-preto": "São José do Rio Preto e região",
+   "regiao-de-sorocaba": "Sorocaba e região",
+   "sao-paulo-e-regiao": "São Paulo e região",
+   "vale-do-paraiba-e-litoral-norte": "Vale do Paraíba, Litoral Norte e região"
+  },
+  "TO": {
+   "tocantins": "Tocantins"
+  }
+ }
+}
