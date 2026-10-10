@@ -124,7 +124,6 @@ export function PaginaBusca() {
               </p>
             </div>
             <div className="search-console__mascot" aria-hidden="true">
-              <div className="search-console__scan" />
               <img src="/mascot/hiro-full-body.svg" alt="" />
             </div>
           </div>
