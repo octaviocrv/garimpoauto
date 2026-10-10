@@ -69,3 +69,15 @@ class LimitesBusca(BaseModel):
         if menor < 0 or menor > maior:
             raise ValueError(f"pausa_entre_paginas_segundos inválida: {self.pausa_entre_paginas_segundos}")
         return self
+
+
+# ---- Servidor (server.py) ----
+
+# Quanto tempo uma busca pronta fica no cache em memória (20 minutos).
+CACHE_TTL_SEGUNDOS = _do_ambiente("GARIMPO_CACHE_TTL_SEGUNDOS", 1200.0, float)
+# Origens liberadas no CORS, separadas por vírgula. Por padrão só o Vite local.
+CORS_ORIGENS = [
+    o.strip()
+    for o in os.environ.get("GARIMPO_CORS_ORIGENS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
+    if o.strip()
+]

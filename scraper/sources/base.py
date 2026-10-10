@@ -7,10 +7,10 @@ classe base, fábrica ou registro.
 
 from __future__ import annotations
 
-from typing import Optional, Protocol, runtime_checkable
+from typing import Iterator, Optional, Protocol, runtime_checkable
 
 from config import LimitesBusca
-from schemas import Busca, ResultadoBusca
+from schemas import Busca, PaginaBusca, ResultadoBusca
 
 
 @runtime_checkable
@@ -20,4 +20,9 @@ class Fonte(Protocol):
     def buscar(self, busca: Busca, limites: Optional[LimitesBusca] = None) -> ResultadoBusca:
         """Busca e devolve tudo junto. Nunca levanta erro por falha da fonte no meio da
         coleta: devolve o que juntou com motivo_parada "falha_fonte" e um aviso."""
+        ...
+
+    def buscar_paginas(self, busca: Busca, limites: Optional[LimitesBusca] = None) -> Iterator[PaginaBusca]:
+        """Mesma busca, uma página por vez (já com filtro local e sem repetidos). A última
+        página traz `parou_por` preenchido."""
         ...
