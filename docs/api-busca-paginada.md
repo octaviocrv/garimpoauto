@@ -10,7 +10,7 @@ A tela ainda usa `/buscar/stream`. Este documento descreve o jeito novo, igual a
 | `GET /buscar/stream` | Várias páginas de uma vez por SSE (até 8). Continua igual |
 | `GET /buscar` | O mesmo do stream em um JSON só. Continua igual |
 
-Os três usam os mesmos parâmetros de busca (`texto`, `marca`, `modelo`, `versao`, `ano_min`, `ano_max`, `preco_min`, `preco_max`, `km_min`, `km_max`, `cambio`, `combustivel`, `anunciante`, `ordenar`, `estado`, `regiao`, `cidade`, `dev`, `atualizar`) e **a mesma sessão de busca no servidor**. Página lida por um deles serve para os outros, e o servidor nunca baixa de novo da OLX uma página que já tem.
+Os três usam os mesmos parâmetros de busca (`texto`, que pode vir vazio, veja "Busca sem texto", `marca`, `modelo`, `versao`, `ano_min`, `ano_max`, `preco_min`, `preco_max`, `km_min`, `km_max`, `cambio`, `combustivel`, `anunciante`, `ordenar`, `estado`, `regiao`, `cidade`, `dev`, `atualizar`) e **a mesma sessão de busca no servidor**. Página lida por um deles serve para os outros, e o servidor nunca baixa de novo da OLX uma página que já tem.
 
 ## Como a tela chama o "Ver mais"
 
@@ -61,6 +61,18 @@ Cada carro em `anuncios` traz também `novo` (`true` ou `false`). `/buscar` e o 
 - **Cache:** por página, e a sessão inteira vale 20 minutos (`CACHE_TTL_SEGUNDOS`), contados a partir da hora da página 1. Pedir uma página já lida volta na hora. A chave considera texto, filtros, estado e ordenação. Com o banco ligado ele é compartilhado e sobrevive a reinício (veja a seção abaixo).
 - **Teto:** o "Ver mais" vai até `GARIMPO_MAX_PAGINAS_SOB_DEMANDA` páginas por busca (padrão 70, veja os testes de confiança abaixo).
 - **Fila:** só uma leitura real da OLX por vez no servidor. Uma busca nunca fica travada na pausa de outra, porque a pausa acontece antes de entrar na fila.
+
+## Busca sem texto (a vitrine)
+
+A tela abre mostrando uma vitrine, igual à OLX: `GET /buscar/pagina?texto=&estado=MG&pagina=1`.
+
+- **`texto` pode vir vazio, mas o parâmetro continua obrigatório.** `texto=` vale. Esquecer o parâmetro continua dando 422. Espaços sozinhos contam como vazio. Vale nos três endpoints (`/buscar/pagina`, `/buscar/stream` e `/buscar`).
+- **Na OLX:** sem texto o servidor não manda `q`, e a OLX lista a categoria de carros do estado, por exemplo `.../carros-vans-e-utilitarios/estado-mg?sf=1`. Conferido com uma chamada real em 10 de outubro de 2026: 50 carros, todos de MG, total 73.619. A resposta salva está em `scraper/tests/fixtures/olx_vitrine_mg.json`.
+- **Frase de `informacao`:** a de sempre, "Mostrando 50 de 73.619 carros. Toca em Ver mais pra ver o resto."
+- **Cache e "novo desde a última vez":** a busca vazia é uma busca como outra qualquer. A chave fica `texto=|estado=mg|ordenar=recentes`, não divide cache com busca de texto nem com outro filtro, e tem o próprio histórico de novos.
+- **Filtro sem texto:** com filtro e sem texto, a busca usa o filtro (`texto=&ano_min=2018` pede só o ano). A vitrine pura é só sem texto e sem filtro.
+- **Na tela:** a vitrine carrega uma vez ao abrir, só a página 1. O "Ver mais" continua manual. Buscar com o campo vazio e sem filtro volta para ela. Uma busca nova no meio da carga cancela a vitrine, como qualquer outra busca em andamento.
+- **O que não tem:** a vitrine não separa usados, seminovos e novos, porque o anúncio não traz campo de condição.
 
 ## Região e cidade (filtradas na própria OLX)
 
