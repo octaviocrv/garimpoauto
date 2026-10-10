@@ -1,0 +1,7 @@
+[
+  {"nome": "gol 2012 em MG", "busca": {"texto": "gol 2012", "estado": "MG"}, "nota": "universo pequeno, serve para ver cobertura quase total"},
+  {"nome": "onix no Brasil", "busca": {"texto": "onix"}, "nota": "universo enorme, o teto de páginas sempre vai valer"},
+  {"nome": "hilux diesel no Brasil", "busca": {"texto": "hilux diesel"}, "nota": "texto com dois termos"},
+  {"nome": "fiat uno no Brasil", "busca": {"texto": "fiat uno"}, "nota": "muitos anúncios antigos e baratos"},
+  {"nome": "civic Honda 2015 a 2018 em MG", "busca": {"texto": "civic", "marca": "Honda", "modelo": "civic", "ano_min": 2015, "ano_max": 2018, "preco_max": 120000, "estado": "MG"}, "nota": "a única com marca, modelo, ano e preço juntos"}
+]
