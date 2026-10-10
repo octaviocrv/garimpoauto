@@ -667,6 +667,129 @@ def buscar_paginas(
             gerenciador.__exit__(None, None, None)
 
 
+class _SemPausa:
+    """Consulta de códigos sem pausa: são respostas pequenas e ficam em memória por horas."""
+
+    fez_requisicao = False
+
+    def esperar(self) -> None:
+        self.fez_requisicao = True
+
+
+class CursorOlx:
+    """Uma busca da OLX que anda uma página por chamada (o servidor pagina "Ver mais" em cima disto).
+
+    `proxima()` lê a página seguinte e devolve a PaginaBusca já normalizada, sem repetido e com o
+    filtro local. A 1ª página sai sem pausa nenhuma. Da 2ª em diante, `esperar()` garante o mesmo
+    intervalo aleatório de sempre desde o último pedido à OLX, descontando o tempo que a pessoa já
+    levou para clicar (quem chama decide se espera fora de uma trava). Se a página não veio
+    (bloqueio), devolve uma PaginaBusca com parou_por="bloqueio" e NÃO avança: chamar de novo tenta
+    a mesma página. Depois de uma página com parou_por preenchido (que não seja bloqueio) a busca
+    acabou. `teto` é a última página que ele entrega (padrão: limites.max_paginas)."""
+
+    def __init__(
+        self, busca: Busca, limites: Optional[LimitesBusca] = None, *, teto: Optional[int] = None,
+        sessao: Any = None, dormir: Callable[[float], None] = time.sleep,
+        relogio: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self.busca, self.limites = busca, limites or LimitesBusca()
+        self.teto = teto or self.limites.max_paginas
+        self._sessao_externa, self._dormir, self._relogio = sessao, dormir, relogio
+        self.numero = 0  # última página entregue
+        self.terminou = False
+        self._vistos: set[str] = set()
+        self._carros: dict[tuple, str] = {}
+        self._acumulado = 0
+        self._total_ads: Optional[int] = None
+        self._ultimo_pedido: Optional[float] = None
+        self._codigos: Optional[dict[str, str]] = None
+        self._ignorar: tuple[str, ...] = ()
+        self._na_origem: list[str] = []
+        self._nao_resolvidos: list[str] = []
+
+    def esperar(self) -> None:
+        """Pausa da 2ª página em diante. A 1ª não espera."""
+        if self._ultimo_pedido is None:
+            return
+        alvo = random.uniform(*self.limites.pausa_entre_paginas_segundos)
+        falta = alvo - (self._relogio() - self._ultimo_pedido)
+        if falta > 0:
+            self._dormir(falta)
+
+    def proxima(self) -> PaginaBusca:
+        if self.terminou:
+            raise RuntimeError("a busca já acabou")
+        pagina = self.numero + 1
+        gerenciador = None
+        sessao = self._sessao_externa
+        if sessao is None:
+            gerenciador = FetcherSession(
+                impersonate="chrome", stealthy_headers=True,
+                timeout=self.limites.timeout_requisicao_segundos, retries=1,
+            )
+            sessao = gerenciador.__enter__()
+        try:
+            if self._codigos is None:
+                codigos, resolvidos, self._nao_resolvidos = resolver_codigos(
+                    sessao, self.busca, _SemPausa(), self._relogio  # type: ignore[arg-type]
+                )
+                self._codigos, self._ignorar = codigos, (*_FILTROS_NA_URL, *resolvidos)
+                self._na_origem = _filtros_na_origem(self.busca, resolvidos)
+            itens, total, erro = _baixar_com_cuidado(
+                sessao, montar_url(self.busca, pagina, codigos=self._codigos),
+                inicio=self._relogio(), tempo_max=self.limites.tempo_max_segundos,
+                tentativas_bloqueio=self.limites.tentativas_bloqueio,
+                backoff_base=self.limites.backoff_base_segundos,
+                dormir=self._dormir, relogio=self._relogio,
+            )
+        finally:
+            self._ultimo_pedido = self._relogio()
+            if gerenciador is not None:
+                gerenciador.__exit__(None, None, None)
+
+        if itens is None:
+            return PaginaBusca(
+                fonte=FONTE, numero=pagina, anuncios=[], acumulado=self._acumulado, total_ads=self._total_ads,
+                parou_por=BLOQUEIO,
+                aviso=f"Parou por bloqueio na página {pagina}: {erro}. Devolvi os {self._acumulado} anúncios que já tinha.",
+                na_origem=self._na_origem, nao_resolvidos=self._nao_resolvidos,
+            )
+        if total is not None and (total > 0 or self._total_ads is None):
+            self._total_ads = total
+        novos: list[Anuncio] = []
+        for item in itens:
+            id_ = str(item["listId"])
+            if id_ in self._vistos:  # anúncio que entrou no ar e empurrou a lista: já vimos, não repete
+                continue
+            self._vistos.add(id_)
+            novos.append(normalizar(item))
+        marcar_repetidos(novos, self._carros)
+        self._acumulado += len(novos)
+
+        parou_por, aviso = None, None
+        if not novos:
+            parou_por = PAGINA_VAZIA
+            aviso = "A página só tinha anúncios repetidos." if itens else "A página veio sem anúncios."
+        elif self._total_ads is not None and len(self._vistos) >= self._total_ads:
+            parou_por = TOTAL_ADS
+        elif pagina >= self.teto:
+            parou_por = MAX_PAGINAS
+        aprovados, cortados = filtrar_local_contando(novos, self.busca, ignorar=self._ignorar)
+        self.numero, self.terminou = pagina, parou_por is not None
+        return PaginaBusca(
+            fonte=FONTE, numero=pagina, anuncios=aprovados, acumulado=self._acumulado,
+            total_ads=self._total_ads, parou_por=parou_por, aviso=aviso, coletados=len(novos),
+            cortados_por_filtro=cortados, na_origem=self._na_origem, nao_resolvidos=self._nao_resolvidos,
+        )
+
+
+def abrir(
+    busca: Busca, limites: Optional[LimitesBusca] = None, *, teto: Optional[int] = None, **kwargs: Any
+) -> CursorOlx:
+    """Abre uma busca que anda uma página por vez (veja CursorOlx). Não faz pedido nenhum ainda."""
+    return CursorOlx(busca, limites, teto=teto, **kwargs)
+
+
 def _filtros_na_origem(busca: Busca, resolvidos: set[str]) -> list[str]:
     """Nomes dos filtros pedidos que a OLX aplicou na própria busca."""
     pedidos = [

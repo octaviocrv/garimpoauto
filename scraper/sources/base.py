@@ -14,12 +14,31 @@ from schemas import Busca, PaginaBusca, ResultadoBusca
 
 
 @runtime_checkable
+class Cursor(Protocol):
+    """Uma busca que anda uma página por chamada. `esperar()` faz a pausa entre pedidos (a 1ª
+    página não espera) e `proxima()` lê a página seguinte. Página com parou_por "bloqueio" não
+    avança, então chamar de novo tenta a mesma. Depois de uma página com parou_por (que não seja
+    bloqueio), `terminou` fica True."""
+
+    terminou: bool
+
+    def esperar(self) -> None: ...
+
+    def proxima(self) -> PaginaBusca: ...
+
+
+@runtime_checkable
 class Fonte(Protocol):
     FONTE: str  # nome curto, ex.: "olx"
 
     def buscar(self, busca: Busca, limites: Optional[LimitesBusca] = None) -> ResultadoBusca:
         """Busca e devolve tudo junto. Nunca levanta erro por falha da fonte no meio da
         coleta: devolve o que juntou com motivo_parada "falha_fonte" e um aviso."""
+        ...
+
+    def abrir(self, busca: Busca, limites: Optional[LimitesBusca] = None, *, teto: Optional[int] = None) -> Cursor:
+        """Busca página por página sob demanda (é o que o servidor usa). `teto` é a última página
+        que entrega. A 1ª sai sem pausa."""
         ...
 
     def buscar_paginas(self, busca: Busca, limites: Optional[LimitesBusca] = None) -> Iterator[PaginaBusca]:

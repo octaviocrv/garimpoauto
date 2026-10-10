@@ -24,53 +24,81 @@ from sources.base import Fonte  # noqa: E402
 from tests.test_olx import anuncio_cru  # noqa: E402
 
 
+class CursorFalso:
+    """Uma busca da fonte falsa andando uma página por chamada."""
+
+    def __init__(self, fonte, busca):
+        self.fonte, self.busca = fonte, busca
+        self.numero, self.terminou = 0, False
+
+    def esperar(self):
+        if self.numero > 0:
+            self.fonte.esperas += 1
+
+    def proxima(self):
+        f = self.fonte
+        n = self.numero + 1
+        with f._lock:
+            if n == 1:
+                f.buscas.append(self.busca)
+            f._ativas += 1
+            f.max_simultaneas = max(f.max_simultaneas, f._ativas)
+            f.paginas_pedidas.append((self.busca.texto, n))
+        f.entrou.set()
+        try:
+            if f.segurar and n == 1:
+                assert f.segurar.wait(5)
+            if f.falha_apos is not None and n > f.falha_apos and f.falhas_restantes != 0:
+                if f.falhas_restantes is not None:
+                    f.falhas_restantes -= 1
+                return PaginaBusca(
+                    fonte=f.FONTE, numero=n, anuncios=[], acumulado=2 * (n - 1), total_ads=f.total,
+                    parou_por=olx.BLOQUEIO, aviso=f"Parou por bloqueio na página {n}: HTTP 403.",
+                )
+            if f.excecao_apos is not None and n > f.excecao_apos:
+                raise RuntimeError("resposta estranha")
+            base = abs(hash(self.busca.texto)) % 100000 * 100
+            ads = [olx.normalizar(anuncio_cru(base + n * 10 + k, seller={"name": "Fulano"})) for k in (1, 2)]
+            ultima = n == f.paginas
+            self.numero, self.terminou = n, ultima
+            return PaginaBusca(
+                fonte=f.FONTE, numero=n, anuncios=ads, acumulado=2 * n, total_ads=f.total,
+                parou_por=olx.TOTAL_ADS if ultima else None, coletados=2,
+            )
+        finally:
+            with f._lock:
+                f._ativas -= 1
+
+
 class FonteFalsa:
     """Segue a interface Fonte sem internet. Cada página tem 2 anúncios; os ids dependem do texto."""
 
     FONTE = "falsa"
 
-    def __init__(self, paginas=3, falha_apos=None, excecao_apos=None, total=6, segurar=None):
+    def __init__(self, paginas=3, falha_apos=None, excecao_apos=None, total=6, segurar=None, falhas=None):
         self.paginas, self.falha_apos, self.excecao_apos = paginas, falha_apos, excecao_apos
-        self.total, self.segurar = total, segurar
-        self.buscas = []
+        self.total, self.segurar, self.falhas_restantes = total, segurar, falhas  # falhas None = sempre
+        self.buscas = []  # uma entrada por busca aberta
+        self.paginas_pedidas = []  # (texto, página) de cada leitura real
+        self.esperas = 0
         self.entrou = threading.Event()
         self._lock = threading.Lock()
         self._ativas = 0
         self.max_simultaneas = 0
 
+    def abrir(self, busca, limites=None, *, teto=None):
+        return CursorFalso(self, busca)
+
     def buscar(self, busca, limites=None):
-        raise AssertionError("o servidor usa buscar_paginas")
+        raise AssertionError("o servidor usa abrir")
 
     def buscar_paginas(self, busca, limites=None):
-        with self._lock:
-            self.buscas.append(busca)
-            self._ativas += 1
-            self.max_simultaneas = max(self.max_simultaneas, self._ativas)
-        self.entrou.set()
-        try:
-            if self.segurar:
-                assert self.segurar.wait(5)
-            base = abs(hash(busca.texto)) % 100000 * 100
-            acumulado = 0
-            for n in range(1, self.paginas + 1):
-                if self.falha_apos is not None and n > self.falha_apos:
-                    yield PaginaBusca(
-                        fonte=self.FONTE, numero=n, anuncios=[], acumulado=acumulado, total_ads=self.total,
-                        parou_por=olx.BLOQUEIO, aviso=f"Parou por bloqueio na página {n}: HTTP 403.",
-                    )
-                    return
-                if self.excecao_apos is not None and n > self.excecao_apos:
-                    raise RuntimeError("resposta estranha")
-                ads = [olx.normalizar(anuncio_cru(base + n * 10 + k, seller={"name": "Fulano"})) for k in (1, 2)]
-                acumulado += 2
-                ultima = n == self.paginas
-                yield PaginaBusca(
-                    fonte=self.FONTE, numero=n, anuncios=ads, acumulado=acumulado, total_ads=self.total,
-                    parou_por=olx.TOTAL_ADS if ultima else None, coletados=2,
-                )
-        finally:
-            with self._lock:
-                self._ativas -= 1
+        cursor = self.abrir(busca, limites)
+        while not cursor.terminou:
+            pag = cursor.proxima()
+            yield pag
+            if pag.parou_por:
+                return
 
 
 def cliente(fonte=None, **kw):
