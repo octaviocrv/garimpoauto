@@ -67,11 +67,26 @@ def abrir_sessao(banco, usuario=""):
 def test_migrations_rodam_na_ordem_e_so_uma_vez(relogio):
     zerar_banco_de_teste()
     a = novo_armazem(relogio)
-    assert a.migrar() == ["001_cache_de_busca", "002_vistos"]
+    assert a.migrar() == ["001_cache_de_busca", "002_vistos", "003_fipe"]
     assert a.migrar() == []
     outro = novo_armazem(relogio)  # outro servidor subindo no mesmo banco
     assert outro.migrar() == []
     a.fechar(), outro.fechar()
+
+
+def test_migration_fipe_cria_catalogo_casamentos_e_orcamento(relogio):
+    zerar_banco_de_teste()
+    a = novo_armazem(relogio)
+    a.migrar()
+    tabelas = a._usar(lambda cur: (
+        cur.execute("SHOW TABLES LIKE 'fipe_%'"),
+        {next(iter(linha.values())) for linha in cur.fetchall()},
+    )[1])
+    assert tabelas == {
+        "fipe_ano", "fipe_cache_estado", "fipe_casamento", "fipe_marca",
+        "fipe_modelo", "fipe_preco", "fipe_referencia", "fipe_requisicao_dia",
+    }
+    a.fechar()
 
 
 def test_os_comandos_do_arquivo_sql_sao_separados_sem_os_comentarios():
