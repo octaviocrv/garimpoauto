@@ -192,4 +192,4 @@ def test_buscar_aplica_filtro_local_e_manda_so_o_que_a_olx_aceita():
     busca = Busca(texto="gol", marca="volkswagen", modelo="gol", km_max=100000, cidade="são paulo")
     res = olx.buscar_tudo(busca, sessao=sessao, dormir=relogio.dormir, relogio=relogio)
     assert ids(res.anuncios) == ["101"]
-    assert sessao.urls == [f"{olx.URL_BASE}?q=gol&me=100000"]  # sem estado, sem marca/modelo/cidade
+    assert sessao.urls_de_listagem == [f"{olx.URL_BASE}?q=gol&me=100000"]  # sem estado, sem marca/modelo/cidade (a OLX não entendeu os nomes)

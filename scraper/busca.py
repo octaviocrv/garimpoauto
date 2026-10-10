@@ -9,14 +9,14 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Sequence
 
 from config import LimitesBusca
 from schemas import Anuncio, Aviso, Busca, Funil, ResultadoBusca
 
 # Ordem fixa dos filtros na chave de busca.
 _ORDEM_CHAVE = (
-    "texto", "marca", "modelo", "ano_min", "ano_max",
+    "texto", "marca", "modelo", "versao", "ano_min", "ano_max",
     "preco_min", "preco_max", "km_max", "estado", "regiao", "cidade",
 )
 FILTROS = _ORDEM_CHAVE[1:]
@@ -48,6 +48,11 @@ def _contem(procurado: str, valor: Optional[str]) -> bool:
     return bool(alvo) and re.search(rf"(?<!\w){re.escape(procurado)}(?!\w)", alvo) is not None
 
 
+def _tem_todas(procuradas: str, valor: Optional[str]) -> bool:
+    """Todas as palavras de `procuradas` aparecem no texto (cada uma inteira)."""
+    return bool(valor) and all(_contem(p, valor) for p in procuradas.split())
+
+
 def filtrar_local_contando(
     anuncios: Iterable[Anuncio], busca: Busca, ignorar: Iterable[str] = ()
 ) -> tuple[list[Anuncio], dict[str, int]]:
@@ -58,6 +63,7 @@ def filtrar_local_contando(
     ativos = {f for f in FILTROS if getattr(busca, f) is not None and f not in ignorar}
     marca = normalizar_texto(busca.marca)
     modelo = normalizar_texto(busca.modelo)
+    versao = normalizar_texto(busca.versao)
     cidade = normalizar_texto(busca.cidade)
 
     def faixa(a: Anuncio, atributo: str, minimo: Optional[str], maximo: str) -> bool:
@@ -75,6 +81,7 @@ def filtrar_local_contando(
     testes = (
         ("marca", "marca" in ativos, lambda a: _contem(marca, a.marca)),
         ("modelo", "modelo" in ativos, lambda a: _contem(modelo, a.modelo_original or a.modelo)),
+        ("versao", "versao" in ativos, lambda a: _tem_todas(versao, " ".join(filter(None, [a.modelo_original, a.titulo])))),
         ("cidade", "cidade" in ativos, lambda a: normalizar_texto(a.cidade) == cidade),
         ("estado", "estado" in ativos, lambda a: (a.estado or "").upper() == busca.estado),
         ("ano", bool(ativos & {"ano_min", "ano_max"}), lambda a: faixa(a, "ano", "ano_min", "ano_max")),
@@ -109,7 +116,7 @@ def filtrar_local(
 
 def _avisos(
     fonte: str, funil: Funil, motivo: str, paginas: int, tempo: float,
-    limites: LimitesBusca, detalhe_falha: Optional[str],
+    limites: LimitesBusca, detalhe_falha: Optional[str], nao_resolvidos: Sequence[str] = (),
 ) -> list[Aviso]:
     nome = fonte.upper()
     execucao = f"parou em {paginas} paginas, teto {limites.max_paginas}, tempo {tempo:.0f}s de {limites.tempo_max_segundos:.0f}s"
@@ -137,6 +144,16 @@ def _avisos(
             ),
             detalhe_tecnico=f"{execucao}, coletados {funil.coletados}. {detalhe_falha or 'sem detalhe'}",
         ))
+    if nao_resolvidos:
+        quais = " e ".join(nao_resolvidos)
+        avisos.append(Aviso(
+            codigo="filtro_aproximado",
+            mensagem=f"Não achei {quais} na lista da {nome}, então filtrei por aqui. Pode ter ficado algum carro de fora.",
+            detalhe_tecnico=(
+                f"sem código na {nome} para: {quais}. Filtro aplicado só depois da coleta, "
+                f"nas {paginas} páginas lidas (teto {limites.max_paginas})"
+            ),
+        ))
     referencia = funil.total_na_fonte if funil.total_na_fonte is not None else funil.coletados
     if referencia > limites.limiar_muitos_resultados:
         avisos.append(Aviso(
@@ -159,10 +176,21 @@ def _avisos(
     return avisos
 
 
+def filtros_locais(busca: Busca, na_origem: Iterable[str]) -> list[str]:
+    """Filtros pedidos que a fonte não aplicou e que, por isso, só valem depois da coleta."""
+    feitos = set(na_origem)
+    pedidos = [
+        ("marca", busca.marca), ("modelo", busca.modelo), ("versao", busca.versao),
+        ("cidade", busca.cidade), ("km", busca.km_max),
+    ]
+    return [n for n, v in pedidos if v is not None and n not in feitos]
+
+
 def montar_resultado(
     fonte: str, anuncios: list[Anuncio], paginas_lidas: int, tempo: float,
     total_na_fonte: Optional[int], coletados: int, cortados: dict[str, int],
     motivo: str, limites: LimitesBusca, detalhe_falha: Optional[str] = None,
+    na_origem: Sequence[str] = (), nao_resolvidos: Sequence[str] = (), locais: Sequence[str] = (),
 ) -> ResultadoBusca:
     """Fecha a busca: monta o funil e os avisos. Qualquer fonte usa esta mesma função."""
     funil = Funil(
@@ -172,5 +200,6 @@ def montar_resultado(
     return ResultadoBusca(
         fonte=fonte, anuncios=anuncios, paginas_lidas=paginas_lidas, tempo_segundos=tempo,
         funil=funil, motivo_parada=motivo,
-        avisos=_avisos(fonte, funil, motivo, paginas_lidas, tempo, limites, detalhe_falha),
+        avisos=_avisos(fonte, funil, motivo, paginas_lidas, tempo, limites, detalhe_falha, nao_resolvidos),
+        filtros_na_origem=list(na_origem), filtros_locais=list(locais),
     )

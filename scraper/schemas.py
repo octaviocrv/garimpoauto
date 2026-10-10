@@ -67,6 +67,8 @@ class PaginaBusca:
     aviso: Optional[str] = None  # texto humano quando algo deu errado
     coletados: int = 0  # anúncios novos que vieram da fonte nesta página, antes do filtro local
     cortados_por_filtro: dict[str, int] = field(default_factory=dict)
+    na_origem: list[str] = field(default_factory=list)  # filtros que a fonte aplicou na própria busca
+    nao_resolvidos: list[str] = field(default_factory=list)  # filtros pedidos que a fonte não entendeu (viram filtro local)
 
     @property
     def ultima(self) -> bool:
@@ -74,7 +76,9 @@ class PaginaBusca:
 
 
 MotivoParada = Literal["acabaram_paginas", "teto_paginas", "teto_tempo", "falha_fonte"]
-CodigoAviso = Literal["teto_paginas", "teto_tempo", "muitos_resultados", "poucos_resultados", "fonte_parcial"]
+CodigoAviso = Literal[
+    "teto_paginas", "teto_tempo", "muitos_resultados", "poucos_resultados", "fonte_parcial", "filtro_aproximado"
+]
 
 
 class Aviso(BaseModel):
@@ -115,6 +119,9 @@ class ResultadoBusca(BaseModel):
     funil: Funil
     motivo_parada: MotivoParada
     avisos: list[Aviso] = []
+    # Onde cada filtro pedido foi aplicado: na própria fonte (antes de coletar) ou aqui, depois da coleta.
+    filtros_na_origem: list[str] = []
+    filtros_locais: list[str] = []
 
     @property
     def incompletos(self) -> int:
@@ -128,6 +135,7 @@ class Busca(BaseModel):
     texto: str
     marca: Optional[str] = None
     modelo: Optional[str] = None
+    versao: Optional[str] = None
     ano_min: Optional[int] = None
     ano_max: Optional[int] = None
     preco_min: Optional[int] = None
@@ -145,7 +153,7 @@ class Busca(BaseModel):
             raise ValueError("texto da busca não pode ser vazio")
         return v
 
-    @field_validator("marca", "modelo", "regiao", "cidade", mode="before")
+    @field_validator("marca", "modelo", "versao", "regiao", "cidade", mode="before")
     @classmethod
     def _vazio_vira_none(cls, v: Any) -> Any:
         if isinstance(v, str):

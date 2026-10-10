@@ -28,7 +28,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import ValidationError
 
 import config
-from busca import chave_busca, montar_resultado
+from busca import chave_busca, filtros_locais, montar_resultado
 from config import LimitesBusca
 from schemas import Anuncio, Busca, PaginaBusca, ResultadoBusca
 from sources import olx
@@ -149,6 +149,8 @@ class Servico:
         cortados: dict[str, int] = {}
         paginas = coletados = 0
         total: Optional[int] = None
+        na_origem: list[str] = []
+        nao_resolvidos: list[str] = []
         motivo, detalhe = "falha_fonte", "a busca terminou sem motivo registrado"
         try:
             for pag in self.fonte.buscar_paginas(busca, limites):
@@ -160,6 +162,7 @@ class Servico:
                     cortados[nome] = cortados.get(nome, 0) + qtd
                 if pag.total_ads is not None:
                     total = pag.total_ads
+                na_origem, nao_resolvidos = pag.na_origem, pag.nao_resolvidos
                 if pag.parou_por is not None:
                     motivo, detalhe = olx._MOTIVOS[pag.parou_por], pag.aviso
                 with coleta.cond:
@@ -170,7 +173,7 @@ class Servico:
             detalhe = f"erro inesperado na pagina {paginas + 1} ({type(e).__name__}: {e})"
         return montar_resultado(
             self.fonte.FONTE, anuncios, paginas, time.monotonic() - inicio, total, coletados,
-            cortados, motivo, limites, detalhe,
+            cortados, motivo, limites, detalhe, na_origem, nao_resolvidos, filtros_locais(busca, na_origem),
         )
 
 

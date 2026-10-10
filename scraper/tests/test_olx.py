@@ -68,15 +68,27 @@ class RespostaFalsa:
 
 
 class SessaoFalsa:
-    """Devolve as respostas combinadas, uma por chamada, e guarda as URLs pedidas."""
+    """Devolve as respostas combinadas, uma por chamada de listagem, e guarda as URLs pedidas.
+    Pedidos à API de filtros (marca, modelo, versão) não gastam resposta de listagem: respondem
+    com o que estiver em `api` (pedaço do endereço -> lista) ou 404."""
 
-    def __init__(self, respostas):
+    def __init__(self, respostas, api=None):
         self.respostas = list(respostas)
+        self.api = api or {}
         self.urls = []
 
-    def get(self, url):
+    def get(self, url, **kw):
         self.urls.append(url)
+        if "/api/filters/" in url:
+            for trecho, lista in self.api.items():
+                if url.endswith(trecho):
+                    return RespostaFalsa(200, "<html><body>" + json.dumps(lista) + "</body></html>")
+            return RespostaFalsa(404, "")
         return self.respostas.pop(0) if self.respostas else RespostaFalsa(200, html_com_ads([], 0))
+
+    @property
+    def urls_de_listagem(self):
+        return [u for u in self.urls if "/api/filters/" not in u]
 
 
 class Relogio:

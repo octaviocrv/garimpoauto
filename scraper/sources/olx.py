@@ -30,7 +30,7 @@ from urllib.parse import quote, urlencode
 from scrapling.fetchers import FetcherSession
 from scrapling.parser import Selector
 
-from busca import filtrar_local_contando, montar_resultado
+from busca import filtrar_local_contando, filtros_locais, montar_resultado, normalizar_texto
 from config import LimitesBusca
 from schemas import Anuncio, Busca, PaginaBusca, ResultadoBusca
 
@@ -279,6 +279,146 @@ def normalizar(ad: dict) -> Anuncio:
     return anuncio.marcar_completude()
 
 
+
+# ---------------------------------------------------------------------------
+# Códigos de marca, modelo e versão (filtros vb, vm, vv da própria OLX)
+# ---------------------------------------------------------------------------
+
+URL_FILTROS = "https://www.olx.com.br/api/filters/v1/attributes"
+TTL_CODIGOS = 12 * 3600  # as listas de marca, modelo e versão mudam pouco
+_CODIGOS: dict[str, tuple[float, list[dict]]] = {}
+
+
+def limpar_cache_codigos() -> None:
+    _CODIGOS.clear()
+
+
+def _sem_simbolos(texto: Optional[str]) -> str:
+    """'HR-V' e 'hrv' ficam iguais."""
+    return re.sub(r"[^a-z0-9]", "", normalizar_texto(texto))
+
+
+def achar_marca(texto: str, lista: list[dict]) -> Optional[dict]:
+    """Casa o texto com o nome da marca ou com uma palavra do endereço dela ('vw' acha Volkswagen).
+    Se mais de uma marca servir, devolve None: melhor filtrar por aqui do que chutar."""
+    alvo, sem = normalizar_texto(texto), _sem_simbolos(texto)
+    servem = [
+        i for i in lista
+        if normalizar_texto(i["label"]) == alvo
+        or _sem_simbolos(i["label"]) == sem
+        or alvo in (i.get("extraData", {}).get("friendlyPath") or "").split("-")
+        or _sem_simbolos(i.get("extraData", {}).get("friendlyPath")) == sem
+    ]
+    return servem[0] if len(servem) == 1 else None
+
+
+def achar_modelo(texto: str, lista: list[dict]) -> tuple[Optional[dict], str]:
+    """Modelo exato, ou o maior modelo que abre o texto ('civic touring' acha Civic e sobra
+    'touring'). Devolve (modelo, o que sobrou)."""
+    alvo, sem = normalizar_texto(texto), _sem_simbolos(texto)
+    for i in lista:
+        if normalizar_texto(i["label"]) == alvo or _sem_simbolos(i["label"]) == sem:
+            return i, ""
+    abre = [i for i in lista if alvo.startswith(normalizar_texto(i["label"]) + " ")]
+    if not abre:
+        return None, ""
+    melhor = max(abre, key=lambda i: len(i["label"]))
+    return melhor, alvo[len(normalizar_texto(melhor["label"])):].strip()
+
+
+def achar_versao(texto: str, lista: list[dict]) -> Optional[dict]:
+    """Versão de nome igual, ou a única que tem todas as palavras do texto."""
+    alvo = normalizar_texto(texto)
+    for i in lista:
+        if normalizar_texto(i["label"]) == alvo:
+            return i
+    palavras = alvo.split()
+    servem = [i for i in lista if palavras and all(p in normalizar_texto(i["label"]).split() for p in palavras)]
+    return servem[0] if len(servem) == 1 else None
+
+
+class _Ritmo:
+    """Mesma pausa das páginas, também entre as consultas de código e a primeira página."""
+
+    def __init__(self, pausa: tuple[float, float], dormir: Callable[[float], None]) -> None:
+        self.pausa, self.dormir, self.fez_requisicao = pausa, dormir, False
+
+    def esperar(self) -> None:
+        if self.fez_requisicao:
+            self.dormir(random.uniform(*self.pausa))
+        self.fez_requisicao = True
+
+
+def _listar(sessao: Any, caminho: str, ritmo: _Ritmo, relogio: Callable[[], float]) -> Optional[list[dict]]:
+    """Lista de marcas, modelos ou versões da OLX, guardada em memória. None se não deu para ler
+    (rede, bloqueio, formato diferente): quem chamou cai no filtro local e o resultado avisa."""
+    guardado = _CODIGOS.get(caminho)
+    if guardado and relogio() - guardado[0] < TTL_CODIGOS:
+        return guardado[1]
+    ritmo.esperar()
+    try:
+        resposta = sessao.get(f"{URL_FILTROS}/{caminho}", headers={"Accept": "application/json"})
+        if resposta.status != 200:
+            return None
+        achou = re.search(r"<body>(.*)</body>", resposta.html_content, re.S)
+        lista = json.loads(achou.group(1) if achou else resposta.html_content)
+    except Exception:
+        return None
+    if not isinstance(lista, list) or not all(isinstance(i, dict) and "value" in i and "label" in i for i in lista):
+        return None
+    _CODIGOS[caminho] = (relogio(), lista)
+    return lista
+
+
+def resolver_codigos(
+    sessao: Any, busca: Busca, ritmo: _Ritmo, relogio: Callable[[], float],
+) -> tuple[dict[str, str], set[str], list[str]]:
+    """Acha os códigos que a OLX usa para a marca, o modelo e a versão pedidos.
+    Devolve (códigos vb/vm/vv, filtros resolvidos de vez, o que não foi entendido).
+    Um filtro "resolvido de vez" não precisa mais do filtro local."""
+    codigos: dict[str, str] = {}
+    resolvidos: set[str] = set()
+    nao: list[str] = []
+
+    if busca.marca:
+        lista = _listar(sessao, "carbrand", ritmo, relogio)
+        item = achar_marca(busca.marca, lista) if lista else None
+        if item:
+            codigos["vb"] = str(item["value"])
+            resolvidos.add("marca")
+        else:
+            nao.append(f"a marca {busca.marca}")
+
+    versao_texto = busca.versao
+    if busca.modelo:
+        item, resto = None, ""
+        if "vb" in codigos:
+            lista = _listar(sessao, f"carmodel?carbrand={codigos['vb']}", ritmo, relogio)
+            item, resto = achar_modelo(busca.modelo, lista) if lista else (None, "")
+        if item:
+            codigos["vm"] = str(item["value"])
+            if resto and not versao_texto:
+                versao_texto = resto  # 'civic touring': o Civic vai na OLX e o resto tenta virar versão
+            elif not resto:
+                resolvidos.add("modelo")
+        else:
+            nao.append(f"o modelo {busca.modelo}")
+
+    if versao_texto:
+        item = None
+        if "vm" in codigos:
+            lista = _listar(sessao, f"carversion?carbrand={codigos['vb']}&carmodel={codigos['vm']}", ritmo, relogio)
+            item = achar_versao(versao_texto, lista) if lista else None
+        if item:
+            codigos["vv"] = str(item["value"])
+            resolvidos.add("versao")
+            if busca.modelo:
+                resolvidos.add("modelo")
+        else:
+            nao.append(f"a versão {versao_texto}")
+    return codigos, resolvidos, nao
+
+
 # ---------------------------------------------------------------------------
 # URL e filtros
 # ---------------------------------------------------------------------------
@@ -308,6 +448,7 @@ def montar_url(
     combustivel: Optional[str] = None,
     anunciante: Optional[str] = None,
     ordenar: Optional[str] = None,
+    codigos: Optional[dict[str, str]] = None,
 ) -> str:
     """Monta a URL de listagem só com os filtros da Busca que a OLX aceita (estado, região, ano,
     preço e km). Marca, modelo e cidade ficam para filtrar_local. O km_max vai como o degrau
@@ -321,6 +462,7 @@ def montar_url(
 
     km_max = _degrau_km(busca.km_max) if busca.km_max is not None else None
     params: list[tuple[str, Any]] = [("q", busca.texto)]
+    params += [(k, v) for k, v in (codigos or {}).items()]  # vb, vm, vv
     if pagina > 1:
         params.append(("o", pagina))
     opcionais = [
@@ -443,6 +585,13 @@ def buscar_paginas(
         )
         sessao = gerenciador.__enter__()
     try:
+        ritmo = _Ritmo(limites.pausa_entre_paginas_segundos, dormir)
+        codigos, resolvidos, nao_resolvidos = resolver_codigos(sessao, busca, ritmo, relogio)
+        filtros["codigos"] = codigos
+        ignorar = (*_FILTROS_NA_URL, *resolvidos)
+        na_origem = _filtros_na_origem(busca, resolvidos)
+        if ritmo.fez_requisicao:
+            dormir(random.uniform(*limites.pausa_entre_paginas_segundos))  # entre a consulta de códigos e a 1ª página
         pagina = 1
         while True:
             url = montar_url(busca, pagina, **filtros)
@@ -466,6 +615,8 @@ def buscar_paginas(
                     parou_por=BLOQUEIO,
                     aviso=f"Parou por bloqueio na página {pagina}: {erro}. "
                     f"Devolvi os {acumulado} anúncios que já tinha.",
+                    na_origem=na_origem,
+                    nao_resolvidos=nao_resolvidos,
                 )
                 return
 
@@ -499,7 +650,7 @@ def buscar_paginas(
                 parou_por = TEMPO_MAXIMO
                 aviso = f"Parou no tempo máximo de {limites.tempo_max_segundos:.0f}s da busca."
 
-            aprovados, cortados = filtrar_local_contando(novos, busca, ignorar=_FILTROS_NA_URL)
+            aprovados, cortados = filtrar_local_contando(novos, busca, ignorar=ignorar)
             yield PaginaBusca(
                 fonte=FONTE,
                 numero=pagina,
@@ -510,6 +661,8 @@ def buscar_paginas(
                 aviso=aviso,
                 coletados=len(novos),
                 cortados_por_filtro=cortados,
+                na_origem=na_origem,
+                nao_resolvidos=nao_resolvidos,
             )
             if parou_por is not None:
                 return
@@ -518,6 +671,16 @@ def buscar_paginas(
     finally:
         if gerenciador is not None:
             gerenciador.__exit__(None, None, None)
+
+
+def _filtros_na_origem(busca: Busca, resolvidos: set[str]) -> list[str]:
+    """Nomes dos filtros pedidos que a OLX aplicou na própria busca."""
+    pedidos = [
+        ("estado", busca.estado), ("regiao", busca.regiao),
+        ("ano", busca.ano_min if busca.ano_min is not None else busca.ano_max),
+        ("preco", busca.preco_min if busca.preco_min is not None else busca.preco_max),
+    ]
+    return [n for n, v in pedidos if v is not None] + sorted(resolvidos)
 
 
 _MOTIVOS = {
@@ -546,6 +709,8 @@ def buscar(
     cortados: dict[str, int] = {}
     paginas = coletados = 0
     total_na_fonte: Optional[int] = None
+    na_origem: list[str] = []
+    nao_resolvidos: list[str] = []
     motivo = "falha_fonte"
     detalhe_falha: Optional[str] = "a busca terminou sem motivo registrado"
     try:
@@ -558,6 +723,7 @@ def buscar(
                 cortados[nome] = cortados.get(nome, 0) + qtd
             if pag.total_ads is not None:
                 total_na_fonte = pag.total_ads
+            na_origem, nao_resolvidos = pag.na_origem, pag.nao_resolvidos
             if pag.parou_por is not None:
                 motivo = _MOTIVOS[pag.parou_por]
                 detalhe_falha = pag.aviso
@@ -566,7 +732,7 @@ def buscar(
         detalhe_falha = f"erro inesperado na pagina {paginas + 1} ({type(e).__name__}: {e})"
     return montar_resultado(
         FONTE, anuncios, paginas, relogio() - inicio, total_na_fonte, coletados, cortados,
-        motivo, limites, detalhe_falha,
+        motivo, limites, detalhe_falha, na_origem, nao_resolvidos, filtros_locais(busca, na_origem),
     )
 
 
