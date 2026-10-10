@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, RefreshCw, Search, SlidersHorizontal } from 'lucide-react'
 import { CardCarro } from './CardCarro'
 import { Diagnostico } from './Diagnostico'
@@ -41,11 +41,8 @@ export function PaginaBusca() {
   const buscando = busca.fase === 'buscando'
   const resposta = busca.resposta
 
-  // Ao abrir a tela, uma vez só, a vitrine: o estado padrão, mais recentes, página 1. O "Ver mais" é manual.
-  const abriu = useRef(false)
+  // Ao abrir a tela, a vitrine: o estado padrão, mais recentes, página 1. O "Ver mais" é manual.
   useEffect(() => {
-    if (abriu.current) return
-    abriu.current = true
     buscar(montarPedidoOuVitrine(RASCUNHO_VAZIO))
   }, [buscar])
 
