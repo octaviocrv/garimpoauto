@@ -142,7 +142,8 @@ def test_cache_hit_nao_coleta_de_novo_e_o_stream_reenvia_as_paginas():
     primeira = c.get("/buscar", params={"texto": "Gol"}).json()
     segunda = c.get("/buscar", params={"texto": "  gol "}).json()  # mesma chave de busca
     assert len(fonte.buscas) == 1
-    assert primeira == segunda
+    assert {**primeira, "do_cache": None} == {**segunda, "do_cache": None}  # igual, só muda de onde veio
+    assert (primeira["do_cache"], segunda["do_cache"]) == (False, True)
     ev = eventos(c.get("/buscar/stream", params={"texto": "gol"}).text)
     assert [n for n, _ in ev] == ["pagina"] * 3 + ["fim"]
     assert len(fonte.buscas) == 1
@@ -324,3 +325,66 @@ def test_opcao_invalida_da_erro_curto_e_humano(params):
     c, _ = cliente()
     r = c.get("/buscar", params={"texto": "gol", **params})
     assert r.status_code == 422 and r.json() == {"erro": server.MSG_PEDIDO}
+
+
+# --- hora da coleta, estado aplicado e ignorar o cache --------------------------
+
+
+def test_resultado_informa_estado_aplicado_hora_da_coleta_e_ordenacao():
+    c, _ = cliente()
+    j = c.get("/buscar", params={"texto": "gol"}).json()
+    assert j["estado_aplicado"] == "MG" and j["busca"]["estado"] == "MG"
+    assert j["busca"]["ordenar"] == "recentes"
+    assert re.match(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", j["coletado_em"])
+    assert c.get("/buscar", params={"texto": "gol", "estado": "todos"}).json()["estado_aplicado"] == "todos"
+    assert c.get("/buscar", params={"texto": "gol", "estado": "sp"}).json()["estado_aplicado"] == "SP"
+
+
+def test_do_cache_so_e_verdade_na_segunda_vez_e_a_hora_nao_muda():
+    c, fonte = cliente()
+    primeira = c.get("/buscar", params={"texto": "gol"}).json()
+    segunda = c.get("/buscar", params={"texto": "gol"}).json()
+    assert (primeira["do_cache"], segunda["do_cache"]) == (False, True)
+    assert primeira["coletado_em"] == segunda["coletado_em"] and len(fonte.buscas) == 1
+
+
+def test_atualizar_ignora_o_cache_e_coleta_de_novo_com_hora_nova():
+    c, fonte = cliente()
+    a = c.get("/buscar", params={"texto": "gol"}).json()
+    b = c.get("/buscar", params={"texto": "gol", "atualizar": 1}).json()
+    assert len(fonte.buscas) == 2 and b["do_cache"] is False and b["coletado_em"] >= a["coletado_em"]
+    d = c.get("/buscar", params={"texto": "gol"}).json()  # a nova coleta virou o cache
+    assert len(fonte.buscas) == 2 and d["do_cache"] is True and d["coletado_em"] == b["coletado_em"]
+
+
+def test_atualizar_no_stream_tambem_coleta_de_novo_e_o_fim_traz_hora_e_estado():
+    c, fonte = cliente()
+    c.get("/buscar/stream", params={"texto": "gol"})
+    ev = eventos(c.get("/buscar/stream", params={"texto": "gol", "atualizar": 1}).text)
+    fim = ev[-1][1]
+    assert len(fonte.buscas) == 2 and fim["do_cache"] is False
+    assert fim["estado_aplicado"] == "MG" and "coletado_em" in fim
+    de_novo = eventos(c.get("/buscar/stream", params={"texto": "gol"}).text)[-1][1]
+    assert de_novo["do_cache"] is True and len(fonte.buscas) == 2
+
+
+def test_atualizar_durante_coleta_em_andamento_divide_a_mesma_coleta():
+    segurar = threading.Event()
+    c, fonte = cliente(FonteFalsa(segurar=segurar))
+    respostas = []
+    t = threading.Thread(target=lambda: respostas.append(c.get("/buscar", params={"texto": "gol"}).status_code))
+    t.start()
+    assert fonte.entrou.wait(5)
+    t2 = threading.Thread(target=lambda: respostas.append(c.get("/buscar", params={"texto": "gol", "atualizar": 1}).status_code))
+    t2.start()
+    time.sleep(0.2)
+    segurar.set()
+    t.join(10)
+    t2.join(10)
+    assert respostas == [200, 200] and len(fonte.buscas) == 1
+
+
+def test_resposta_com_os_campos_novos_continua_sem_dado_de_anunciante():
+    c, _ = cliente()
+    texto = c.get("/buscar", params={"texto": "gol"}).text.lower()
+    assert '"raw"' not in texto and "seller" not in texto and "fulano" not in texto

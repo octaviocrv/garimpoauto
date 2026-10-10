@@ -727,6 +727,7 @@ def buscar(
     return montar_resultado(
         FONTE, anuncios, paginas, relogio() - inicio, total_na_fonte, coletados, cortados,
         motivo, limites, detalhe_falha, na_origem, nao_resolvidos, filtros_locais(busca, na_origem),
+        busca,
     )
 
 

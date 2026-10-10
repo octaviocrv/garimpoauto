@@ -129,6 +129,8 @@ class ResultadoBusca(BaseModel):
     # Onde cada filtro pedido foi aplicado: na própria fonte (antes de coletar) ou aqui, depois da coleta.
     filtros_na_origem: list[str] = []
     filtros_locais: list[str] = []
+    busca: Optional["Busca"] = None  # o que foi aplicado de fato (estado, ordenação e filtros)
+    coletado_em: Optional[datetime] = None  # quando a coleta terminou, em UTC
 
     @property
     def incompletos(self) -> int:
@@ -242,3 +244,6 @@ class Busca(BaseModel):
         if self.regiao and not self.estado:
             raise ValueError("regiao exige estado")
         return self
+
+
+ResultadoBusca.model_rebuild()  # a Busca é definida depois do resultado

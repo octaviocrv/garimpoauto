@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from datetime import datetime, timezone
 from typing import Iterable, Optional, Sequence
 
 from config import LimitesBusca
@@ -215,6 +216,7 @@ def montar_resultado(
     total_na_fonte: Optional[int], coletados: int, cortados: dict[str, int],
     motivo: str, limites: LimitesBusca, detalhe_falha: Optional[str] = None,
     na_origem: Sequence[str] = (), nao_resolvidos: Sequence[str] = (), locais: Sequence[str] = (),
+    busca: Optional[Busca] = None,
 ) -> ResultadoBusca:
     """Fecha a busca: monta o funil e os avisos. Qualquer fonte usa esta mesma função."""
     funil = Funil(
@@ -226,4 +228,5 @@ def montar_resultado(
         funil=funil, motivo_parada=motivo,
         avisos=_avisos(fonte, funil, motivo, paginas_lidas, tempo, limites, detalhe_falha, nao_resolvidos),
         filtros_na_origem=list(na_origem), filtros_locais=list(locais),
+        busca=busca, coletado_em=datetime.now(timezone.utc),
     )

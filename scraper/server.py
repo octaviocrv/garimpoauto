@@ -7,7 +7,8 @@ GET /buscar/stream  o mesmo por SSE: um evento "pagina" por página, "fim" com f
 
 Parâmetros: texto (obrigatório), marca, modelo, versao, ano_min, ano_max, preco_min, preco_max,
 km_min, km_max, cambio, combustivel, anunciante (particular ou profissional), ordenar (recentes,
-menor_preco ou relevancia, padrão recentes), estado, regiao, cidade, dev. Estado ausente usa config.ESTADO_PADRAO, "todos" busca no Brasil
+menor_preco ou relevancia, padrão recentes), estado, regiao, cidade, dev, atualizar (1 ignora o
+cache e coleta de novo). Estado ausente usa config.ESTADO_PADRAO, "todos" busca no Brasil
 todo. Com dev=1 os avisos trazem o detalhe_tecnico, senão ele nem aparece.
 
 Cache só em memória, com a chave de busca.chave_busca e TTL de config.CACHE_TTL_SEGUNDOS. A mesma
@@ -52,8 +53,10 @@ def _avisos_json(avisos: list, dev: bool) -> list[dict]:
     return saida
 
 
-def resultado_json(r: ResultadoBusca, dev: bool) -> dict[str, Any]:
+def resultado_json(r: ResultadoBusca, dev: bool, do_cache: bool = False) -> dict[str, Any]:
     corpo = r.model_dump(mode="json", exclude={"anuncios", "avisos"})
+    corpo["estado_aplicado"] = (r.busca.estado if r.busca else None) or "todos"  # a tela mostra onde buscou
+    corpo["do_cache"] = do_cache  # True quando veio guardado, sem coletar de novo
     corpo["anuncios"] = [_anuncio_json(a) for a in r.anuncios]
     corpo["avisos"] = _avisos_json(r.avisos, dev)
     return corpo
@@ -112,15 +115,20 @@ class Servico:
     def max_paginas(self) -> int:
         return (self.limites or LimitesBusca()).max_paginas
 
-    def obter(self, busca: Busca) -> Coleta:
+    def obter(self, busca: Busca, atualizar: bool = False) -> tuple[Coleta, bool]:
+        """(coleta, veio_do_cache). `atualizar` ignora uma coleta pronta e busca de novo. Se a mesma
+        busca ainda está sendo coletada, divide essa coleta em vez de começar outra."""
         chave, agora = chave_busca(busca), time.monotonic()
         with self.trava:
             self.cache = {k: c for k, c in self.cache.items() if c.vigente(agora)}
             coleta = self.cache.get(chave)
+            if coleta is not None and atualizar and coleta.terminou:
+                coleta = None
             if coleta is None:
                 coleta = self.cache[chave] = Coleta()
                 threading.Thread(target=self._rodar, args=(chave, coleta, busca), daemon=True).start()
-            return coleta
+                return coleta, False
+            return coleta, coleta.terminou
 
     def _rodar(self, chave: str, coleta: Coleta, busca: Busca) -> None:
         try:
@@ -175,6 +183,7 @@ class Servico:
         return montar_resultado(
             self.fonte.FONTE, anuncios, paginas, time.monotonic() - inicio, total, coletados,
             cortados, motivo, limites, detalhe, na_origem, nao_resolvidos, filtros_locais(busca, na_origem),
+            busca=busca,
         )
 
 
@@ -238,17 +247,17 @@ def criar_app(
         return {"status": "ok"}
 
     @app.get("/buscar")
-    def buscar(busca: Busca = Depends(pedido), dev: int = 0) -> JSONResponse:
-        coleta = servico.obter(busca)
+    def buscar(busca: Busca = Depends(pedido), dev: int = 0, atualizar: int = 0) -> JSONResponse:
+        coleta, do_cache = servico.obter(busca, atualizar == 1)
         with coleta.cond:
             coleta.cond.wait_for(lambda: coleta.terminou)
         if coleta.resultado is None:
             return JSONResponse({"erro": MSG_ERRO}, status_code=500)
-        return JSONResponse(resultado_json(coleta.resultado, dev == 1))
+        return JSONResponse(resultado_json(coleta.resultado, dev == 1, do_cache))
 
     @app.get("/buscar/stream")
-    def stream(busca: Busca = Depends(pedido), dev: int = 0) -> StreamingResponse:
-        coleta = servico.obter(busca)
+    def stream(busca: Busca = Depends(pedido), dev: int = 0, atualizar: int = 0) -> StreamingResponse:
+        coleta, do_cache = servico.obter(busca, atualizar == 1)
 
         def eventos() -> Iterator[str]:
             i = 0
@@ -265,7 +274,7 @@ def criar_app(
             if r is None:
                 yield sse("erro", {"mensagem": MSG_ERRO})
                 return
-            fim = resultado_json(r, dev == 1)
+            fim = resultado_json(r, dev == 1, do_cache)
             fim.pop("anuncios")  # já foram nos eventos "pagina"
             yield sse("fim", fim)
 
