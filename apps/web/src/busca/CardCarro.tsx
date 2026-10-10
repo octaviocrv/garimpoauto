@@ -4,7 +4,7 @@ import type { Anuncio } from '../types'
 import type { Analise } from './analise'
 import { fipeDe, type ReferenciaFipe } from './fipe'
 import { dataCurta, prefixoData, type Sinal, type TipoSinal } from './sinais'
-import { T } from './textos'
+import { seloFipeAbaixo, seloFipeAcima, T } from './textos'
 
 const preco = (v: number) => `R$ ${v.toLocaleString('pt-BR')}`
 const SEM_SINAIS: Sinal[] = []
@@ -18,18 +18,31 @@ const COR_SINAL: Record<TipoSinal, string> = {
 }
 
 function FipeDoCard({ f }: { f: ReferenciaFipe }) {
-  const abaixo = f.diferencaReais > 0
-  const igual = f.diferencaReais === 0
+  const diferenca = f.diferencaPercentual
+  const oportunidade = diferenca >= 15 && diferenca <= 50 && !f.precoEstranho
+  const texto = f.precoEstranho
+    ? T.fipePrecoEstranho
+    : diferenca < 0
+      ? seloFipeAcima(Math.abs(diferenca))
+      : diferenca === 0
+        ? T.fipeNoValor
+        : oportunidade || f.exemplo
+          ? seloFipeAbaixo(diferenca)
+          : null
+  if (!texto) return null
   return (
-    <div className="rounded-xl border border-dashed border-orange-400/50 bg-orange-400/[0.06] px-3 py-2 text-sm">
-      {f.exemplo && (
-        <p className="mb-1 inline-block rounded-full bg-orange-400 px-2 py-0.5 text-xs font-bold text-black">{T.exemplo}</p>
-      )}
-      <p className="text-gray-300">FIPE {preco(f.valor)}</p>
-      <p className={abaixo ? 'font-semibold text-teal-300' : 'text-gray-400'}>
-        {igual ? 'No valor da FIPE' : `${preco(Math.abs(f.diferencaReais))} ${abaixo ? 'abaixo' : 'acima'} (${Math.abs(f.diferencaPercentual)}%)`}
-      </p>
-    </div>
+    <li
+      title={f.exemplo ? T.exemplo : `FIPE ${preco(f.valor)}`}
+      className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs ${
+        oportunidade ? 'bg-teal-400/10 text-teal-300'
+          : f.precoEstranho ? 'bg-amber-300/10 text-amber-200'
+            : 'bg-white/[0.05] text-gray-400'
+      }`}
+    >
+      <TrendingDown size={14} className="flex-none" aria-hidden="true" />
+      <span className="font-semibold">{texto}</span>
+      {f.exemplo && <span className="sr-only">{T.exemplo}</span>}
+    </li>
   )
 }
 
@@ -47,7 +60,7 @@ function Card({ a, sinais = SEM_SINAIS, agora, novo, demo, analise, onGarimpar }
   const foto = a.imagens[0]
   const local = [a.cidade, a.estado].filter(Boolean).join(', ')
   const quando = dataCurta(a.anunciado_em, agora)
-  const fipe = demo ? fipeDe(a) : null
+  const fipe = a.fipe ? fipeDe(a) : demo ? fipeDe(a) : null
   const nivel = analise?.nivel ?? null
   const sinalRecente = sinais.find((s) => s.tipo === 'recente')
   const outrosSinais = sinais.filter((s) => s.tipo !== 'recente')
@@ -121,9 +134,9 @@ function Card({ a, sinais = SEM_SINAIS, agora, novo, demo, analise, onGarimpar }
             <ChevronRight size={16} className="flex-none" aria-hidden="true" />
           </button>
         )}
-        {fipe && <div className="mt-3"><FipeDoCard f={fipe} /></div>}
-        {outrosSinais.length > 0 && (
+        {(fipe || outrosSinais.length > 0) && (
           <ul className="mt-3 flex flex-wrap gap-1.5">
+            {fipe && <FipeDoCard f={fipe} />}
             {outrosSinais.map((s) => {
               const Icone = ICONE[s.tipo]
               return (

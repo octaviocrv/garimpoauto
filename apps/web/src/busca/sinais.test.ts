@@ -126,6 +126,20 @@ describe('FIPE', () => {
     expect(fipeDe(carro('a'))).toBeNull()
   })
 
+  it('usa a FIPE real que veio do servidor e mantém a conta', () => {
+    const f = fipeDe(carro('real', {
+      preco: 30000,
+      fipe: {
+        codigo: '005384-8', preco: 40000, diferenca_percentual: 25,
+        mes_referencia: 'outubro de 2026', confianca: 'alta', preco_estranho: false,
+      },
+    }))
+    expect(f).toEqual({
+      valor: 40000, diferencaReais: 10000, diferencaPercentual: 25, exemplo: false,
+      codigo: '005384-8', mesReferencia: 'outubro de 2026', precoEstranho: false,
+    })
+  })
+
   it('o exemplo vem marcado, tem a conta certa e é sempre o mesmo pro mesmo carro', () => {
     const feitos = Array.from({ length: 30 }, (_, i) => fipeDeExemplo(carro(`id${i}`))).filter((f) => f !== null)
     expect(feitos.length).toBeGreaterThan(10)

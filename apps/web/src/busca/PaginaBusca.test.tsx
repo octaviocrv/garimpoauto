@@ -3,7 +3,7 @@ import { act, StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../api'
-import type { RespostaPagina } from '../types'
+import type { Anuncio, RespostaPagina } from '../types'
 import { PaginaBusca } from './PaginaBusca'
 import { T } from './textos'
 
@@ -40,6 +40,20 @@ const resposta: RespostaPagina = {
   do_cache: false,
 }
 
+const carroComFipe = {
+  source: 'olx', external_id: 'fipe-1', url: 'https://exemplo', titulo: 'Gol', marca: 'Volkswagen',
+  modelo: 'Gol', modelo_original: 'Gol Trendline 1.0', ano: 2016, km: 60000, preco: 30000,
+  cambio: 'manual', combustivel: 'flex', cor: null, portas: 4, cidade: 'Contagem', bairro: null,
+  estado: 'MG', publicado_em: null, renovado_em: null, anunciado_em: null, em_destaque: false,
+  repetido_de: null, anunciante_profissional: false, nota_anunciante: null, imagens: [], novo: false,
+  incompleto: false, campos_faltando: [],
+  fipe: {
+    codigo: '005384-8', preco: 40000, diferenca_percentual: 25,
+    mes_referencia: 'outubro de 2026', confianca: 'alta', preco_estranho: false,
+  },
+  fipe_bloqueio: null,
+} satisfies Anuncio
+
 afterEach(() => {
   vi.clearAllMocks()
 })
@@ -71,6 +85,33 @@ describe('vitrine ao abrir', () => {
 
     expect(buscarPagina).toHaveBeenCalledTimes(2)
 
+    act(() => root.unmount())
+    container.remove()
+  })
+
+  it('mostra uma vez o selo FIPE real dentro do StrictMode', async () => {
+    const buscarPagina = vi.mocked(api.buscarPagina)
+    const respostaFipe = {
+      ...resposta, anuncios: [carroComFipe], entregues: 1, coletados: 1, total_na_fonte: 1,
+    }
+    buscarPagina.mockImplementation((_pedido, _pagina, _dev, _atualizar, signal) =>
+      new Promise((resolve, reject) => {
+        signal.addEventListener('abort', () => reject(new DOMException('Abortada', 'AbortError')))
+        queueMicrotask(() => {
+          if (!signal.aborted) resolve(respostaFipe)
+        })
+      }),
+    )
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(async () => {
+      root.render(<StrictMode><PaginaBusca /></StrictMode>)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    await vi.waitFor(() => expect(container.textContent?.match(/25% abaixo da FIPE/g)).toHaveLength(1))
     act(() => root.unmount())
     container.remove()
   })

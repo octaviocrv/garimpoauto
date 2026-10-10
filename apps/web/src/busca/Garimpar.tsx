@@ -315,7 +315,9 @@ function FaixaPreco({ carro, criterio, mercado }: { carro: Anuncio; criterio: Cr
           <div className="ga-faixa-preco__nomes">
             <span>{GT.minimo}</span><span>{GT.mediana}</span><span>{GT.maximo}</span>
           </div>
-          <p className="ga-faixa-preco__destaque">{GT.precoDesteCarro} <b>{reais(carro.preco)}</b></p>
+          <p className="ga-faixa-preco__destaque">
+            {GT.precoDesteCarro} <b>{carro.preco === null ? GT.precoAusente : reais(carro.preco)}</b>
+          </p>
         </div>
       ) : (
         <div className="ga-progresso">
@@ -356,15 +358,18 @@ function ReferenciaFipe({ carro }: { carro: Anuncio }) {
   if (!fipe) return null
 
   return (
-    <article className="ga-painel ga-painel--exemplo">
+    <article className={`ga-painel ${fipe.exemplo ? 'ga-painel--exemplo' : ''}`}>
       <div className="ga-painel__topo">
         <div>
           <p className="ga-sobretitulo">{GT.fipe}</p>
           <h3>{reais(fipe.valor)}</h3>
         </div>
-        <span className="ga-etiqueta-exemplo">{T.exemplo}</span>
+        {fipe.exemplo && <span className="ga-etiqueta-exemplo">{T.exemplo}</span>}
       </div>
-      <p className="ga-conta">{GT.fipeNaoEntra}</p>
+      {!fipe.exemplo && fipe.codigo && fipe.mesReferencia && (
+        <p className="ga-conta">{T.fipeCodigo} {fipe.codigo}. {T.fipeMes} {fipe.mesReferencia}.</p>
+      )}
+      <p className="ga-conta">{fipe.exemplo ? GT.fipeNaoEntra : T.fipeReferencia}</p>
     </article>
   )
 }

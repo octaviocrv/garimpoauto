@@ -22,6 +22,15 @@ export interface Busca {
   cidade?: string | null
 }
 
+export interface ReferenciaFipe {
+  codigo: string
+  preco: number
+  diferenca_percentual: number
+  mes_referencia: string
+  confianca: 'alta'
+  preco_estranho: boolean
+}
+
 export interface Anuncio {
   source: string
   external_id: string
@@ -51,6 +60,8 @@ export interface Anuncio {
   novo: boolean // só vale com o banco ligado, depois da primeira busca
   incompleto: boolean
   campos_faltando: string[]
+  fipe?: ReferenciaFipe | null
+  fipe_bloqueio?: 'anuncio_promocional' | 'km_incoerente' | null
 }
 
 export type MotivoParada = 'acabaram_paginas' | 'teto_paginas' | 'teto_tempo' | 'falha_fonte'

@@ -47,6 +47,11 @@ export const T = {
   demoLigado: 'Modo exemplo ligado. A FIPE que aparece aqui é inventada, só pra ver como o card ficaria.',
   demoEsconder: 'Esconder FIPE de exemplo',
   demoMostrar: 'Mostrar FIPE de exemplo',
+  fipeNoValor: 'No valor da FIPE',
+  fipePrecoEstranho: 'Preço muito abaixo da FIPE',
+  fipeCodigo: 'Código FIPE',
+  fipeMes: 'Mês de referência',
+  fipeReferencia: 'A FIPE é uma referência. Não garante o preço de revenda.',
 } as const
 
 export const naOlx = (total: number) => `${total.toLocaleString('pt-BR')} na OLX`
@@ -56,3 +61,5 @@ export const buscadoAs = (iso: string): string => {
 }
 
 export const novosDesde = (n: number) => `${n.toLocaleString('pt-BR')} ${n === 1 ? 'novo' : 'novos'} desde a última busca`
+export const seloFipeAbaixo = (n: number) => `${n}% abaixo da FIPE`
+export const seloFipeAcima = (n: number) => `${n}% acima da FIPE`
