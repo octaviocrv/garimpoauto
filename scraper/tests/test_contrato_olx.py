@@ -103,3 +103,82 @@ def test_o_funil_sempre_fecha_as_contas():
     r, _ = buscar([pagina_real("olx_civic_p1"), pagina_real("olx_civic_p2")], busca)
     assert r.funil.coletados - sum(r.funil.cortados_por_filtro.values()) == r.funil.finais == len(r.anuncios)
     assert all(a.cidade == "Belo Horizonte" for a in r.anuncios)
+
+
+# --- datas, destaque e repetido (páginas reais) -------------------------------
+
+
+def todos_os_anuncios():
+    r, _ = buscar([pagina_real("olx_civic_p1"), pagina_real("olx_civic_p2")])
+    return r.anuncios
+
+
+def test_data_so_vira_publicacao_quando_nunca_foi_renovado():
+    brutos = {}
+    for nome in ("olx_civic_p1", "olx_civic_p2"):
+        for ad in json.loads((FIXTURES / f"{nome}.json").read_text(encoding="utf-8"))["ads"]:
+            if "listId" in ad:
+                brutos[str(ad["listId"])] = ad
+    anuncios = todos_os_anuncios()
+    nunca = [a for a in anuncios if brutos[a.external_id]["lastBumpAgeSecs"] == "0"]
+    renovados = [a for a in anuncios if brutos[a.external_id]["lastBumpAgeSecs"] != "0"]
+    assert nunca and renovados  # a página real tem os dois casos
+    assert all(a.publicado_em is not None and a.renovado_em is None for a in nunca)
+    assert all(a.publicado_em is None and a.renovado_em is not None for a in renovados)
+    assert all((a.publicado_em or a.renovado_em).tzinfo is not None for a in anuncios)
+
+
+def test_anuncio_em_destaque_e_marcado_e_continua_na_lista():
+    anuncios = todos_os_anuncios()
+    destaques = [a for a in anuncios if a.em_destaque]
+    assert 0 < len(destaques) < len(anuncios) and len(anuncios) == 78
+
+
+def test_repetido_entre_lojas_e_marcado_sem_apagar_nada():
+    anuncios = todos_os_anuncios()
+    ids = {a.external_id for a in anuncios}
+    repetidos = [a for a in anuncios if a.repetido_de]
+    assert all(a.repetido_de in ids and a.repetido_de != a.external_id for a in repetidos)
+    assert len(anuncios) == 78  # marcar não tira ninguém
+
+
+def test_sem_o_campo_de_renovacao_nao_inventa_data():
+    from tests.test_olx import anuncio_cru
+    sem = anuncio_cru("1")
+    sem.pop("lastBumpAgeSecs", None)
+    a = olx.normalizar(sem)
+    assert a.publicado_em is None and a.renovado_em is None
+    nunca = olx.normalizar(anuncio_cru("2", lastBumpAgeSecs="0"))
+    assert nunca.publicado_em is not None and nunca.renovado_em is None
+    renovado = olx.normalizar(anuncio_cru("3", lastBumpAgeSecs="3600"))
+    assert renovado.publicado_em is None and renovado.renovado_em is not None
+    estranho = olx.normalizar(anuncio_cru("4", lastBumpAgeSecs="abc"))
+    assert estranho.publicado_em is None and estranho.renovado_em is None
+
+
+def test_destaque_pelos_dois_campos_da_olx():
+    from tests.test_olx import anuncio_cru
+    assert olx.normalizar(anuncio_cru("1", isFeatured=True)).em_destaque
+    assert olx.normalizar(anuncio_cru("2", fixedOnTop=True)).em_destaque
+    assert not olx.normalizar(anuncio_cru("3", isFeatured=False, fixedOnTop=False)).em_destaque
+
+
+def test_mesmo_carro_em_paginas_diferentes_aponta_para_o_primeiro():
+    from tests.test_olx import anuncio_cru
+    a, b, c = (anuncio_cru(i) for i in ("10", "11", "12"))
+    c["priceValue"] = "R$ 99.000"  # preço diferente: outro carro
+    p1 = RespostaFalsa(200, html_com_ads([a], 3))
+    p2 = RespostaFalsa(200, html_com_ads([b, c], 3))
+    r, _ = buscar([p1, p2])
+    por_id = {x.external_id: x for x in r.anuncios}
+    assert por_id["10"].repetido_de is None
+    assert por_id["11"].repetido_de == "10"
+    assert por_id["12"].repetido_de is None
+    assert len(r.anuncios) == 3
+
+
+def test_sem_preco_ou_km_nao_marca_repetido():
+    from tests.test_olx import anuncio_cru
+    a, b = anuncio_cru("20", priceValue=None, price=None), anuncio_cru("21", priceValue=None, price=None)
+    r, _ = buscar([RespostaFalsa(200, html_com_ads([a, b], 2))])
+    assert all(x.repetido_de is None for x in r.anuncios)

@@ -30,7 +30,7 @@ from urllib.parse import quote, urlencode
 from scrapling.fetchers import FetcherSession
 from scrapling.parser import Selector
 
-from busca import filtrar_local_contando, filtros_locais, montar_resultado, normalizar_texto
+from busca import filtrar_local_contando, filtros_locais, marcar_repetidos, montar_resultado, normalizar_texto
 from config import LimitesBusca
 from schemas import Anuncio, Busca, PaginaBusca, ResultadoBusca
 
@@ -217,6 +217,20 @@ def _data(timestamp: Any) -> Optional[datetime]:
         return None
 
 
+def _datas(ad: dict) -> tuple[Optional[datetime], Optional[datetime]]:
+    """(publicado_em, renovado_em). O "date" da OLX é a publicação se lastBumpAgeSecs for "0"
+    (nunca renovado) e a renovação se for outro número. Sem esse campo não dá para saber, então
+    nenhuma das duas é preenchida."""
+    data, renovacao = _data(ad.get("date")), ad.get("lastBumpAgeSecs")
+    if data is None or renovacao is None:
+        return None, None
+    try:
+        nunca_renovado = int(str(renovacao).strip()) == 0
+    except ValueError:
+        return None, None
+    return (data, None) if nunca_renovado else (None, data)
+
+
 def _imagens(ad: dict) -> list[str]:
     links = []
     for img in ad.get("images") or []:
@@ -248,6 +262,7 @@ def normalizar(ad: dict) -> Anuncio:
         cidade, bairro = _texto(cidade), _texto(resto)
 
     portas = _numero(props.get("doors"))
+    publicado_em, renovado_em = _datas(ad)
     profissional = ad.get("professionalAd") if isinstance(ad.get("professionalAd"), bool) else None
     raw = _sem_dados_de_anunciante(ad)
     if profissional is not True:
@@ -270,7 +285,9 @@ def normalizar(ad: dict) -> Anuncio:
         cidade=cidade,
         bairro=bairro,
         estado=_texto(local.get("uf")),
-        publicado_em=_data(ad.get("date")),
+        publicado_em=publicado_em,
+        renovado_em=renovado_em,
+        em_destaque=bool(ad.get("isFeatured") or ad.get("fixedOnTop")),
         anunciante_profissional=profissional,
         nota_anunciante=_nota_do_anunciante(ad, profissional),
         imagens=_imagens(ad),
@@ -548,6 +565,7 @@ def buscar_paginas(
 
     inicio = relogio()
     vistos: set[str] = set()
+    carros_vistos: dict[tuple, str] = {}
     acumulado = 0
     total_ads: Optional[int] = None
 
@@ -604,6 +622,7 @@ def buscar_paginas(
                     continue
                 vistos.add(id_)
                 novos.append(normalizar(item))
+            marcar_repetidos(novos, carros_vistos)
             acumulado += len(novos)
 
             aviso = None

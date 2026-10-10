@@ -32,7 +32,12 @@ class Anuncio:
     cidade: Optional[str] = None
     bairro: Optional[str] = None
     estado: Optional[str] = None  # sigla em maiúscula, como a fonte devolve
-    publicado_em: Optional[datetime] = None  # data do anúncio na fonte, em UTC
+    # Na OLX o campo "date" é a publicação só se o anúncio nunca foi renovado. Senão é a data da
+    # renovação, e a de publicação não existe. Por isso são dois campos, e sem certeza os dois ficam vazios.
+    publicado_em: Optional[datetime] = None  # em UTC
+    renovado_em: Optional[datetime] = None  # em UTC, só quando o anúncio foi renovado
+    em_destaque: bool = False  # anúncio impulsionado ou fixado no topo pela fonte
+    repetido_de: Optional[str] = None  # external_id do primeiro igual (mesmo carro, preço, km e cidade)
     anunciante_profissional: Optional[bool] = None
     nota_anunciante: Optional[float] = None  # nota do Google (0 a 5), só de anunciante profissional
     imagens: list[str] = field(default_factory=list)  # só os links
@@ -48,8 +53,9 @@ class Anuncio:
 
     def to_dict(self, com_raw: bool = True) -> dict[str, Any]:
         d = asdict(self)
-        if self.publicado_em is not None:
-            d["publicado_em"] = self.publicado_em.isoformat()
+        for campo in ("publicado_em", "renovado_em"):
+            if d[campo] is not None:
+                d[campo] = d[campo].isoformat()
         if not com_raw:
             d.pop("raw")
         return d

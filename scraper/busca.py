@@ -177,6 +177,29 @@ def _avisos(
     return avisos
 
 
+def _chave_do_carro(a: Anuncio) -> Optional[tuple]:
+    """Mesmo carro anunciado de novo: marca, modelo, ano, km, preço e cidade iguais. Só vale com
+    preço e km, senão qualquer par pareceria igual."""
+    if a.preco is None or a.km is None:
+        return None
+    return (
+        normalizar_texto(a.marca), normalizar_texto(a.modelo_original or a.modelo), a.ano, a.km, a.preco,
+        normalizar_texto(a.cidade),
+    )
+
+
+def marcar_repetidos(anuncios: Iterable[Anuncio], vistos: dict[tuple, str]) -> None:
+    """Marca em `repetido_de` o id do primeiro anúncio igual. Nada é apagado. `vistos` guarda o
+    primeiro de cada carro e vale para a busca inteira (páginas diferentes)."""
+    for a in anuncios:
+        chave = _chave_do_carro(a)
+        if chave is None:
+            continue
+        primeiro = vistos.setdefault(chave, a.external_id)
+        if primeiro != a.external_id:
+            a.repetido_de = primeiro
+
+
 def filtros_locais(busca: Busca, na_origem: Iterable[str]) -> list[str]:
     """Filtros pedidos que a fonte não aplicou e que, por isso, só valem depois da coleta."""
     feitos = set(na_origem)
