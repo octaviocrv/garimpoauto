@@ -76,7 +76,7 @@ class LimitesBusca(BaseModel):
 # Quanto tempo uma busca pronta fica no cache em memória (20 minutos).
 CACHE_TTL_SEGUNDOS = _do_ambiente("GARIMPO_CACHE_TTL_SEGUNDOS", 1200.0, float)
 # Até que página o "Ver mais" vai numa busca só (a OLX mostra 50 anúncios por página).
-MAX_PAGINAS_SOB_DEMANDA = _do_ambiente("GARIMPO_MAX_PAGINAS_SOB_DEMANDA", 30, int)
+MAX_PAGINAS_SOB_DEMANDA = _do_ambiente("GARIMPO_MAX_PAGINAS_SOB_DEMANDA", 70, int)
 # Pausa entre páginas quando a pessoa clica em "Ver mais" (o clique já espaça os pedidos). Dois
 # números, ex.: "2,4". A leitura de várias páginas seguidas (stream) usa a pausa de LimitesBusca.
 PAUSA_VER_MAIS_SEGUNDOS = _do_ambiente("GARIMPO_PAUSA_VER_MAIS_SEGUNDOS", (2.0, 4.0), _par)

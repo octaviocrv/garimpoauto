@@ -45,6 +45,7 @@ A tela pode juntar as páginas numa lista só, anexando `anuncios` de cada respo
 ### Frases de `informacao`
 - Tem mais: "Mostrando 50 de 1.413 carros. Toca em Ver mais pra ver o resto."
 - Acabou: "Achei 80 carros. Esses são todos."
+- Acabou, mas a OLX contava mais do que entregou: "Achei 1.360 carros. A OLX fala em 1.413, mas só mostra esses." (usa quando o total da OLX passa do que veio por mais de 1%, e no mínimo 3 anúncios)
 - Parou no teto de páginas: "Mostrei 1.500 de 28.839 carros. Essa busca é grande demais pra mostrar tudo, refina por ano ou preço pra ver os outros."
 - Filtros daqui tiraram carros: acrescenta "Alguns ficaram de fora dos filtros que você pôs."
 - Falha: "Não consegui buscar mais agora, tenta de novo daqui a pouco?" (ou "Não achei esse carro agora, tenta de novo?" se foi na página 1)
@@ -52,9 +53,9 @@ A tela pode juntar as páginas numa lista só, anexando `anuncios` de cada respo
 
 ## Tempo, pausa e cache
 - **Página 1:** sem pausa. Se a busca tem marca ou modelo, o servidor consulta as listas de códigos da OLX antes (uma vez por marca, guardada por 12 h), também sem pausa.
-- **Da página 2 em diante:** o servidor garante o mesmo intervalo de 6 a 14 s desde a última leitura **da mesma busca**, descontando o tempo que a pessoa já levou para clicar. Quem demora mais que a pausa não espera nada. Quem clica rápido espera só o que falta.
+- **Da página 2 em diante:** o servidor garante uma pausa de 2 a 4 s (`GARIMPO_PAUSA_VER_MAIS_SEGUNDOS`) desde a última leitura **da mesma busca**, descontando o tempo que a pessoa já levou para clicar. Quem demora mais que a pausa não espera nada. Quem clica rápido espera só o que falta.
 - **Cache:** por página, e a sessão inteira vale 20 minutos (`CACHE_TTL_SEGUNDOS`), contados a partir da hora da página 1. Pedir uma página já lida volta na hora. A chave considera texto, filtros, estado e ordenação.
-- **Teto:** o "Ver mais" vai até `GARIMPO_MAX_PAGINAS_SOB_DEMANDA` páginas por busca (veja o resultado do teste de paginação abaixo).
+- **Teto:** o "Ver mais" vai até `GARIMPO_MAX_PAGINAS_SOB_DEMANDA` páginas por busca (padrão 70, veja os testes de confiança abaixo).
 - **Fila:** só uma leitura real da OLX por vez no servidor. Uma busca nunca fica travada na pausa de outra, porque a pausa acontece antes de entrar na fila.
 
 ## O que acontece quando a lista da OLX muda no meio
@@ -79,7 +80,7 @@ Busca "fiat argo" em MG, mais recentes, páginas 1 a 30 com a pausa normal, sem 
 ## Tempos medidos (OLX real)
 - Página 1: cerca de 2 s (1,8 s no teste pelo servidor).
 - Página já lida: cerca de 20 ms.
-- Página 2 clicada logo depois da 1: cerca de 8 s (a pausa de 6 a 14 s valendo).
+- Página 2 clicada logo depois da 1: cerca de 8 s (a pausa valendo, na época ainda de 6 a 14 s, hoje de 2 a 4 s).
 
 ## Testes de confiança (10 de outubro de 2026)
 
@@ -103,4 +104,4 @@ Não é culpa da coleta. A OLX **conta mais anúncios do que entrega** nas pági
 - O que falta é anúncio contado no total e que a OLX não serve em página nenhuma. Não sei o motivo, só que acontece do lado dela.
 
 ### 3. Existe teto de páginas?
-Não apareceu um teto fixo. Em "onix" (MG, 3.357 resultados) a OLX serve até a **página 65**, que vem com 37 anúncios (3.237 no total). A página 66 em diante responde 200 com a lista vazia e nenhuma mensagem (sem erro, sem bloqueio). Páginas 30 e 60 vieram cheias. Ou seja, a lista acaba sozinha, perto de 96% do total. O padrão `GARIMPO_MAX_PAGINAS_SOB_DEMANDA=30` corta a busca antes disso em buscas grandes.
+Não apareceu um teto fixo. Em "onix" (MG, 3.357 resultados) a OLX serve até a **página 65**, que vem com 37 anúncios (3.237 no total). A página 66 em diante responde 200 com a lista vazia e nenhuma mensagem (sem erro, sem bloqueio). Páginas 30 e 60 vieram cheias. Ou seja, a lista acaba sozinha, perto de 96% do total. O padrão `GARIMPO_MAX_PAGINAS_SOB_DEMANDA` foi de 30 para 70, só como teto de segurança (a lista da OLX acaba sozinha antes).

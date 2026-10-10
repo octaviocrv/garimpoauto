@@ -214,7 +214,7 @@ def test_mesma_busca_simultanea_espera_a_coleta_em_andamento():
     assert len(respostas) == 2
     sem_origem = [{**r, "do_cache": None} for r in respostas]
     assert sem_origem[0] == sem_origem[1]  # a mesma coleta
-    assert sorted(r["do_cache"] for r in respostas) == [False, True]  # quem esperou recebeu do cache
+    assert sorted(p for _, p in fonte.paginas_pedidas) == [1, 2, 3]  # cada página foi lida uma vez só, por quem chegou primeiro
 
 
 def test_busca_diferente_espera_na_fila_so_uma_coleta_por_vez():
@@ -581,6 +581,11 @@ def test_detalhe_tecnico_da_falha_so_com_dev():
     ((50, 1413, True, 0, False), "Mostrando 50 de 1.413 carros. Toca em Ver mais pra ver o resto."),
     ((50, None, True, 0, False), "Mostrando 50 carros. Toca em Ver mais pra ver o resto."),
     ((1, 1, False, 0, False), "Achei 1 carro. Esses são todos."),
+    ((80, 80, False, 0, False), "Achei 80 carros. Esses são todos."),
+    ((80, 81, False, 0, False), "Achei 80 carros. Esses são todos."),  # diferença desprezível
+    ((1360, 1413, False, 0, False, 1360), "Achei 1.360 carros. A OLX fala em 1.413, mas só mostra esses."),
+    ((1300, 1413, False, 60, False, 1360), "Achei 1.300 carros. A OLX fala em 1.413, mas só mostra esses. Alguns ficaram de fora dos filtros que você pôs."),
+    ((70, 80, False, 10, False, 80), "Achei 70 carros. Esses são todos. Alguns ficaram de fora dos filtros que você pôs."),
     ((0, 0, False, 0, False), "Não achei nenhum carro com esses filtros. Que tal afrouxar algum?"),
     ((20, 40, True, 5, False), "Mostrando 20 de 40 carros. Toca em Ver mais pra ver o resto. Alguns ficaram de fora dos filtros que você pôs."),
     ((1500, 28839, False, 0, True), "Mostrei 1.500 de 28.839 carros. Essa busca é grande demais pra mostrar tudo, refina por ano ou preço pra ver os outros."),

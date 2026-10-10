@@ -270,7 +270,7 @@ def pagina_resposta(sessao: SessaoBusca, n: int, pag: PaginaBusca, do_cache: boo
         "falhou": falhou,
         "informacao": (
             (MSG_ERRO if not lidas else MSG_MAIS_FALHOU) if falhou
-            else texto_informacao(entregues, pag.total_ads, tem_mais, cortados, no_teto)
+            else texto_informacao(entregues, pag.total_ads, tem_mais, cortados, no_teto, pag.acumulado)
         ),
         "avisos": _avisos_json(avisos, dev),
         "filtros_na_origem": pag.na_origem,

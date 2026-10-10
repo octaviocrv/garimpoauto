@@ -133,9 +133,12 @@ def _milhar(n: int) -> str:
     return f"{n:,}".replace(",", ".")
 
 
-def texto_informacao(entregues: int, total: Optional[int], tem_mais: bool, cortados: int, parou_no_teto: bool) -> str:
+def texto_informacao(
+    entregues: int, total: Optional[int], tem_mais: bool, cortados: int, parou_no_teto: bool, coletados: Optional[int] = None,
+) -> str:
     """Frase curta para a tela dizer quanto já mostrou, sem esconder que tem mais. `entregues` é o que a
-    pessoa já recebeu, `total` o que a fonte diz ter, `cortados` quantos os filtros daqui tiraram."""
+    pessoa já recebeu, `total` o que a fonte diz ter, `cortados` quantos os filtros daqui tiraram e
+    `coletados` quantos vieram da fonte (a fonte costuma contar uns 3% a mais do que lista)."""
     corte = " Alguns ficaram de fora dos filtros que você pôs." if cortados else ""
     if entregues == 0 and not tem_mais:
         return "Não achei nenhum carro com esses filtros. Que tal afrouxar algum?"
@@ -147,7 +150,11 @@ def texto_informacao(entregues: int, total: Optional[int], tem_mais: bool, corta
             f"Mostrei {_milhar(entregues)}{de} carros. Essa busca é grande demais pra mostrar tudo, "
             f"refina por ano ou preço pra ver os outros.{corte}"
         )
-    return f"Achei {_milhar(entregues)} {'carro' if entregues == 1 else 'carros'}. Esses são todos.{corte}"
+    carros = f"{_milhar(entregues)} {'carro' if entregues == 1 else 'carros'}"
+    veio = entregues + cortados if coletados is None else coletados
+    if total and total - veio > max(2, total // 100):  # a fonte conta mais do que entrega
+        return f"Achei {carros}. A OLX fala em {_milhar(total)}, mas só mostra esses.{corte}"
+    return f"Achei {carros}. Esses são todos.{corte}"
 
 
 def _avisos(
