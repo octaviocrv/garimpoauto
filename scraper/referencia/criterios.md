@@ -15,3 +15,20 @@ medir sozinho é medido por `verificar_referencia.py`. O resto é conferido na m
 | 7 | Repetir é rápido: a mesma busca dentro do cache volta em menos de 1 s | Automático |
 | 8 | Tempo previsível: busca nova de 8 páginas termina em cerca de 2 minutos | Automático |
 | 9 | O que a pessoa pediu é o que foi aplicado: o resultado informa estado, ordenação e hora da coleta | Automático |
+
+## Última verificação (10 de outubro de 2026, OLX real, ordem por mais recentes)
+
+| # | Resultado |
+|---|---|
+| 1 | Total da OLX lido em todas as buscas (121, 28.839, 11.214, 6.154 e 320). Ids contra o site: **não deu para medir** nesta rodada, fica manual |
+| 2 | **Passou** nas 5, inclusive a com marca, modelo, ano, preço e estado (320 de 320 dentro do filtro) |
+| 3 | **Passou.** O funil fechou em todas e as 3 buscas que bateram no teto de 8 páginas trouxeram o aviso `teto_paginas` |
+| 4 | **Passou.** Zero id repetido. Mesmo carro em outro anúncio marcado: 0, 15, 6, 1 e 3 |
+| 5 | **Passou.** Mínimo de 99,2% (preço da busca de gol, 1 anúncio sem preço), o resto em 100% |
+| 6 | **Passou** nos testes offline (bloqueio na 1ª e na 2ª página, página sem anúncios) |
+| 7 | **Passou.** Busca repetida no cache em menos de 1 ms |
+| 8 | **Passou.** 16 s a 90 s (menor universo, menos páginas). As de 8 páginas ficaram entre 75 s e 85 s |
+| 9 | **Passou.** O resultado traz estado aplicado, ordenação e hora da coleta |
+
+Ordem por mais recentes: nas 5 buscas as datas vieram em ordem decrescente. As 8 páginas (cerca de 400 anúncios) cobrem 4 horas no onix, cerca de 10 horas na hilux e cerca de 30 horas no fiat uno.
+Cuidado: em busca ampla, quase tudo em `sf=1` vem com `isFeatured` (onix: 50 de 50 na página 1, 340 de 397 no total). São anúncios de loja renovados, então "mais recentes" mostra o que foi renovado ou impulsionado, não só o que é novo.

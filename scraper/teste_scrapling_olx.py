@@ -15,11 +15,17 @@ parser = argparse.ArgumentParser()
 parser.add_argument("texto")
 parser.add_argument("--marca")
 parser.add_argument("--modelo")
+parser.add_argument("--versao")
 parser.add_argument("--ano-min", type=int)
 parser.add_argument("--ano-max", type=int)
 parser.add_argument("--preco-min", type=int)
 parser.add_argument("--preco-max", type=int)
+parser.add_argument("--km-min", type=int)
 parser.add_argument("--km-max", type=int)
+parser.add_argument("--cambio", help="manual, automatico, semi-automatico ou automatizado")
+parser.add_argument("--combustivel", help="gasolina, alcool, flex, diesel, hibrido ou eletrico")
+parser.add_argument("--anunciante", help="particular ou profissional")
+parser.add_argument("--ordenar", help="recentes (padrão), menor_preco ou relevancia")
 parser.add_argument("--estado", help="sigla; sem isso a busca é no Brasil todo")
 parser.add_argument("--regiao", help="slug da OLX, exige --estado")
 parser.add_argument("--cidade")
@@ -27,7 +33,7 @@ parser.add_argument("--max-paginas", type=int, help="sobrescreve o limite só de
 parser.add_argument("--salvar", help="nome do JSON a salvar em dados/")
 args = parser.parse_args()
 
-campos = {k: v for k, v in vars(args).items() if k not in ("salvar", "max_paginas")}
+campos = {k: v for k, v in vars(args).items() if k not in ("salvar", "max_paginas") and v is not None}
 busca = Busca(**campos)
 limites = LimitesBusca(**({"max_paginas": args.max_paginas} if args.max_paginas else {}))
 
@@ -37,6 +43,7 @@ print(f"Busca: {busca.model_dump(exclude_none=True)}")
 print(f"Limites: {limites.model_dump()}")
 print(f"Páginas lidas: {res.paginas_lidas} | tempo: {res.tempo_segundos:.1f}s | motivo_parada: {res.motivo_parada}")
 print(f"Funil: total na fonte {f.total_na_fonte} -> coletados {f.coletados} -> cortes {f.cortados_por_filtro} -> finais {f.finais}")
+print(f"Na OLX: {res.filtros_na_origem} | aqui depois da coleta: {res.filtros_locais} | coletado em {res.coletado_em:%d/%m %H:%M:%S} UTC")
 for a in res.avisos:
     print(f"Aviso [{a.codigo}] {a.mensagem}\n    técnico: {a.detalhe_tecnico}")
 incompletos = [a for a in res.anuncios if a.incompleto]
