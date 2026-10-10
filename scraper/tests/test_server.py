@@ -297,3 +297,30 @@ def test_cors_so_para_o_vite_local():
     assert "access-control-allow-origin" not in outro.headers
     c2, _ = cliente(cors_origens=["http://meu-front.local"])
     assert c2.get("/saude", headers={"Origin": "http://meu-front.local"}).headers["access-control-allow-origin"] == "http://meu-front.local"
+
+
+def test_repassa_cambio_combustivel_anunciante_km_minimo_versao_e_ordenacao():
+    c, fonte = cliente()
+    r = c.get("/buscar", params={
+        "texto": "civic", "versao": "touring", "km_min": 20000, "cambio": "Automático",
+        "combustivel": "flex", "anunciante": "profissional", "ordenar": "menor_preco",
+    })
+    assert r.status_code == 200
+    b = fonte.buscas[0]
+    assert (b.versao, b.km_min, b.cambio, b.combustivel, b.anunciante, b.ordenar) == (
+        "touring", 20000, "automatico", "flex", "profissional", "menor_preco")
+
+
+def test_ordenacao_padrao_e_mais_recentes_e_entra_na_chave_do_cache():
+    c, fonte = cliente()
+    c.get("/buscar", params={"texto": "gol"})
+    c.get("/buscar", params={"texto": "gol", "ordenar": "relevancia"})
+    c.get("/buscar", params={"texto": "gol", "ordenar": "recentes"})  # igual à primeira: cache
+    assert [b.ordenar for b in fonte.buscas] == ["recentes", "relevancia"]
+
+
+@pytest.mark.parametrize("params", [{"cambio": "voador"}, {"ordenar": "maior_preco"}, {"anunciante": "x"}, {"km_min": 9, "km_max": 1}])
+def test_opcao_invalida_da_erro_curto_e_humano(params):
+    c, _ = cliente()
+    r = c.get("/buscar", params={"texto": "gol", **params})
+    assert r.status_code == 422 and r.json() == {"erro": server.MSG_PEDIDO}

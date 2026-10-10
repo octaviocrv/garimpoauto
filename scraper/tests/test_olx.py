@@ -216,9 +216,8 @@ class Normalizacao(unittest.TestCase):
 
     def test_montar_url_com_filtros(self):
         busca = Busca(texto="civic 2018", estado="mg", preco_max=90000, ano_min=2018, km_max=60000)
-        url = olx.montar_url(
-            busca, 2, cambio="automático", combustivel="flex", anunciante="particular", ordenar="recentes",
-        )
+        busca = busca.model_copy(update={"cambio": "automatico", "combustivel": "flex", "anunciante": "particular"})
+        url = olx.montar_url(busca, 2)
         for pedaco in ("estado-mg", "q=civic%202018", "o=2", "pe=90000", "rs=2018", "gb=2",
                        "fu=3", "me=60000", "f=0", "sf=1"):
             self.assertIn(pedaco, url)

@@ -17,7 +17,8 @@ from schemas import Anuncio, Aviso, Busca, Funil, ResultadoBusca
 # Ordem fixa dos filtros na chave de busca.
 _ORDEM_CHAVE = (
     "texto", "marca", "modelo", "versao", "ano_min", "ano_max",
-    "preco_min", "preco_max", "km_max", "estado", "regiao", "cidade",
+    "preco_min", "preco_max", "km_min", "km_max", "cambio", "combustivel", "anunciante",
+    "estado", "regiao", "cidade", "ordenar",
 )
 FILTROS = _ORDEM_CHAVE[1:]
 
@@ -86,7 +87,7 @@ def filtrar_local_contando(
         ("estado", "estado" in ativos, lambda a: (a.estado or "").upper() == busca.estado),
         ("ano", bool(ativos & {"ano_min", "ano_max"}), lambda a: faixa(a, "ano", "ano_min", "ano_max")),
         ("preco", bool(ativos & {"preco_min", "preco_max"}), lambda a: faixa(a, "preco", "preco_min", "preco_max")),
-        ("km", "km_max" in ativos, lambda a: faixa(a, "km", None, "km_max")),
+        ("km", bool(ativos & {"km_min", "km_max"}), lambda a: faixa(a, "km", "km_min", "km_max")),
     )
     testes = [(nome, fn) for nome, ligado, fn in testes if ligado]
     cortados = {nome: 0 for nome, _ in testes}
@@ -181,7 +182,7 @@ def filtros_locais(busca: Busca, na_origem: Iterable[str]) -> list[str]:
     feitos = set(na_origem)
     pedidos = [
         ("marca", busca.marca), ("modelo", busca.modelo), ("versao", busca.versao),
-        ("cidade", busca.cidade), ("km", busca.km_max),
+        ("cidade", busca.cidade), ("km", busca.km_min if busca.km_min is not None else busca.km_max),
     ]
     return [n for n, v in pedidos if v is not None and n not in feitos]
 

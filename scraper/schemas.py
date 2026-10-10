@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+import unicodedata
 from datetime import datetime
 from typing import Any, Literal, Optional
 
@@ -128,6 +129,27 @@ class ResultadoBusca(BaseModel):
         return sum(1 for a in self.anuncios if a.incompleto)
 
 
+# Opções aceitas na busca, iguais para qualquer fonte. A fonte traduz para os códigos dela.
+CAMBIOS = ("manual", "automatico", "semi-automatico", "automatizado")
+COMBUSTIVEIS = ("gasolina", "alcool", "flex", "diesel", "hibrido", "eletrico")
+ANUNCIANTES = ("particular", "profissional")
+ORDENS = ("recentes", "menor_preco", "relevancia")
+ORDEM_PADRAO = "recentes"  # estável entre páginas, ao contrário da relevância
+
+
+def _opcao(v: Any, validas: tuple[str, ...], nome: str) -> Any:
+    """Aceita 'Automático', ' semi automatico ' e devolve o valor canônico. Vazio vira None."""
+    if v is None:
+        return None
+    chave = "".join(c for c in unicodedata.normalize("NFD", str(v)) if unicodedata.category(c) != "Mn")
+    chave = "-".join(chave.lower().split())
+    if not chave:
+        return None
+    if chave not in validas:
+        raise ValueError(f"{nome} deve ser um destes: {', '.join(validas)}")
+    return chave
+
+
 class Busca(BaseModel):
     """O que o usuário pediu. Igual para todas as fontes; cada fonte usa o que aceita na URL
     e o resto é filtrado depois da coleta (busca.filtrar_local). Só `texto` é obrigatório."""
@@ -140,7 +162,12 @@ class Busca(BaseModel):
     ano_max: Optional[int] = None
     preco_min: Optional[int] = None
     preco_max: Optional[int] = None
+    km_min: Optional[int] = None
     km_max: Optional[int] = None
+    cambio: Optional[str] = None
+    combustivel: Optional[str] = None
+    anunciante: Optional[str] = None  # particular ou profissional
+    ordenar: str = ORDEM_PADRAO
     estado: Optional[str] = None  # sigla; vazio = Brasil todo
     regiao: Optional[str] = None  # slug da OLX, ex.: belo-horizonte-e-regiao (exige estado)
     cidade: Optional[str] = None
@@ -173,7 +200,27 @@ class Busca(BaseModel):
             raise ValueError(f"estado deve ser a sigla com 2 letras, recebi {v!r}")
         return v.upper()
 
-    @field_validator("ano_min", "ano_max", "preco_min", "preco_max", "km_max")
+    @field_validator("cambio", mode="before")
+    @classmethod
+    def _cambio(cls, v: Any) -> Any:
+        return _opcao(v, CAMBIOS, "cambio")
+
+    @field_validator("combustivel", mode="before")
+    @classmethod
+    def _combustivel(cls, v: Any) -> Any:
+        return _opcao(v, COMBUSTIVEIS, "combustivel")
+
+    @field_validator("anunciante", mode="before")
+    @classmethod
+    def _anunciante(cls, v: Any) -> Any:
+        return _opcao(v, ANUNCIANTES, "anunciante")
+
+    @field_validator("ordenar", mode="before")
+    @classmethod
+    def _ordenar(cls, v: Any) -> Any:
+        return _opcao(v, ORDENS, "ordenar") or ORDEM_PADRAO
+
+    @field_validator("ano_min", "ano_max", "preco_min", "preco_max", "km_min", "km_max")
     @classmethod
     def _nao_negativo(cls, v: Optional[int]) -> Optional[int]:
         if v is not None and v < 0:
@@ -182,7 +229,7 @@ class Busca(BaseModel):
 
     @model_validator(mode="after")
     def _faixas_e_regiao(self) -> "Busca":
-        for menor, maior in (("ano_min", "ano_max"), ("preco_min", "preco_max")):
+        for menor, maior in (("ano_min", "ano_max"), ("preco_min", "preco_max"), ("km_min", "km_max")):
             a, b = getattr(self, menor), getattr(self, maior)
             if a is not None and b is not None and a > b:
                 raise ValueError(f"{menor} ({a}) maior que {maior} ({b})")

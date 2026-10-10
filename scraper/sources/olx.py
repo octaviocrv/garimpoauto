@@ -424,36 +424,24 @@ def resolver_codigos(
 # ---------------------------------------------------------------------------
 
 
-def _codigo(tabela: dict[str, int], valor: Any, nome: str) -> int:
-    if isinstance(valor, int):
-        return valor
-    chave = _tira_acento(str(valor)).lower().strip().replace(" ", "-")
-    if chave not in tabela:
-        raise ValueError(f"{nome} desconhecido: {valor!r}. Opções: {', '.join(tabela)}")
-    return tabela[chave]
-
-
 def _degrau_km(km: int) -> Optional[int]:
     """Menor degrau da OLX que cobre `km`. None se for maior que o último degrau conhecido
     (nesse caso não manda km_max e deixa o filtro local fazer o corte)."""
     return next((d for d in _DEGRAUS_KM if d >= km), None)
 
 
-def montar_url(
-    busca: Busca,
-    pagina: int = 1,
-    *,
-    km_min: Optional[int] = None,
-    cambio: Optional[str] = None,
-    combustivel: Optional[str] = None,
-    anunciante: Optional[str] = None,
-    ordenar: Optional[str] = None,
-    codigos: Optional[dict[str, str]] = None,
-) -> str:
-    """Monta a URL de listagem só com os filtros da Busca que a OLX aceita (estado, região, ano,
-    preço e km). Marca, modelo e cidade ficam para filtrar_local. O km_max vai como o degrau
-    mais próximo que cobre o pedido (a OLX só aceita degraus) e o valor exato é aplicado
-    depois. km_min precisa ser um degrau. Parâmetros da OLX: q, o, ps/pe, rs/re, ms/me, gb, fu, f, sp/sf."""
+def _degrau_km_min(km: int) -> Optional[int]:
+    """Maior degrau da OLX que não passa de `km` (assim a OLX nunca esconde um carro que serve;
+    o corte exato fica para o filtro local)."""
+    return max((d for d in _DEGRAUS_KM if d <= km), default=None)
+
+
+def montar_url(busca: Busca, pagina: int = 1, *, codigos: Optional[dict[str, str]] = None) -> str:
+    """Monta a URL de listagem só com os filtros da Busca que a OLX aceita: estado, região, ano,
+    preço, km, câmbio, combustível, tipo de anunciante, ordenação e (com `codigos`) marca, modelo
+    e versão. Cidade fica para filtrar_local. O km vai como o degrau da OLX que cobre o pedido (a OLX só
+    aceita degraus) e o valor exato é aplicado depois. Parâmetros da OLX: q, o, vb/vm/vv, ps/pe,
+    rs/re, ms/me, gb, fu, f, sp/sf."""
     caminho = URL_BASE
     if busca.estado:
         caminho += f"/estado-{busca.estado.lower()}"
@@ -461,6 +449,7 @@ def montar_url(
             caminho += f"/{busca.regiao.strip('/')}"
 
     km_max = _degrau_km(busca.km_max) if busca.km_max is not None else None
+    km_min = (_degrau_km_min(busca.km_min) or None) if busca.km_min else None  # degrau 0 não filtra nada
     params: list[tuple[str, Any]] = [("q", busca.texto)]
     params += [(k, v) for k, v in (codigos or {}).items()]  # vb, vm, vv
     if pagina > 1:
@@ -474,16 +463,14 @@ def montar_url(
         ("me", km_max),
     ]
     params += [(k, v) for k, v in opcionais if v is not None]
-    if cambio is not None:
-        params.append(("gb", _codigo(_CAMBIO, cambio, "cambio")))
-    if combustivel is not None:
-        params.append(("fu", _codigo(_COMBUSTIVEL, combustivel, "combustivel")))
-    if anunciante is not None:
-        params.append(("f", _codigo(_ANUNCIANTE, anunciante, "anunciante")))
-    if ordenar is not None and ordenar != "relevancia":
-        if ordenar not in _ORDEM:
-            raise ValueError(f"ordenar desconhecido: {ordenar!r}. Opções: relevancia, {', '.join(_ORDEM)}")
-        params.append(_ORDEM[ordenar])
+    if busca.cambio:
+        params.append(("gb", _CAMBIO[busca.cambio]))
+    if busca.combustivel:
+        params.append(("fu", _COMBUSTIVEL[busca.combustivel]))
+    if busca.anunciante:
+        params.append(("f", _ANUNCIANTE[busca.anunciante]))
+    if busca.ordenar in _ORDEM:
+        params.append(_ORDEM[busca.ordenar])  # relevância não manda nada
     return f"{caminho}?{urlencode(params, quote_via=quote)}"
 
 
@@ -536,11 +523,6 @@ def buscar_paginas(
     busca: Busca,
     limites: Optional[LimitesBusca] = None,
     *,
-    km_min: Optional[int] = None,
-    cambio: Optional[str] = None,
-    combustivel: Optional[str] = None,
-    anunciante: Optional[str] = None,
-    ordenar: Optional[str] = None,
     sessao: Any = None,
     dormir: Callable[[float], None] = time.sleep,
     relogio: Callable[[], float] = time.monotonic,
@@ -562,14 +544,7 @@ def buscar_paginas(
     conta o que veio da OLX, antes desse filtro.
     """
     limites = limites or LimitesBusca()
-    filtros = dict(
-        km_min=km_min,
-        cambio=cambio,
-        combustivel=combustivel,
-        anunciante=anunciante,
-        ordenar=ordenar,
-    )
-    montar_url(busca, 1, **filtros)  # valida os argumentos antes de bater na OLX
+    filtros: dict[str, Any] = {}
 
     inicio = relogio()
     vistos: set[str] = set()
@@ -679,6 +654,7 @@ def _filtros_na_origem(busca: Busca, resolvidos: set[str]) -> list[str]:
         ("estado", busca.estado), ("regiao", busca.regiao),
         ("ano", busca.ano_min if busca.ano_min is not None else busca.ano_max),
         ("preco", busca.preco_min if busca.preco_min is not None else busca.preco_max),
+        ("cambio", busca.cambio), ("combustivel", busca.combustivel), ("anunciante", busca.anunciante),
     ]
     return [n for n, v in pedidos if v is not None] + sorted(resolvidos)
 
@@ -700,8 +676,7 @@ def buscar(
     **kwargs: Any,
 ) -> ResultadoBusca:
     """Busca na OLX e devolve o ResultadoBusca completo (anúncios, funil, motivo de parada e
-    avisos). Aceita os mesmos extras de `buscar_paginas` (km_min, cambio, combustivel,
-    anunciante, ordenar, sessao, dormir). Se algo falhar no meio, devolve o que já juntou
+    avisos). Aceita os mesmos extras de `buscar_paginas` (sessao, dormir, relogio). Se algo falhar no meio, devolve o que já juntou
     com motivo_parada "falha_fonte" em vez de levantar erro."""
     limites = limites or LimitesBusca()
     inicio = relogio()

@@ -5,8 +5,9 @@ GET /buscar         ResultadoBusca completo em JSON
 GET /buscar/stream  o mesmo por SSE: um evento "pagina" por página, "fim" com funil, motivo_parada
                     e avisos, e "erro" (em tom humano) se algo quebrar
 
-Parâmetros: texto (obrigatório), marca, modelo, ano_min, ano_max, preco_min, preco_max, km_max,
-estado, regiao, cidade, dev. Estado ausente usa config.ESTADO_PADRAO, "todos" busca no Brasil
+Parâmetros: texto (obrigatório), marca, modelo, versao, ano_min, ano_max, preco_min, preco_max,
+km_min, km_max, cambio, combustivel, anunciante (particular ou profissional), ordenar (recentes,
+menor_preco ou relevancia, padrão recentes), estado, regiao, cidade, dev. Estado ausente usa config.ESTADO_PADRAO, "todos" busca no Brasil
 todo. Com dev=1 os avisos trazem o detalhe_tecnico, senão ele nem aparece.
 
 Cache só em memória, com a chave de busca.chave_busca e TTL de config.CACHE_TTL_SEGUNDOS. A mesma
@@ -204,11 +205,17 @@ def criar_app(
         texto: str = Query(...),
         marca: Optional[str] = None,
         modelo: Optional[str] = None,
+        versao: Optional[str] = None,
         ano_min: Optional[int] = None,
         ano_max: Optional[int] = None,
         preco_min: Optional[int] = None,
         preco_max: Optional[int] = None,
+        km_min: Optional[int] = None,
         km_max: Optional[int] = None,
+        cambio: Optional[str] = None,
+        combustivel: Optional[str] = None,
+        anunciante: Optional[str] = None,
+        ordenar: Optional[str] = None,
         estado: Optional[str] = None,
         regiao: Optional[str] = None,
         cidade: Optional[str] = None,
@@ -218,8 +225,9 @@ def criar_app(
             estado = None
         try:
             return Busca(
-                texto=texto, marca=marca, modelo=modelo, ano_min=ano_min, ano_max=ano_max,
-                preco_min=preco_min, preco_max=preco_max, km_max=km_max,
+                texto=texto, marca=marca, modelo=modelo, versao=versao, ano_min=ano_min, ano_max=ano_max,
+                preco_min=preco_min, preco_max=preco_max, km_min=km_min, km_max=km_max,
+                cambio=cambio, combustivel=combustivel, anunciante=anunciante, ordenar=ordenar,
                 estado=estado, regiao=regiao, cidade=cidade,
             )
         except ValidationError:

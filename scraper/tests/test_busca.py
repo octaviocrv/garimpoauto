@@ -13,7 +13,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
 
 from busca import chave_busca, filtrar_local, normalizar_texto  # noqa: E402
-from schemas import Busca  # noqa: E402
+from schemas import Anuncio, Busca  # noqa: E402
 from sources import olx  # noqa: E402
 from tests.test_olx import Relogio, RespostaFalsa, SessaoFalsa, anuncio_cru, html_com_ads  # noqa: E402
 
@@ -90,7 +90,7 @@ def test_url_gol_2012_com_estado():
 
 def test_url_sem_estado_e_brasil_todo():
     url = olx.montar_url(Busca(texto="hilux diesel"))
-    assert url == f"{olx.URL_BASE}?q=hilux%20diesel"
+    assert url == f"{olx.URL_BASE}?q=hilux%20diesel&sf=1"
     assert "estado-" not in url
 
 
@@ -98,7 +98,7 @@ def test_url_com_regiao_e_sem_filtros_locais():
     b = Busca(texto="onix", estado="MG", regiao="belo-horizonte-e-regiao",
               marca="Chevrolet", modelo="Onix", cidade="Contagem")
     url = olx.montar_url(b)
-    assert url == f"{olx.URL_BASE}/estado-mg/belo-horizonte-e-regiao?q=onix"  # marca/modelo/cidade não vão
+    assert url == f"{olx.URL_BASE}/estado-mg/belo-horizonte-e-regiao?q=onix&sf=1"  # marca/modelo/cidade não vão
 
 
 @pytest.mark.parametrize("pedido, degrau", [(60000, "60000"), (55000, "60000"), (1, "5000"), (0, "0"), (99000, "100000"), (450000, "500000"), (160001, "180000")])
@@ -174,7 +174,7 @@ def test_chave_ignora_caixa_acento_e_espacos():
 
 def test_chave_tem_ordem_fixa_e_so_filtros_preenchidos():
     b = Busca(texto="Onix", km_max=50000, marca="Chevrolet", ano_min=2018)
-    assert chave_busca(b) == "texto=onix|marca=chevrolet|ano_min=2018|km_max=50000"
+    assert chave_busca(b) == "texto=onix|marca=chevrolet|ano_min=2018|km_max=50000|ordenar=recentes"
 
 
 def test_chaves_diferentes_para_buscas_diferentes_e_estado_vazio_distinto():
@@ -192,4 +192,55 @@ def test_buscar_aplica_filtro_local_e_manda_so_o_que_a_olx_aceita():
     busca = Busca(texto="gol", marca="volkswagen", modelo="gol", km_max=100000, cidade="são paulo")
     res = olx.buscar_tudo(busca, sessao=sessao, dormir=relogio.dormir, relogio=relogio)
     assert ids(res.anuncios) == ["101"]
-    assert sessao.urls_de_listagem == [f"{olx.URL_BASE}?q=gol&me=100000"]  # sem estado, sem marca/modelo/cidade (a OLX não entendeu os nomes)
+    assert sessao.urls_de_listagem == [f"{olx.URL_BASE}?q=gol&me=100000&sf=1"]  # sem estado, sem marca/modelo/cidade (a OLX não entendeu os nomes)
+
+
+# --- câmbio, combustível, anunciante, km mínimo e ordenação -------------------
+
+
+def test_cambio_combustivel_e_anunciante_aceitam_acento_e_caixa():
+    b = Busca(texto="civic", cambio=" Automático ", combustivel="FLEX", anunciante="Profissional")
+    assert (b.cambio, b.combustivel, b.anunciante) == ("automatico", "flex", "profissional")
+    url = olx.montar_url(b)
+    for pedaco in ("gb=2", "fu=3", "f=1"):
+        assert pedaco in url
+    assert Busca(texto="x", cambio="semi automático").cambio == "semi-automatico"
+    assert Busca(texto="x", cambio="  ").cambio is None
+
+
+@pytest.mark.parametrize("campo,valor", [("cambio", "voador"), ("combustivel", "agua"), ("anunciante", "robo"), ("ordenar", "maior_preco")])
+def test_opcao_invalida_e_recusada(campo, valor):
+    with pytest.raises(ValueError):
+        Busca(texto="x", **{campo: valor})
+
+
+def test_ordenacao_padrao_e_mais_recentes_e_relevancia_nao_manda_nada():
+    assert Busca(texto="x").ordenar == "recentes" and "sf=1" in olx.montar_url(Busca(texto="x"))
+    assert "sp=1" in olx.montar_url(Busca(texto="x", ordenar="menor_preco"))
+    url = olx.montar_url(Busca(texto="x", ordenar="relevancia"))
+    assert "sf=" not in url and "sp=" not in url
+
+
+@pytest.mark.parametrize("pedido, degrau", [(60000, "60000"), (55000, "40000"), (5000, "5000"), (4999, None), (500000, "500000")])
+def test_km_minimo_vai_para_o_degrau_de_baixo(pedido, degrau):
+    url = olx.montar_url(Busca(texto="onix", km_min=pedido))
+    assert (f"ms={degrau}" in url) if degrau else ("ms=" not in url)
+
+
+def test_km_minimo_e_maximo_exatos_sao_aplicados_depois_da_coleta():
+    a = [Anuncio(source="olx", external_id=str(i), url="u", km=km) for i, km in enumerate((10000, 45000, 70000, None))]
+    busca = Busca(texto="x", km_min=40000, km_max=60000)
+    assert [x.km for x in filtrar_local(a, busca)] == [45000]
+
+
+def test_km_minimo_maior_que_maximo_e_recusado():
+    with pytest.raises(ValueError):
+        Busca(texto="x", km_min=90000, km_max=10000)
+
+
+def test_a_ordenacao_e_os_filtros_novos_entram_na_chave_do_cache():
+    base = Busca(texto="gol")
+    assert chave_busca(base) != chave_busca(Busca(texto="gol", ordenar="relevancia"))
+    for extra in ({"cambio": "manual"}, {"combustivel": "flex"}, {"anunciante": "particular"}, {"km_min": 1000}, {"versao": "1.0"}):
+        assert chave_busca(base) != chave_busca(Busca(texto="gol", **extra)), extra
+    assert chave_busca(Busca(texto="gol", cambio="Automático")) == chave_busca(Busca(texto="gol", cambio="automatico"))
