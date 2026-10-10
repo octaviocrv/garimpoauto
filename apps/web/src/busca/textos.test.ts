@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest'
+import { GARIMPAR_TEXTOS } from './garimparTextos'
 import { T, buscadoAs, naOlx, novosDesde } from './textos'
 
 describe('textos da tela', () => {
   it('sem travessão, dois pontos nem ponto e vírgula', () => {
-    for (const [nome, frase] of Object.entries(T)) {
+    for (const [nome, frase] of Object.entries({ ...T, ...GARIMPAR_TEXTOS })) {
       expect(frase, nome).not.toMatch(/[—–;:]/)
     }
   })
 
   it('usa carro e anúncio, nunca veículo ou listing', () => {
-    const tudo = Object.values(T).join(' ').toLowerCase()
+    const tudo = [...Object.values(T), ...Object.values(GARIMPAR_TEXTOS)].join(' ').toLowerCase()
     expect(tudo).not.toMatch(/ve[ií]culo|listing/)
   })
 
