@@ -71,9 +71,17 @@ function Card({ a, sinais = SEM_SINAIS, agora, novo, demo, analise, onGarimpar }
             <span>{textoTempo}</span>
           </div>
         )}
-        <span className="absolute bottom-3 right-3 rounded-md border border-white/15 bg-black/70 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-white/70">
-          {a.source}
-        </span>
+        {a.source === 'olx' ? (
+          <img
+            src="/logos/olx.png"
+            alt="OLX"
+            className="absolute bottom-3 right-3 h-7 w-7 rounded-full border border-white/20 bg-[#6e0ad7] p-1 object-contain shadow"
+          />
+        ) : (
+          <span className="absolute bottom-3 right-3 rounded-full border border-white/20 bg-black/70 px-2.5 py-1 text-[11px] font-semibold uppercase text-white/80">
+            {a.source}
+          </span>
+        )}
       </div>
       <div className="flex flex-1 flex-col p-4 sm:p-[18px]">
         <div className="mb-3 flex items-start justify-between gap-3">

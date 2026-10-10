@@ -99,7 +99,7 @@ export function Garimpar({ a, analise, onFechar }: { a: Anuncio; analise: Analis
       <main className="relative mx-auto max-w-5xl px-5 py-7 sm:py-10">
         <section className="analysis-hero">
           <div className="analysis-hero__media">
-            {foto ? <img src={foto} alt="" referrerPolicy="no-referrer" className="h-full w-full object-cover" /> : <div className="h-full bg-black/40" />}
+            {foto ? <img src={foto} alt="" decoding="async" referrerPolicy="no-referrer" className="h-full w-full object-cover" /> : <div className="h-full bg-black/40" />}
             <div className="absolute inset-0 bg-gradient-to-t from-[#071012] via-transparent to-transparent" />
           </div>
           <div className="min-w-0 flex-1 p-5 sm:p-7">

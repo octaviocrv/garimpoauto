@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { analisesDaPagina, palavraDeRisco } from './analise'
+import { agrupar, analisesDaPagina, palavraDeRisco } from './analise'
 import type { Anuncio } from '../types'
 
 const AGORA = new Date(2026, 9, 10, 15, 0).getTime()
@@ -14,7 +14,7 @@ const carro = (id: string, extra: Partial<Anuncio> = {}): Anuncio => ({
 // Cinco iguais por perto de R$ 50 mil, mais o carro que a gente quer analisar.
 const mercado = (alvo: Anuncio): Anuncio[] =>
   [50000, 52000, 51000, 50000, 50000].map((p, i) => carro(`m${i}`, { preco: p })).concat(alvo)
-const analise = (alvo: Anuncio) => analisesDaPagina([alvo], mercado(alvo), AGORA)[alvo.external_id]
+const analise = (alvo: Anuncio) => { const lista = mercado(alvo); return analisesDaPagina([alvo], agrupar(lista), AGORA)[alvo.external_id] }
 const veredito = (alvo: Anuncio, id: string) => analise(alvo).criterios.find((c) => c.id === id)?.veredito
 
 describe('nível do carro', () => {
@@ -47,7 +47,7 @@ describe('nível do carro', () => {
 
   it('sem carros iguais suficientes não tem margem nem nível, e diz por quê', () => {
     const sozinho = carro('x', { preco: 30000 })
-    const a = analisesDaPagina([sozinho], [sozinho], AGORA).x
+    const a = analisesDaPagina([sozinho], agrupar([sozinho]), AGORA).x
     expect(a.nivel).toBeNull()
     expect(a.margem).toBeNull()
     expect(a.criterios.find((c) => c.id === 'preco')?.veredito).toBe('semdado')
@@ -98,7 +98,7 @@ describe('critérios', () => {
   it('km acima da mediana dos iguais pede cuidado', () => {
     const alvo = carro('x', { km: 100000 })
     const lista = [...mercado(alvo).map((c) => (c.external_id === 'x' ? c : { ...c, km: 60000 }))]
-    const a = analisesDaPagina([alvo], lista, AGORA).x
+    const a = analisesDaPagina([alvo], agrupar(lista), AGORA).x
     expect(a.criterios.find((c) => c.id === 'km')?.veredito).toBe('atencao')
   })
 
@@ -131,7 +131,7 @@ describe('textos da análise', () => {
       carro('s', { preco: 60000, km: 500, anunciante_profissional: true, nota_anunciante: 3 }),
     ]
     const lista = [...mercado(casos[0]), ...casos.slice(1)]
-    for (const a of Object.values(analisesDaPagina(casos, lista, AGORA))) {
+    for (const a of Object.values(analisesDaPagina(casos, agrupar(lista), AGORA))) {
       const textos = [a.motivo, a.resumo ?? '', ...a.criterios.flatMap((c) => [c.titulo, c.resultado, c.fato])]
       for (const t of textos) expect(t).not.toMatch(/[—–;:]/)
       for (const c of a.criterios) expect(c.fato.length).toBeGreaterThan(0)

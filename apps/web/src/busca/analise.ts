@@ -249,8 +249,7 @@ export function agrupar(lista: Anuncio[]): Map<string, Anuncio[]> {
 
 // Como `sinaisDaPagina`: calcula pros carros que acabaram de chegar, comparando com tudo que já está
 // carregado. Quem chama guarda o resultado e não recalcula, pra o nível não mudar sozinho.
-export function analisesDaPagina(novos: Anuncio[], lista: Anuncio[], agora: number): Record<string, Analise> {
-  const grupos = agrupar(lista)
+export function analisesDaPagina(novos: Anuncio[], grupos: Map<string, Anuncio[]>, agora: number): Record<string, Analise> {
   const saida: Record<string, Analise> = {}
   for (const a of novos) saida[a.external_id] = analisar(a, grupos, agora)
   return saida

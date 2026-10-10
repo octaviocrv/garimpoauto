@@ -61,17 +61,14 @@ export function mediana(v: number[]): number {
   return o.length % 2 ? o[m] : (o[m - 1] + o[m]) / 2
 }
 
-// Preços da lista por modelo e ano. Só entra carro com preço de verdade.
-function gruposDePreco(lista: Anuncio[]): Map<string, number[]> {
-  const grupos = new Map<string, number[]>()
-  for (const a of lista) {
-    const k = chave(a)
-    if (!k || a.preco === null || a.preco <= 0) continue
-    const g = grupos.get(k)
-    if (g) g.push(a.preco)
-    else grupos.set(k, [a.preco])
+function precosDosGrupos(grupos: Map<string, Anuncio[]>): Map<string, number[]> {
+  const precos = new Map<string, number[]>()
+  for (const [k, anuncios] of grupos) {
+    const ps: number[] = []
+    for (const a of anuncios) if (a.preco !== null && a.preco > 0) ps.push(a.preco)
+    if (ps.length > 0) precos.set(k, ps)
   }
-  return grupos
+  return precos
 }
 
 function sinalDePreco(a: Anuncio, grupos: Map<string, number[]>): Sinal | null {
@@ -106,11 +103,11 @@ function sinalRecente(a: Anuncio, agora: number): Sinal | null {
 // Os sinais dos carros que acabaram de chegar (`novos`), comparando preço com tudo que já está
 // carregado (`lista`, que inclui os novos). Quem chama guarda o resultado e não recalcula: assim o
 // card não muda sozinho quando chega outra página.
-export function sinaisDaPagina(novos: Anuncio[], lista: Anuncio[], agora: number): Record<string, Sinal[]> {
-  const grupos = gruposDePreco(lista)
+export function sinaisDaPagina(novos: Anuncio[], grupos: Map<string, Anuncio[]>, agora: number): Record<string, Sinal[]> {
+  const precosPorGrupo = precosDosGrupos(grupos)
   const saida: Record<string, Sinal[]> = {}
   for (const a of novos) {
-    saida[a.external_id] = [sinalDePreco(a, grupos), sinalDeKm(a, agora), sinalRecente(a, agora)]
+    saida[a.external_id] = [sinalDePreco(a, precosPorGrupo), sinalDeKm(a, agora), sinalRecente(a, agora)]
       .filter((s): s is Sinal => s !== null)
   }
   return saida

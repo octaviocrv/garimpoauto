@@ -4,7 +4,7 @@ import { useCallback, useEffect, useReducer, useRef } from 'react'
 import { buscarPagina, ErroBusca } from '../api'
 import type { Anuncio, Aviso, RespostaPagina } from '../types'
 import type { Pedido } from './pedido'
-import { analisesDaPagina, type Analise } from './analise'
+import { agrupar, analisesDaPagina, type Analise } from './analise'
 import { sinaisDaPagina, type Sinal } from './sinais'
 import { T } from './textos'
 
@@ -59,12 +59,13 @@ export function reduzir(e: EstadoBusca, a: Acao): EstadoBusca {
       }
       const agora = primeira ? a.agora ?? Date.now() : e.agora
       const anuncios = primeira ? r.anuncios : [...e.anuncios, ...r.anuncios]
+      const grupos = agrupar(anuncios)
       return {
         ...e, fase: 'pronto', carregandoMais: false, falhouMais: false, erro: null, resposta: r,
         primeira: primeira ? r : e.primeira, anuncios, agora,
         blocos: primeira ? [r.anuncios] : [...e.blocos, r.anuncios],
-        sinais: { ...(primeira ? {} : e.sinais), ...sinaisDaPagina(r.anuncios, anuncios, agora) },
-        analises: { ...(primeira ? {} : e.analises), ...analisesDaPagina(r.anuncios, anuncios, agora) },
+        sinais: { ...(primeira ? {} : e.sinais), ...sinaisDaPagina(r.anuncios, grupos, agora) },
+        analises: { ...(primeira ? {} : e.analises), ...analisesDaPagina(r.anuncios, grupos, agora) },
         avisos: mesclarAvisos(primeira ? [] : e.avisos, r.avisos),
       }
     }

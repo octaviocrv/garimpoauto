@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, CarFront, ChevronDown, Gauge, RefreshCw, Search, SlidersHorizontal, Sparkles } from 'lucide-react'
+import { ArrowLeft, CarFront, ChevronDown, Gauge, RefreshCw, Search, SlidersHorizontal } from 'lucide-react'
 import { CardCarro } from './CardCarro'
 import { Diagnostico } from './Diagnostico'
 import { Garimpar } from './Garimpar'
@@ -113,18 +113,18 @@ export function PaginaBusca() {
         <section className="search-console" aria-labelledby="search-title">
           <div className="search-console__intro">
             <div>
-              <p className="mb-3 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">
-                <Sparkles size={14} aria-hidden="true" /> Radar de oportunidades
+              <p className="mb-4 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">
+                Central de oportunidades
               </p>
-              <h1 id="search-title" className="max-w-2xl font-sans text-3xl font-extrabold leading-[1.08] tracking-[-0.045em] text-white sm:text-4xl">
-                Encontre o carro certo.<br /><span className="text-cyan-300">Antes de todo mundo.</span>
+              <h1 id="search-title" className="search-title max-w-2xl text-4xl leading-[1.08] tracking-[-0.02em] text-white sm:text-5xl lg:text-[3.5rem]">
+                Encontre o carro certo.<br /><span className="search-title__accent text-cyan-300">Antes de todo mundo.</span>
               </h1>
               <p className="mt-3 max-w-xl text-sm leading-relaxed text-gray-400">
                 Busque, filtre e compare anúncios recentes em uma leitura só.
               </p>
             </div>
             <div className="search-console__mascot" aria-hidden="true">
-              <img src="/mascot/hiro-full-body.svg" alt="" />
+              <img src="/mascot/hiro-metade-half-body.svg" alt="" />
             </div>
           </div>
 
@@ -158,7 +158,7 @@ export function PaginaBusca() {
             </button>
           </form>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            <p className="hidden items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-gray-600 sm:flex">
+            <p className="hidden items-center gap-2 text-xs tracking-normal text-gray-400 sm:flex">
               <Gauge size={13} aria-hidden="true" /> Busca atualizada em tempo real
             </p>
             <button type="button" onClick={() => setPainel((p) => !p)} aria-expanded={painel} className={`${botao} ml-auto`}>
@@ -302,10 +302,6 @@ export function PaginaBusca() {
                   </button>
                 </div>
               )}
-              <div className="mb-4 flex items-center gap-3">
-                <span className="h-px flex-1 bg-gradient-to-r from-cyan-300/20 to-transparent" />
-                <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-gray-600">{T.legendaSinais}</p>
-              </div>
               {busca.blocos.map((bloco, n) => (
                 <ul key={n} className={`vehicle-grid grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 ${n > 0 ? 'mt-5' : ''}`}>
                   {bloco.map((a) => (

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { dataCurta, minutosDesde, sinaisDaPagina } from './sinais'
+import { agrupar } from './analise'
 import { fipeDe, fipeDeExemplo } from './fipe'
 import type { Anuncio } from '../types'
 
@@ -11,7 +12,7 @@ const carro = (id: string, extra: Partial<Anuncio> = {}): Anuncio => ({
   external_id: id, marca: 'Fiat', modelo: 'Argo', ano: 2019, km: 60000, preco: 50000, anunciado_em: null,
   renovado_em: null, publicado_em: null, em_destaque: false, novo: false, imagens: [], ...extra,
 } as Anuncio)
-const sinaisDe = (a: Anuncio, lista: Anuncio[] = [a]) => sinaisDaPagina([a], lista, AGORA)[a.external_id]
+const sinaisDe = (a: Anuncio, lista: Anuncio[] = [a]) => sinaisDaPagina([a], agrupar(lista), AGORA)[a.external_id]
 
 describe('data curta', () => {
   it('conta em minutos, horas, hoje, ontem, dias e data', () => {
@@ -76,31 +77,31 @@ describe('sinal de preço contra a lista carregada', () => {
 
   it('aparece quando está bem abaixo dos iguais da lista, e diz com quantos comparou', () => {
     const lista = grupo([50000, 52000, 51000, 50000, 40000])
-    const s = sinaisDaPagina(lista, lista, AGORA)
+    const s = sinaisDaPagina(lista, agrupar(lista), AGORA)
     expect(s.g4).toEqual([{ tipo: 'preco', texto: 'Preço 20% abaixo da lista', detalhe: 'Comparado com 5 Argo 2019 já carregados' }])
     expect(s.g0).toEqual([])
   })
 
   it('amostra pequena não compara', () => {
     const lista = grupo([50000, 52000, 51000, 40000])
-    expect(sinaisDaPagina(lista, lista, AGORA).g3).toEqual([])
+    expect(sinaisDaPagina(lista, agrupar(lista), AGORA).g3).toEqual([])
   })
 
   it('só compara com o mesmo modelo e ano', () => {
     const lista = [...grupo([50000, 52000, 51000, 50000]), carro('outro', { km: null, preco: 30000, ano: 2012 })]
-    expect(sinaisDaPagina(lista, lista, AGORA).outro).toEqual([])
+    expect(sinaisDaPagina(lista, agrupar(lista), AGORA).outro).toEqual([])
   })
 
   it('diferença pequena não é sinal, e desconto grande demais também não', () => {
     const pequena = grupo([50000, 52000, 51000, 50000, 45000])
-    expect(sinaisDaPagina(pequena, pequena, AGORA).g4).toEqual([])
+    expect(sinaisDaPagina(pequena, agrupar(pequena), AGORA).g4).toEqual([])
     const enorme = grupo([50000, 52000, 51000, 50000, 5000])
-    expect(sinaisDaPagina(enorme, enorme, AGORA).g4).toEqual([])
+    expect(sinaisDaPagina(enorme, agrupar(enorme), AGORA).g4).toEqual([])
   })
 
   it('sem preço ou sem modelo não entra na conta nem vira sinal', () => {
     const lista = [...grupo([50000, 52000, 51000, 50000, 40000]), carro('x', { km: null, preco: null }), carro('y', { km: null, modelo: null })]
-    const s = sinaisDaPagina(lista, lista, AGORA)
+    const s = sinaisDaPagina(lista, agrupar(lista), AGORA)
     expect(s.x).toEqual([])
     expect(s.y).toEqual([])
     expect(s.g4[0].detalhe).toContain('5 Argo')
@@ -114,7 +115,7 @@ describe('o que não é sinal', () => {
 
   it('os textos dos sinais seguem as regras da tela', () => {
     const lista = [...[50000, 52000, 51000, 50000, 40000].map((p, i) => carro(`g${i}`, { km: 40000, preco: p, anunciado_em: antes(10) }))]
-    const todos = Object.values(sinaisDaPagina(lista, lista, AGORA)).flat()
+    const todos = Object.values(sinaisDaPagina(lista, agrupar(lista), AGORA)).flat()
     expect(todos.length).toBeGreaterThan(0)
     for (const s of todos) expect(`${s.texto} ${s.detalhe ?? ''}`).not.toMatch(/[—–;:]/)
   })
