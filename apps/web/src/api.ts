@@ -11,7 +11,8 @@ export class ErroBusca extends Error {}
 export function montarUrl(pedido: Pedido, pagina: number, dev: boolean, atualizar: boolean): string {
   const q = new URLSearchParams()
   for (const [chave, valor] of Object.entries(pedido)) {
-    if (valor !== undefined && valor !== '') q.set(chave, String(valor))
+    // o texto vai sempre, mesmo vazio: o servidor exige o parâmetro e vazio é a vitrine
+    if (chave === 'texto' || (valor !== undefined && valor !== '')) q.set(chave, String(valor))
   }
   q.set('pagina', String(pagina))
   if (dev) q.set('dev', '1')

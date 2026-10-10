@@ -63,9 +63,19 @@ const numero = (v: string): number | undefined => {
 const ordenado = (a?: number, b?: number): [number | undefined, number | undefined] =>
   a !== undefined && b !== undefined && a > b ? [b, a] : [a, b]
 
+// Busca digitada: sem texto não há o que buscar.
 export function montarPedido(r: Rascunho): Pedido | null {
+  return r.texto.trim() ? montar(r) : null
+}
+
+// Busca da tela ao abrir e ao apertar Buscar. Sem texto e sem filtro é a vitrine do estado. Sem texto e
+// com filtro busca com o filtro, não volta pra vitrine. Nunca devolve null.
+export function montarPedidoOuVitrine(r: Rascunho): Pedido {
+  return montar(r)
+}
+
+function montar(r: Rascunho): Pedido {
   const texto = r.texto.trim()
-  if (!texto) return null
   const [ano_min, ano_max] = ordenado(numero(r.anoMin), numero(r.anoMax))
   const [preco_min, preco_max] = ordenado(numero(r.precoMin), numero(r.precoMax))
   const [km_min, km_max] = ordenado(numero(r.kmMin), numero(r.kmMax))

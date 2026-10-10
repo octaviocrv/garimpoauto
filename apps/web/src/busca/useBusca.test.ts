@@ -97,6 +97,40 @@ describe('estado da busca', () => {
   })
 })
 
+describe('vitrine', () => {
+  const vitrine: Pedido = { texto: '', ordenar: 'recentes', estado: 'MG' }
+  const ids = Array.from({ length: 50 }, (_, i) => `v${i}`)
+
+  it('chega só a página 1 e fica esperando o clique no Ver mais', () => {
+    let e = reduzir(INICIAL, { tipo: 'iniciar', pedido: vitrine })
+    expect(e.fase).toBe('buscando')
+    e = reduzir(e, { tipo: 'chegou', resposta: resposta(1, ids, { total_na_fonte: 73619 }) })
+    expect(e.fase).toBe('pronto')
+    expect(e.anuncios).toHaveLength(50)
+    expect(e.blocos).toHaveLength(1)
+    expect(e.carregandoMais).toBe(false)
+    expect(e.resposta?.proxima_pagina).toBe(2) // quem pede é o clique, não o estado
+  })
+
+  it('busca nova substitui a vitrine, e voltar pra vitrine também substitui a busca', () => {
+    let e = reduzir(reduzir(INICIAL, { tipo: 'iniciar', pedido: vitrine }), { tipo: 'chegou', resposta: resposta(1, ids) })
+    e = reduzir(e, { tipo: 'iniciar', pedido: { ...vitrine, texto: 'onix' } })
+    expect(e.anuncios).toEqual([])
+    e = reduzir(e, { tipo: 'chegou', resposta: resposta(1, ['o1']) })
+    expect(e.anuncios.map((a) => a.external_id)).toEqual(['o1'])
+    e = reduzir(e, { tipo: 'iniciar', pedido: vitrine })
+    expect(e.anuncios).toEqual([])
+    expect(e.pedido?.texto).toBe('')
+  })
+
+  it('se a vitrine falha mostra a frase da marca e deixa tentar de novo', () => {
+    const e = reduzir(reduzir(INICIAL, { tipo: 'iniciar', pedido: vitrine }), { tipo: 'chegou', resposta: resposta(1, [], { falhou: true }) })
+    expect(e.fase).toBe('falhou')
+    expect(e.erro).toBe(T.semCarro)
+    expect(e.pedido).toEqual(vitrine) // o botão Tentar de novo refaz esse mesmo pedido
+  })
+})
+
 describe('a lista não muda sozinha quando chega página nova', () => {
   const AGORA = new Date(2026, 9, 10, 15, 0).getTime()
   const igual = (id: string, preco: number): Anuncio =>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { RASCUNHO_VAZIO, montarPedido, nomeDoEstado, ESTADOS } from './pedido'
+import { RASCUNHO_VAZIO, montarPedido, montarPedidoOuVitrine, nomeDoEstado, ESTADOS } from './pedido'
 import { montarUrl } from '../api'
 
 describe('montarPedido', () => {
@@ -87,5 +87,33 @@ describe('região e zona', () => {
     const p = montarPedido({ ...RASCUNHO_VAZIO, texto: 'argo', estado: 'todos', regiao: 'x', zona: 'y' })!
     expect(p.regiao).toBeUndefined()
     expect(p.zona).toBeUndefined()
+  })
+})
+
+describe('vitrine', () => {
+  const params = (url: string) => Object.fromEntries(new URL(url, 'http://x').searchParams)
+
+  it('sem texto e sem filtro é a vitrine do estado padrão, mais recentes, sem filtro nenhum', () => {
+    const p = montarPedidoOuVitrine(RASCUNHO_VAZIO)
+    expect(p).toMatchObject({ texto: '', estado: 'MG', ordenar: 'recentes' })
+    expect(Object.entries(p).filter(([k, v]) => !['texto', 'estado', 'ordenar'].includes(k) && v !== undefined)).toEqual([])
+    expect(montarPedidoOuVitrine({ ...RASCUNHO_VAZIO, texto: '   ' }).texto).toBe('')
+  })
+
+  it('a url da vitrine manda o texto vazio, que o servidor exige, e pede só a página 1', () => {
+    const q = params(montarUrl(montarPedidoOuVitrine(RASCUNHO_VAZIO), 1, false, false))
+    expect(q).toEqual({ texto: '', ordenar: 'recentes', estado: 'MG', pagina: '1' })
+  })
+
+  it('sem texto mas com filtro busca com o filtro, não é vitrine pura', () => {
+    const p = montarPedidoOuVitrine({ ...RASCUNHO_VAZIO, anoMin: '2018', marca: 'Fiat' })
+    expect(p).toMatchObject({ texto: '', ano_min: 2018, marca: 'Fiat' })
+    expect(params(montarUrl(p, 1, false, false))).toMatchObject({ texto: '', ano_min: '2018', marca: 'Fiat' })
+  })
+
+  it('com texto é igual à busca de sempre, e a busca digitada sem texto continua não existindo', () => {
+    const r = { ...RASCUNHO_VAZIO, texto: ' gol 2012 ', estado: 'SP' }
+    expect(montarPedidoOuVitrine(r)).toEqual(montarPedido(r))
+    expect(montarPedido(RASCUNHO_VAZIO)).toBeNull()
   })
 })

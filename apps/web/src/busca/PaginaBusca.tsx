@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, RefreshCw, Search, SlidersHorizontal } from 'lucide-react'
 import { CardCarro } from './CardCarro'
 import { Diagnostico } from './Diagnostico'
 import { Garimpar } from './Garimpar'
 import { DEMO } from './fipe'
 import {
-  ANUNCIANTES, CAMBIOS, COMBUSTIVEIS, ESTADOS, FILTROS_DO_RASCUNHO, ORDENS, RASCUNHO_VAZIO, montarPedido,
+  ANUNCIANTES, CAMBIOS, COMBUSTIVEIS, ESTADOS, FILTROS_DO_RASCUNHO, ORDENS, RASCUNHO_VAZIO, montarPedidoOuVitrine,
   nomeDoEstado, type Rascunho,
 } from './pedido'
 import { useRegioes, useZonas } from './regioes'
@@ -41,6 +41,14 @@ export function PaginaBusca() {
   const buscando = busca.fase === 'buscando'
   const resposta = busca.resposta
 
+  // Ao abrir a tela, uma vez só, a vitrine: o estado padrão, mais recentes, página 1. O "Ver mais" é manual.
+  const abriu = useRef(false)
+  useEffect(() => {
+    if (abriu.current) return
+    abriu.current = true
+    buscar(montarPedidoOuVitrine(RASCUNHO_VAZIO))
+  }, [buscar])
+
   // Se o primeiro carro não chega em 15 s, a tela explica em vez de parecer travada.
   useEffect(() => {
     setDemorando(false)
@@ -68,8 +76,7 @@ export function PaginaBusca() {
 
   const buscarAgora = (e: React.FormEvent) => {
     e.preventDefault()
-    const pedido = montarPedido(r)
-    if (pedido) buscar(pedido)
+    buscar(montarPedidoOuVitrine(r)) // campo vazio e sem filtro volta pra vitrine
   }
   const filtrosAtivos = FILTROS_DO_RASCUNHO.filter((k) => r[k] !== '').length
 
@@ -120,7 +127,6 @@ export function PaginaBusca() {
           <div className="flex gap-3">
             <button
               type="submit"
-              disabled={!r.texto.trim()}
               className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-teal-600 px-6 font-medium text-white transition-all hover:bg-teal-500 disabled:opacity-40"
             >
               <Search size={16} aria-hidden="true" /> {T.buscar}
