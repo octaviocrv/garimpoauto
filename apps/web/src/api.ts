@@ -1,67 +1,38 @@
-// Única porta de entrada dos dados: a busca ao vivo do servidor (/buscar/stream).
+// Única porta de entrada dos dados: a busca por página do servidor (/buscar/pagina), o "Ver mais".
 // A tela chama /api/... e o Vite repassa para o servidor (veja vite.config.ts).
-import type { Anuncio, ResultadoBusca } from './types'
-import { criarLeitorSse } from './busca/sse'
+import type { RespostaPagina } from './types'
+import type { Pedido } from './busca/pedido'
+import { T } from './busca/textos'
 
 const API = import.meta.env.VITE_API_URL ?? '/api'
 
-// O que vai na busca. Marca e ano o servidor já aplica na coleta.
-export interface Pedido {
-  texto: string
-  marca?: string
-  ano_min?: number
-  ano_max?: number
-}
+export class ErroBusca extends Error {}
 
-export interface PaginaStream {
-  numero: number
-  max_paginas: number
-  anuncios: Anuncio[]
-  coletados: number
-  cortados_por_filtro: Record<string, number>
-  acumulado: number
-  total_na_fonte: number | null
-}
-
-export type FimStream = Omit<ResultadoBusca, 'anuncios'>
-
-export interface Ouvintes {
-  aoChegarPagina: (p: PaginaStream) => void
-  aoTerminar: (fim: FimStream) => void
-  aoFalhar: () => void // a coleta não chegou ao fim (rede, servidor caiu, erro do servidor)
-}
-
-export function montarUrl(pedido: Pedido, dev: boolean): string {
-  const q = new URLSearchParams({ texto: pedido.texto })
-  if (pedido.marca) q.set('marca', pedido.marca)
-  if (pedido.ano_min !== undefined) q.set('ano_min', String(pedido.ano_min))
-  if (pedido.ano_max !== undefined) q.set('ano_max', String(pedido.ano_max))
-  if (dev) q.set('dev', '1')
-  return `${API}/buscar/stream?${q}`
-}
-
-// Resolve quando a busca acaba. Chama aoTerminar ou aoFalhar, uma só vez. Se o signal for
-// abortado (cancelou ou começou outra busca), não chama nenhum dos dois.
-export async function buscarAoVivo(pedido: Pedido, dev: boolean, ouvintes: Ouvintes, signal: AbortSignal): Promise<void> {
-  let acabou = false
-  const leitor = criarLeitorSse(({ nome, dados }) => {
-    if (acabou || signal.aborted) return
-    if (nome === 'pagina') ouvintes.aoChegarPagina(dados as PaginaStream)
-    else if (nome === 'fim') { acabou = true; ouvintes.aoTerminar(dados as FimStream) }
-    else if (nome === 'erro') { acabou = true; ouvintes.aoFalhar() }
-  })
-  try {
-    const r = await fetch(montarUrl(pedido, dev), { signal, headers: { Accept: 'text/event-stream' } })
-    if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`)
-    const leitorBytes = r.body.getReader()
-    const decodificador = new TextDecoder()
-    for (;;) {
-      const { done, value } = await leitorBytes.read()
-      if (done) break
-      leitor.empurrar(decodificador.decode(value, { stream: true }))
-    }
-  } catch {
-    // cai no teste abaixo
+export function montarUrl(pedido: Pedido, pagina: number, dev: boolean, atualizar: boolean): string {
+  const q = new URLSearchParams()
+  for (const [chave, valor] of Object.entries(pedido)) {
+    if (valor !== undefined && valor !== '') q.set(chave, String(valor))
   }
-  if (!acabou && !signal.aborted) ouvintes.aoFalhar()
+  q.set('pagina', String(pagina))
+  if (dev) q.set('dev', '1')
+  if (atualizar && pagina === 1) q.set('atualizar', '1') // só na página 1, senão a busca recomeça
+  return `${API}/buscar/pagina?${q}`
+}
+
+// Rede caiu ou o servidor não respondeu direito: ErroBusca com uma frase pronta para a tela.
+export async function buscarPagina(
+  pedido: Pedido, pagina: number, dev: boolean, atualizar: boolean, signal: AbortSignal,
+): Promise<RespostaPagina> {
+  let r: Response
+  try {
+    r = await fetch(montarUrl(pedido, pagina, dev, atualizar), { signal })
+  } catch (e) {
+    if (signal.aborted) throw e
+    throw new ErroBusca(T.semCarro)
+  }
+  if (!r.ok) {
+    const corpo = await r.json().catch(() => null)
+    throw new ErroBusca(r.status === 422 ? corpo?.erro ?? T.pedidoRuim : T.semCarro)
+  }
+  return r.json()
 }

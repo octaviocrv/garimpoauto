@@ -1,8 +1,10 @@
-// Controla uma busca ao vivo: junta os carros conforme as páginas chegam, guarda o progresso e
-// cuida de cancelar e de começar outra no meio. Só a busca mais nova pode mexer no estado.
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { buscarAoVivo, type FimStream, type PaginaStream, type Pedido } from '../api'
-import type { Anuncio } from '../types'
+// Controla a busca por página: junta os carros de cada página que chega, cuida do "Ver mais",
+// de cancelar e de começar outra no meio. Só a busca mais nova pode mexer no estado.
+import { useCallback, useEffect, useReducer, useRef } from 'react'
+import { buscarPagina, ErroBusca } from '../api'
+import type { Anuncio, RespostaPagina } from '../types'
+import type { Pedido } from './pedido'
+import { T } from './textos'
 
 export type Fase = 'inicial' | 'buscando' | 'pronto' | 'parada' | 'falhou'
 
@@ -10,49 +12,89 @@ export interface EstadoBusca {
   fase: Fase
   pedido: Pedido | null
   anuncios: Anuncio[]
-  pagina: number // páginas já lidas
-  paginasTotal: number | null // estimativa, só depois que a 1ª página chega
-  fim: FimStream | null
+  resposta: RespostaPagina | null // a última que chegou (tem proxima_pagina, informacao, avisos...)
+  primeira: RespostaPagina | null // a da página 1, que tem a hora da coleta
+  carregandoMais: boolean
+  falhouMais: boolean
+  erro: string | null // frase pronta quando a busca nem começou
 }
 
-const INICIAL: EstadoBusca = { fase: 'inicial', pedido: null, anuncios: [], pagina: 0, paginasTotal: null, fim: null }
+export const INICIAL: EstadoBusca = {
+  fase: 'inicial', pedido: null, anuncios: [], resposta: null, primeira: null,
+  carregandoMais: false, falhouMais: false, erro: null,
+}
 
-// A fonte diz quantos anúncios tem no total. Páginas esperadas = total / tamanho da 1ª página,
-// nunca mais que o teto da coleta.
-export function estimarPaginas(p: Pick<PaginaStream, 'total_na_fonte' | 'coletados' | 'max_paginas'>): number {
-  if (!p.total_na_fonte || p.coletados <= 0) return p.max_paginas
-  return Math.max(1, Math.min(p.max_paginas, Math.ceil(p.total_na_fonte / p.coletados)))
+export type Acao =
+  | { tipo: 'iniciar'; pedido: Pedido }
+  | { tipo: 'chegou'; resposta: RespostaPagina }
+  | { tipo: 'verMais' }
+  | { tipo: 'caiu'; erro: string }
+  | { tipo: 'parar' }
+
+export function reduzir(e: EstadoBusca, a: Acao): EstadoBusca {
+  switch (a.tipo) {
+    case 'iniciar': // busca nova, de qualquer tipo, limpa a lista antiga
+      return { ...INICIAL, fase: 'buscando', pedido: a.pedido }
+    case 'verMais':
+      return { ...e, carregandoMais: true, falhouMais: false }
+    case 'chegou': {
+      const r = a.resposta
+      const primeira = r.pagina === 1
+      if (r.falhou) {
+        if (primeira) return { ...e, fase: 'falhou', erro: T.semCarro, resposta: r }
+        return { ...e, carregandoMais: false, falhouMais: true } // mantém a resposta anterior, que já aponta a mesma página
+      }
+      return {
+        ...e, fase: 'pronto', carregandoMais: false, falhouMais: false, erro: null, resposta: r,
+        primeira: primeira ? r : e.primeira,
+        anuncios: primeira ? r.anuncios : [...e.anuncios, ...r.anuncios],
+      }
+    }
+    case 'caiu':
+      if (e.fase === 'buscando') return { ...e, fase: 'falhou', erro: a.erro }
+      return { ...e, carregandoMais: false, falhouMais: true }
+    case 'parar':
+      return e.fase === 'buscando' ? { ...e, fase: 'parada' } : e
+  }
 }
 
 export function useBusca(dev: boolean) {
-  const [estado, setEstado] = useState<EstadoBusca>(INICIAL)
+  const [estado, despachar] = useReducer(reduzir, INICIAL)
   const atual = useRef<AbortController | null>(null)
+  const ultimo = useRef(estado)
+  ultimo.current = estado
+
+  const carregar = useCallback((pedido: Pedido, pagina: number, atualizar: boolean) => {
+    atual.current?.abort() // a busca velha é largada
+    const ctl = new AbortController()
+    atual.current = ctl
+    buscarPagina(pedido, pagina, dev, atualizar, ctl.signal)
+      .then((resposta) => { if (!ctl.signal.aborted) despachar({ tipo: 'chegou', resposta }) })
+      .catch((e) => {
+        if (ctl.signal.aborted) return
+        despachar({ tipo: 'caiu', erro: e instanceof ErroBusca ? e.message : T.semCarro })
+      })
+  }, [dev])
+
+  const buscar = useCallback((pedido: Pedido, atualizar = false) => {
+    despachar({ tipo: 'iniciar', pedido })
+    carregar(pedido, 1, atualizar)
+  }, [carregar])
+
+  const verMais = useCallback(() => {
+    const { pedido, resposta, carregandoMais } = ultimo.current
+    if (!pedido || !resposta?.proxima_pagina || carregandoMais) return
+    despachar({ tipo: 'verMais' })
+    carregar(pedido, resposta.proxima_pagina, false)
+  }, [carregar])
 
   const parar = useCallback(() => {
     atual.current?.abort()
     atual.current = null
-    setEstado((e) => (e.fase === 'buscando' ? { ...e, fase: 'parada' } : e))
+    despachar({ tipo: 'parar' })
   }, [])
-
-  const buscar = useCallback((pedido: Pedido) => {
-    atual.current?.abort() // busca nova no meio de outra: a velha é largada
-    const ctl = new AbortController()
-    atual.current = ctl
-    setEstado({ ...INICIAL, fase: 'buscando', pedido })
-    void buscarAoVivo(pedido, dev, {
-      aoChegarPagina: (p) =>
-        setEstado((e) => ({
-          ...e,
-          anuncios: [...e.anuncios, ...p.anuncios],
-          pagina: p.numero,
-          paginasTotal: e.paginasTotal ?? estimarPaginas(p),
-        })),
-      aoTerminar: (fim) => setEstado((e) => ({ ...e, fase: 'pronto', fim })),
-      aoFalhar: () => setEstado((e) => ({ ...e, fase: 'falhou' })),
-    }, ctl.signal)
-  }, [dev])
 
   useEffect(() => () => atual.current?.abort(), [])
 
-  return { estado, buscar, parar }
+  return { estado, buscar, verMais, parar }
 }

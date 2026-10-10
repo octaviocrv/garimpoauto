@@ -1,5 +1,6 @@
 import { ExternalLink, Star } from 'lucide-react'
 import type { Anuncio } from '../types'
+import { T } from './textos'
 
 const preco = (v: number) => `R$ ${v.toLocaleString('pt-BR')}`
 
@@ -25,6 +26,9 @@ export function CardCarro({ a }: { a: Anuncio }) {
             <span className="rounded-md border border-teal-600/60 px-2 py-1 font-semibold text-teal-400">
               {a.anunciante_profissional ? 'Loja' : 'Particular'}
             </span>
+          )}
+          {a.em_destaque && (
+            <span className="rounded-md border border-white/15 px-2 py-1 text-gray-400">{T.destaque}</span>
           )}
           {a.nota_anunciante !== null && (
             <span className="inline-flex items-center gap-1 text-yellow-200">
