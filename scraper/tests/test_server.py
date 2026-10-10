@@ -130,6 +130,7 @@ def test_stream_manda_uma_pagina_por_vez_e_o_fim():
     assert [n for n, _ in ev] == ["pagina", "pagina", "pagina", "fim"]
     assert [d["numero"] for n, d in ev if n == "pagina"] == [1, 2, 3]
     assert all(len(d["anuncios"]) == 2 for n, d in ev if n == "pagina")
+    assert all(d["max_paginas"] == LimitesBusca().max_paginas for n, d in ev if n == "pagina")
     fim = ev[-1][1]
     assert "anuncios" not in fim
     assert fim["motivo_parada"] == "acabaram_paginas" and fim["funil"]["coletados"] == 6

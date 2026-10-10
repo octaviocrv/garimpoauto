@@ -58,9 +58,10 @@ def resultado_json(r: ResultadoBusca, dev: bool) -> dict[str, Any]:
     return corpo
 
 
-def pagina_json(p: PaginaBusca) -> dict[str, Any]:
+def pagina_json(p: PaginaBusca, max_paginas: int) -> dict[str, Any]:
     return {
         "numero": p.numero,
+        "max_paginas": max_paginas,  # teto de páginas da coleta, para a tela mostrar o progresso
         "anuncios": [_anuncio_json(a) for a in p.anuncios],
         "coletados": p.coletados,
         "cortados_por_filtro": p.cortados_por_filtro,
@@ -106,6 +107,9 @@ class Servico:
         self.trava = threading.Lock()
         self.semaforo = threading.Semaphore(1)
         self.cache: dict[str, Coleta] = {}
+
+    def max_paginas(self) -> int:
+        return (self.limites or LimitesBusca()).max_paginas
 
     def obter(self, busca: Busca) -> Coleta:
         chave, agora = chave_busca(busca), time.monotonic()
@@ -240,7 +244,7 @@ def criar_app(
             while True:
                 pag = coleta.proxima(i, ESPERA_PING)
                 if pag is not None:
-                    yield sse("pagina", pagina_json(pag))
+                    yield sse("pagina", pagina_json(pag, servico.max_paginas()))
                     i += 1
                 elif coleta.terminou and i >= len(coleta.paginas):
                     break
