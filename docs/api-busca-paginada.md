@@ -99,42 +99,15 @@ Entre uma página e outra, anúncios novos entram no topo e empurram a lista. Re
 - **Omissão:** não coberta. Se um anúncio é renovado e sobe para uma página que a pessoa já passou, ele não aparece nessa sessão. Também pode escapar um anúncio quando outro sai do ar e a lista anda para cima. É raro e some ao usar `atualizar=1`, que recomeça a busca na hora.
 - Uma página que só traz repetidos encerra a busca, com o aviso "A página só tinha anúncios repetidos".
 
-## Banco de dados (cache compartilhado e "novo desde a última vez")
+## Banco de dados e "novo desde a última vez"
 
-O cache de busca fica num banco MariaDB (serve MySQL também), então todos os usuários dividem as mesmas páginas e um reinício do servidor não perde nada. Sem `GARIMPO_DATABASE_URL`, tudo funciona como antes, só em memória.
+O cache de busca fica num banco, compartilhado entre os usuários, e sobrevive a reinício. Como subir, as tabelas, as regras da empresa e as migrations estão em [banco.md](banco.md). Aqui só o que a tela sente.
 
-### Como subir
-1. Copie `.env.example` para `.env` na raiz e troque as senhas. O `.env` não vai para o git.
-2. `docker-compose up -d banco` sobe o container `garimpo_auto_banco` (MariaDB 11.4) em `127.0.0.1:3390`, com o banco `garimpo_auto`, um usuário só do projeto e os dados num volume próprio (`garimpo_auto_garimpo_auto_dados`). Ele não usa nem encosta nos MySQL da empresa (portas 3306 e 3307).
-3. As migrations rodam sozinhas quando o servidor sobe. À mão: `cd scraper && .venv/bin/python migrar.py`. Os arquivos ficam em `scraper/migracoes/` (`NNN_nome.sql`, aplicados em ordem e uma vez só, controle na tabela `schema_migracoes`).
-4. Os testes que usam o banco rodam no banco `garimpo_auto_teste` (`GARIMPO_DATABASE_URL_TESTE`), que é apagado e refeito a cada teste. Sem o banco de pé eles são pulados.
-
-### O que fica guardado
-| Tabela | O que guarda |
-|---|---|
-| `busca_sessao` | A busca (chave e pedido), o total da OLX, até quando vale (20 min depois da página 1) e o ponto onde a busca continua |
-| `busca_pagina` | Cada página lida: os carros, o tempo que levou e a hora da coleta (sem o item cru da OLX) |
-| `busca_execucao` | Cada vez que uma busca igual recomeça do zero (busca nova, venceu ou `atualizar=1`) |
-| `busca_visto` | Os carros que cada busca igual já mostrou, por usuário |
-
-- **Validade:** uma sessão por busca. Venceu ou `atualizar=1`, a sessão e as páginas são apagadas e outra começa. Quem pede `atualizar=1` troca a busca para todos.
-- **Reinício e vários servidores:** o ponto onde a busca continua (carros já vistos, total, filtros resolvidos) é guardado junto de cada página. Outro servidor, ou o mesmo depois de reiniciar, continua dali, sem ler de novo da OLX e sem repetir carro. Dois servidores lendo a mesma página ao mesmo tempo podem ler a OLX duas vezes, o resultado sai igual.
-- **Hora:** tudo em UTC, com precisão de milissegundos.
-
-### Novo desde a última vez
-- **Regra:** um carro é `novo` quando existe uma busca igual anterior, ele não apareceu em nenhuma delas **e** foi anunciado (ou renovado) depois do início da última. Se o carro não tem data, vale só o "não apareceu antes". A data vem de `anunciado_em`.
-- **Por que a data:** a busca nem sempre lê a lista inteira. Sem ela, um carro antigo do fundo da lista, que a busca anterior não chegou a ler, apareceria como novo.
-- **Primeira busca:** `primeira_busca: true`, ninguém é novo, não há com o que comparar.
-- **Só vale o que foi entregue:** um carro só entra no "visto" quando a página dele é lida. Carro cortado pelos filtros daqui não conta.
-- **Valor fixo por sessão:** o `novo` é calculado na primeira leitura da página e guardado nela. Ler a mesma página de novo, ou depois de um reinício, dá a mesma resposta.
-- **Global por enquanto:** "busca igual" vale para qualquer pessoa. Um usuário "gasta" o novo do outro. A tabela `busca_visto` e a `busca_execucao` já têm a coluna `usuario` (vazia hoje). Quando houver login, o servidor passa o id e cada pessoa tem o seu histórico. Como o `novo` fica guardado dentro da página compartilhada, nessa troca ele passa a ser calculado na hora de responder, a partir de `busca_visto`.
-- **Não expira:** os carros vistos ficam no banco. Quando a tabela crescer demais, apagar os mais velhos é seguro (só faz alguns carros antigos aparecerem como novos uma vez).
-
-### Se o banco cair
-- A busca **continua funcionando só com a memória**, sem esperar o banco. A sessão que estava no meio segue até vencer.
-- O log diz uma vez "Banco fora do ar" (com o motivo) e depois "Banco voltou". O servidor **não reconecta a cada busca**: uma thread confere a cada `GARIMPO_BANCO_CONFERE_SEGUNDOS` (padrão 30).
-- Sem banco: `primeira_busca` vem `null`, `novos` vem 0 e nenhum carro é `novo`. A tela deve tratar `null` como "não sei".
-- Se o servidor sobe sem o banco, ele sobe do mesmo jeito e o log avisa.
+- **Cache de todos:** `do_cache: true` aparece mais, porque a busca de uma pessoa serve para as outras por 20 minutos. `atualizar=1` troca a busca para todos.
+- **`novo`:** cada carro traz `true` ou `false`. Vale "não apareceu em busca igual anterior e foi anunciado depois dela". A regra completa está em [banco.md](banco.md#decisões-tomadas).
+- **`primeira_busca`:** `true` quando nunca houve busca igual antes (ninguém é novo). `null` quando o servidor está sem banco. A tela deve tratar `null` como "não sei" e não mostrar selo de novo.
+- **Valor fixo:** ler a mesma página de novo, ou depois de um reinício, dá a mesma resposta de `novo`.
+- **Banco fora do ar:** a busca continua normal, só em memória. Não vem erro, mas `primeira_busca` vem `null` e `novos` vem 0.
 
 ## Quando a OLX falha no meio
 Falha é 403, 429, 500, captcha, página sem os dados, JSON fora do formato, timeout ou rede que caiu. Em todos os casos a resposta é a mesma.
