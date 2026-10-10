@@ -5,14 +5,15 @@ Lê o array "ads" que a página de listagem já traz dentro do payload do Next.j
 
 Uso:
 
-    from sources.olx import buscar, buscar_tudo
+    from schemas import Busca
+    from sources.olx import buscar, buscar_paginas
 
-    for pagina in buscar("civic 2018", estado="mg"):
-        mostrar(pagina.anuncios)          # a página 1 já pode aparecer na tela
+    busca = Busca(texto="gol 2012", estado="sp")   # sem estado = Brasil todo
+    resultado = buscar(busca)       # ResultadoBusca: anuncios, funil, motivo_parada, avisos
+    for pagina in buscar_paginas(busca):   # ou página por página
+        mostrar(pagina.anuncios)
         if pagina.ultima:
             print(pagina.parou_por, pagina.aviso)
-
-    resultado = buscar_tudo("civic 2018", estado="mg")   # tudo de uma vez
 """
 
 from __future__ import annotations
@@ -29,13 +30,14 @@ from urllib.parse import quote, urlencode
 from scrapling.fetchers import FetcherSession
 from scrapling.parser import Selector
 
-from schemas import Anuncio, PaginaBusca, ResultadoBusca
+from busca import filtrar_local_contando, montar_resultado
+from config import LimitesBusca
+from schemas import Anuncio, Busca, PaginaBusca, ResultadoBusca
 
 FONTE = "olx"
 URL_BASE = "https://www.olx.com.br/autos-e-pecas/carros-vans-e-utilitarios"
 
 # Motivos de parada (PaginaBusca.parou_por)
-MAX_RESULTADOS = "max_resultados"
 TOTAL_ADS = "total_ads"
 MAX_PAGINAS = "max_paginas"
 PAGINA_VAZIA = "pagina_vazia"
@@ -48,6 +50,15 @@ _COMBUSTIVEL = {"gasolina": 1, "alcool": 2, "flex": 3, "diesel": 5, "hibrido": 6
 _ANUNCIANTE = {"particular": 0, "profissional": 1}
 # Ordenação: só os códigos comprovados na prática. sp=price, sp=date e sp=2 a 4 não funcionam.
 _ORDEM = {"recentes": ("sf", 1), "menor_preco": ("sp", 1)}
+
+# Degraus de km que a OLX aceita em ms/me, lidos das opções do filtro "mileage" da própria listagem.
+# Melhoria futura: filtrar marca e modelo na própria OLX (vb, vm, vv, com códigos numéricos).
+_DEGRAUS_KM = (
+    0, 5000, 10000, 20000, 30000, 40000, 60000, 80000, 100000,
+    120000, 140000, 160000, 180000, 200000, 250000, 300000, 400000, 500000,
+)
+# Filtros da Busca que a URL aplica sem arredondar. O resto (marca, modelo, cidade, km_max) é local.
+_FILTROS_NA_URL = ("estado", "ano_min", "ano_max", "preco_min", "preco_max")
 
 _PREFIXO_PUSH = "self.__next_f.push("
 _PREFIXOS_DATALAYER = "dataLayer.push("
@@ -248,6 +259,7 @@ def normalizar(ad: dict) -> Anuncio:
         titulo=_texto(ad.get("subject")),
         marca=props.get("vehicle_brand"),
         modelo=props.get("vehicle_model"),
+        modelo_original=props.get("vehicle_model"),
         ano=_numero(props.get("regdate")),
         km=_numero(props.get("mileage")),
         preco=_numero(ad.get("priceValue")) if ad.get("priceValue") else _numero(ad.get("price")),
@@ -281,39 +293,41 @@ def _codigo(tabela: dict[str, int], valor: Any, nome: str) -> int:
     return tabela[chave]
 
 
+def _degrau_km(km: int) -> Optional[int]:
+    """Menor degrau da OLX que cobre `km`. None se for maior que o último degrau conhecido
+    (nesse caso não manda km_max e deixa o filtro local fazer o corte)."""
+    return next((d for d in _DEGRAUS_KM if d >= km), None)
+
+
 def montar_url(
-    query: str,
-    estado: str = "mg",
+    busca: Busca,
     pagina: int = 1,
     *,
-    regiao: Optional[str] = None,
-    preco_min: Optional[int] = None,
-    preco_max: Optional[int] = None,
-    ano_min: Optional[int] = None,
-    ano_max: Optional[int] = None,
     km_min: Optional[int] = None,
-    km_max: Optional[int] = None,
     cambio: Optional[str] = None,
     combustivel: Optional[str] = None,
     anunciante: Optional[str] = None,
     ordenar: Optional[str] = None,
 ) -> str:
-    """Monta a URL de listagem. Atenção: km_min e km_max só funcionam com os valores de degrau da OLX
-    (0, 5000, 10000, 20000, 30000, 40000, 60000, 80000, 100000, 120000, 140000, 160000...). Parâmetros da OLX: q, o, ps/pe, rs/re, ms/me, gb, fu, f, sp/sf."""
-    if not (isinstance(estado, str) and len(estado) == 2 and estado.isalpha()):
-        raise ValueError(f"estado deve ser a sigla com 2 letras, recebi {estado!r}")
-    caminho = f"{URL_BASE}/estado-{estado.lower()}"
-    if regiao:
-        caminho += f"/{regiao.strip('/')}"
+    """Monta a URL de listagem só com os filtros da Busca que a OLX aceita (estado, região, ano,
+    preço e km). Marca, modelo e cidade ficam para filtrar_local. O km_max vai como o degrau
+    mais próximo que cobre o pedido (a OLX só aceita degraus) e o valor exato é aplicado
+    depois. km_min precisa ser um degrau. Parâmetros da OLX: q, o, ps/pe, rs/re, ms/me, gb, fu, f, sp/sf."""
+    caminho = URL_BASE
+    if busca.estado:
+        caminho += f"/estado-{busca.estado.lower()}"
+        if busca.regiao:
+            caminho += f"/{busca.regiao.strip('/')}"
 
-    params: list[tuple[str, Any]] = [("q", query)]
+    km_max = _degrau_km(busca.km_max) if busca.km_max is not None else None
+    params: list[tuple[str, Any]] = [("q", busca.texto)]
     if pagina > 1:
         params.append(("o", pagina))
     opcionais = [
-        ("ps", preco_min),
-        ("pe", preco_max),
-        ("rs", ano_min),
-        ("re", ano_max),
+        ("ps", busca.preco_min),
+        ("pe", busca.preco_max),
+        ("rs", busca.ano_min),
+        ("re", busca.ano_max),
         ("ms", km_min),
         ("me", km_max),
     ]
@@ -376,55 +390,44 @@ def _baixar_com_cuidado(
     return None, None, erro
 
 
-def buscar(
-    query: str,
-    estado: str = "mg",
-    max_resultados: int = 200,
-    max_paginas: int = 4,
+def buscar_paginas(
+    busca: Busca,
+    limites: Optional[LimitesBusca] = None,
     *,
-    regiao: Optional[str] = None,
-    preco_min: Optional[int] = None,
-    preco_max: Optional[int] = None,
-    ano_min: Optional[int] = None,
-    ano_max: Optional[int] = None,
     km_min: Optional[int] = None,
-    km_max: Optional[int] = None,
     cambio: Optional[str] = None,
     combustivel: Optional[str] = None,
     anunciante: Optional[str] = None,
     ordenar: Optional[str] = None,
-    pausa: tuple[float, float] = (6.0, 14.0),
-    tempo_max: float = 180.0,
-    tentativas_bloqueio: int = 2,
-    backoff_base: float = 20.0,
     sessao: Any = None,
     dormir: Callable[[float], None] = time.sleep,
     relogio: Callable[[], float] = time.monotonic,
 ) -> Iterator[PaginaBusca]:
-    """Busca carros na OLX e devolve uma página de cada vez (gerador).
+    """Busca carros na OLX e devolve uma página de cada vez (gerador). Quem não precisa disso
+    usa `buscar`, que junta tudo e devolve o ResultadoBusca com funil e avisos.
 
-    Para quando acontecer o primeiro destes: juntou `max_resultados`, chegou no totalOfAds,
-    bateu `max_paginas`, a página veio vazia ou só com repetidos, bloqueio, ou passou de
-    `tempo_max` segundos. A última página devolvida traz `parou_por` preenchido.
+    Para quando acontecer o primeiro destes: chegou no totalOfAds, a página veio vazia ou só
+    com repetidos, bateu `limites.max_paginas`, passou de `limites.tempo_max_segundos`, ou
+    houve bloqueio. A última página devolvida traz `parou_por` preenchido. Nenhum limite
+    descarta anúncio: só decide quando parar de pedir páginas.
 
-    Uma página por vez, nunca em paralelo, com pausa aleatória (`pausa`, em segundos) e a
-    mesma sessão (cookies) do começo ao fim. Depois de um bloqueio, não insiste: espera e
-    tenta de novo até `tentativas_bloqueio` vezes e então para, devolvendo o que já juntou.
+    Uma página por vez, nunca em paralelo, com pausa aleatória (`limites.pausa_entre_paginas_segundos`)
+    e a mesma sessão (cookies) do começo ao fim. Depois de um bloqueio, não insiste: espera e
+    tenta de novo até `limites.tentativas_bloqueio` vezes e então para, devolvendo o que já juntou.
+
+    Os filtros que a OLX não aceita ou arredonda (marca, modelo, cidade, km exato) são aplicados
+    por filtrar_local em cada página: `anuncios` traz só os que passam, enquanto `acumulado`
+    conta o que veio da OLX, antes desse filtro.
     """
+    limites = limites or LimitesBusca()
     filtros = dict(
-        regiao=regiao,
-        preco_min=preco_min,
-        preco_max=preco_max,
-        ano_min=ano_min,
-        ano_max=ano_max,
         km_min=km_min,
-        km_max=km_max,
         cambio=cambio,
         combustivel=combustivel,
         anunciante=anunciante,
         ordenar=ordenar,
     )
-    montar_url(query, estado, 1, **filtros)  # valida os argumentos antes de bater na OLX
+    montar_url(busca, 1, **filtros)  # valida os argumentos antes de bater na OLX
 
     inicio = relogio()
     vistos: set[str] = set()
@@ -434,19 +437,22 @@ def buscar(
     gerenciador = None
     if sessao is None:
         # retries=1: o Scrapling não repete sozinho. Quem decide repetir sou eu, com backoff.
-        gerenciador = FetcherSession(impersonate="chrome", stealthy_headers=True, timeout=30, retries=1)
+        gerenciador = FetcherSession(
+            impersonate="chrome", stealthy_headers=True,
+            timeout=limites.timeout_requisicao_segundos, retries=1,
+        )
         sessao = gerenciador.__enter__()
     try:
         pagina = 1
         while True:
-            url = montar_url(query, estado, pagina, **filtros)
+            url = montar_url(busca, pagina, **filtros)
             itens, total, erro = _baixar_com_cuidado(
                 sessao,
                 url,
                 inicio=inicio,
-                tempo_max=tempo_max,
-                tentativas_bloqueio=tentativas_bloqueio,
-                backoff_base=backoff_base,
+                tempo_max=limites.tempo_max_segundos,
+                tentativas_bloqueio=limites.tentativas_bloqueio,
+                backoff_base=limites.backoff_base_segundos,
                 dormir=dormir,
                 relogio=relogio,
             )
@@ -463,12 +469,12 @@ def buscar(
                 )
                 return
 
-            if total is not None:
-                total_ads = total
+            if total is not None and (total > 0 or total_ads is None):
+                total_ads = total  # uma página vazia com total 0 não apaga o total já visto
             novos: list[Anuncio] = []
             for item in itens:
                 id_ = str(item["listId"])
-                if id_ in vistos or acumulado + len(novos) >= max_resultados:
+                if id_ in vistos:
                     continue
                 vistos.add(id_)
                 novos.append(normalizar(item))
@@ -483,26 +489,27 @@ def buscar(
                     if itens
                     else "A página veio sem anúncios."
                 )
-            elif acumulado >= max_resultados:
-                parou_por = MAX_RESULTADOS
             elif total_ads is not None and len(vistos) >= total_ads:
                 parou_por = TOTAL_ADS
-            elif pagina >= max_paginas:
+            elif pagina >= limites.max_paginas:
                 parou_por = MAX_PAGINAS
 
-            espera = random.uniform(*pausa)
-            if parou_por is None and relogio() - inicio + espera > tempo_max:
+            espera = random.uniform(*limites.pausa_entre_paginas_segundos)
+            if parou_por is None and relogio() - inicio + espera > limites.tempo_max_segundos:
                 parou_por = TEMPO_MAXIMO
-                aviso = f"Parou no tempo máximo de {tempo_max:.0f}s da busca."
+                aviso = f"Parou no tempo máximo de {limites.tempo_max_segundos:.0f}s da busca."
 
+            aprovados, cortados = filtrar_local_contando(novos, busca, ignorar=_FILTROS_NA_URL)
             yield PaginaBusca(
                 fonte=FONTE,
                 numero=pagina,
-                anuncios=novos,
+                anuncios=aprovados,
                 acumulado=acumulado,
                 total_ads=total_ads,
                 parou_por=parou_por,
                 aviso=aviso,
+                coletados=len(novos),
+                cortados_por_filtro=cortados,
             )
             if parou_por is not None:
                 return
@@ -513,23 +520,56 @@ def buscar(
             gerenciador.__exit__(None, None, None)
 
 
-def buscar_tudo(*args: Any, **kwargs: Any) -> ResultadoBusca:
-    """Mesma coisa que `buscar`, mas espera tudo e devolve junto."""
-    inicio = time.monotonic()
+_MOTIVOS = {
+    TOTAL_ADS: "acabaram_paginas",
+    PAGINA_VAZIA: "acabaram_paginas",
+    MAX_PAGINAS: "teto_paginas",
+    TEMPO_MAXIMO: "teto_tempo",
+    BLOQUEIO: "falha_fonte",
+}
+
+
+def buscar(
+    busca: Busca,
+    limites: Optional[LimitesBusca] = None,
+    *,
+    relogio: Callable[[], float] = time.monotonic,
+    **kwargs: Any,
+) -> ResultadoBusca:
+    """Busca na OLX e devolve o ResultadoBusca completo (anúncios, funil, motivo de parada e
+    avisos). Aceita os mesmos extras de `buscar_paginas` (km_min, cambio, combustivel,
+    anunciante, ordenar, sessao, dormir). Se algo falhar no meio, devolve o que já juntou
+    com motivo_parada "falha_fonte" em vez de levantar erro."""
+    limites = limites or LimitesBusca()
+    inicio = relogio()
     anuncios: list[Anuncio] = []
-    paginas = 0
-    ultima: Optional[PaginaBusca] = None
-    for pagina in buscar(*args, **kwargs):
-        anuncios.extend(pagina.anuncios)
-        if pagina.parou_por != BLOQUEIO:
-            paginas += 1
-        ultima = pagina
-    return ResultadoBusca(
-        fonte=FONTE,
-        anuncios=anuncios,
-        paginas=paginas,
-        total_ads=ultima.total_ads if ultima else None,
-        parou_por=ultima.parou_por if ultima else None,
-        aviso=ultima.aviso if ultima else None,
-        segundos=time.monotonic() - inicio,
+    cortados: dict[str, int] = {}
+    paginas = coletados = 0
+    total_na_fonte: Optional[int] = None
+    motivo = "falha_fonte"
+    detalhe_falha: Optional[str] = "a busca terminou sem motivo registrado"
+    try:
+        for pag in buscar_paginas(busca, limites, relogio=relogio, **kwargs):
+            if pag.parou_por != BLOQUEIO:
+                paginas += 1
+            anuncios.extend(pag.anuncios)
+            coletados += pag.coletados
+            for nome, qtd in pag.cortados_por_filtro.items():
+                cortados[nome] = cortados.get(nome, 0) + qtd
+            if pag.total_ads is not None:
+                total_na_fonte = pag.total_ads
+            if pag.parou_por is not None:
+                motivo = _MOTIVOS[pag.parou_por]
+                detalhe_falha = pag.aviso
+    except Exception as e:  # resposta estranha, falha de rede fora do retry, etc.
+        motivo = "falha_fonte"
+        detalhe_falha = f"erro inesperado na pagina {paginas + 1} ({type(e).__name__}: {e})"
+    return montar_resultado(
+        FONTE, anuncios, paginas, relogio() - inicio, total_na_fonte, coletados, cortados,
+        motivo, limites, detalhe_falha,
     )
+
+
+def buscar_tudo(*args: Any, **kwargs: Any) -> ResultadoBusca:
+    """Nome antigo de `buscar`, que agora já devolve tudo junto."""
+    return buscar(*args, **kwargs)

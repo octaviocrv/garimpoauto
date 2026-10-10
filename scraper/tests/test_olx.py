@@ -1,6 +1,6 @@
 """Testes da fonte OLX. Rodar dentro de scraper/:
 
-    .venv/bin/python -m unittest discover -s tests -v
+    .venv/bin/python -m pytest tests -v
 
 Os testes normais são offline. O canário ao vivo só roda com OLX_LIVE=1.
 """
@@ -15,6 +15,8 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
 
+from config import LimitesBusca  # noqa: E402
+from schemas import Busca  # noqa: E402
 from sources import olx  # noqa: E402
 
 FIXTURE = RAIZ / "tests" / "fixtures" / "olx_listagem.html"
@@ -92,11 +94,18 @@ class Relogio:
         return self.agora
 
 
+def limites(**kw):
+    kw.setdefault("pausa_entre_paginas_segundos", (1.0, 1.0))
+    return LimitesBusca(**kw)
+
+
 def rodar(respostas, **kw):
     sessao, relogio = SessaoFalsa(respostas), Relogio()
-    kw.setdefault("pausa", (1.0, 1.0))
     paginas = list(
-        olx.buscar("civic", "mg", sessao=sessao, dormir=relogio.dormir, relogio=relogio, **kw)
+        olx.buscar_paginas(
+            Busca(texto="civic", estado="mg"), limites(**kw),
+            sessao=sessao, dormir=relogio.dormir, relogio=relogio,
+        )
     )
     return paginas, sessao, relogio
 
@@ -194,15 +203,15 @@ class Normalizacao(unittest.TestCase):
         self.assertIsNone(sem_campo.nota_anunciante)
 
     def test_montar_url_com_filtros(self):
+        busca = Busca(texto="civic 2018", estado="mg", preco_max=90000, ano_min=2018, km_max=60000)
         url = olx.montar_url(
-            "civic 2018", "mg", 2, preco_max=90000, ano_min=2018, cambio="automático",
-            combustivel="flex", km_max=60000, anunciante="particular", ordenar="recentes",
+            busca, 2, cambio="automático", combustivel="flex", anunciante="particular", ordenar="recentes",
         )
         for pedaco in ("estado-mg", "q=civic%202018", "o=2", "pe=90000", "rs=2018", "gb=2",
                        "fu=3", "me=60000", "f=0", "sf=1"):
             self.assertIn(pedaco, url)
         with self.assertRaises(ValueError):
-            olx.montar_url("civic", "minas")
+            Busca(texto="civic", estado="minas")
 
 
 class CanarioDoPayload(unittest.TestCase):
@@ -220,7 +229,7 @@ class CanarioDoPayload(unittest.TestCase):
 
     @unittest.skipUnless(os.environ.get("OLX_LIVE") == "1", "ao vivo: rode com OLX_LIVE=1")
     def test_ao_vivo_a_olx_ainda_entrega_anuncios(self):
-        paginas = list(olx.buscar("civic", "mg", max_resultados=10, max_paginas=1))
+        paginas = list(olx.buscar_paginas(Busca(texto="civic", estado="mg"), LimitesBusca(max_paginas=1)))
         achados = sum(len(p.anuncios) for p in paginas)
         self.assertGreater(
             achados,
@@ -242,12 +251,6 @@ class ComportamentoDaBusca(unittest.TestCase):
         self.assertEqual(len(relogio.esperas), 1)  # uma pausa entre as duas páginas
         self.assertIn("o=2", sessao.urls[1])
 
-    def test_corta_em_max_resultados(self):
-        p1 = html_com_ads([anuncio_cru(i) for i in range(1, 6)], total=50)
-        paginas, _, _ = rodar([RespostaFalsa(200, p1)], max_resultados=3)
-        self.assertEqual(len(paginas[0].anuncios), 3)
-        self.assertEqual(paginas[0].parou_por, olx.MAX_RESULTADOS)
-
     def test_para_no_max_paginas(self):
         resp = [RespostaFalsa(200, html_com_ads([anuncio_cru(i)], total=99)) for i in (1, 2, 3)]
         paginas, sessao, _ = rodar(resp, max_paginas=2)
@@ -263,7 +266,7 @@ class ComportamentoDaBusca(unittest.TestCase):
 
     def test_pausa_fica_dentro_do_intervalo(self):
         resp = [RespostaFalsa(200, html_com_ads([anuncio_cru(i)], total=99)) for i in (1, 2, 3)]
-        _, _, relogio = rodar(resp, max_paginas=3, pausa=(6.0, 14.0))
+        _, _, relogio = rodar(resp, max_paginas=3, pausa_entre_paginas_segundos=(6.0, 14.0))
         self.assertEqual(len(relogio.esperas), 2)
         self.assertTrue(all(6.0 <= e <= 14.0 for e in relogio.esperas))
 
@@ -297,7 +300,7 @@ class ComportamentoDaBusca(unittest.TestCase):
 
     def test_respeita_o_tempo_maximo(self):
         resp = [RespostaFalsa(200, html_com_ads([anuncio_cru(i)], total=99)) for i in (1, 2, 3, 4)]
-        paginas, sessao, _ = rodar(resp, max_paginas=4, pausa=(10.0, 10.0), tempo_max=15.0)
+        paginas, sessao, _ = rodar(resp, max_paginas=4, pausa_entre_paginas_segundos=(10.0, 10.0), tempo_max_segundos=15.0)
         self.assertEqual(paginas[-1].parou_por, olx.TEMPO_MAXIMO)
         self.assertEqual(len(sessao.urls), 2)
 
@@ -305,9 +308,9 @@ class ComportamentoDaBusca(unittest.TestCase):
         sessao, relogio = SessaoFalsa([
             RespostaFalsa(200, html_com_ads([anuncio_cru(1), anuncio_cru(2, priceValue=None)], total=2))
         ]), Relogio()
-        resultado = olx.buscar_tudo("civic", "mg", sessao=sessao, dormir=relogio.dormir, relogio=relogio)
-        self.assertEqual((len(resultado.anuncios), resultado.paginas, resultado.incompletos), (2, 1, 1))
-        self.assertEqual(resultado.parou_por, olx.TOTAL_ADS)
+        resultado = olx.buscar_tudo(Busca(texto="civic", estado="mg"), sessao=sessao, dormir=relogio.dormir, relogio=relogio)
+        self.assertEqual((len(resultado.anuncios), resultado.paginas_lidas, resultado.incompletos), (2, 1, 1))
+        self.assertEqual(resultado.motivo_parada, "acabaram_paginas")
 
 
 if __name__ == "__main__":

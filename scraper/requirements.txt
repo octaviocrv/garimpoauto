@@ -6,6 +6,7 @@
 scrapling[fetchers]==0.4.15
 httpx==0.28.1
 python-dotenv==1.2.4
+pytest==9.1.1
 
 # Ainda NÃO instalados no .venv. Versões fixas na que o pip escolheria em 09/10/2026
 pydantic==2.14.0
