@@ -292,7 +292,7 @@ def test_ao_subir_o_servidor_aplica_as_migrations(relogio):
         assert c.get("/saude").json() == {"status": "ok"}
     with a.armazem._conectar() as con, con.cursor() as cur:
         cur.execute("SELECT versao FROM schema_migracoes ORDER BY versao")
-        assert [r["versao"] for r in cur.fetchall()] == ["001_cache_de_busca", "002_vistos"]
+        assert [r["versao"] for r in cur.fetchall()] == ["001_cache_de_busca", "002_vistos", "003_fipe"]
 
 
 def test_ao_subir_sem_banco_o_servidor_sobe_do_mesmo_jeito(relogio, caplog):

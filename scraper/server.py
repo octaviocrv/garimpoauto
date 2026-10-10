@@ -41,6 +41,7 @@ from armazem import Armazem, BancoFora, hash_da_chave
 from busca import aviso_filtro_aproximado, chave_busca, filtros_locais, montar_resultado, texto_informacao
 from config import LimitesBusca
 from schemas import Anuncio, Aviso, Busca, PaginaBusca, ResultadoBusca
+from servico_fipe import EnriquecedorFipe, criar_enriquecedor
 from sources import olx
 from sources.base import Fonte
 
@@ -118,10 +119,12 @@ class SessaoBusca:
     def __init__(
         self, chave: str, fonte: Fonte, busca: Busca, limites: LimitesBusca, teto: int, semaforo: threading.Semaphore,
         armazem: Optional[Armazem] = None, ttl: float = config.CACHE_TTL_SEGUNDOS, usuario: str = "",
+        enriquecedor_fipe: Optional[EnriquecedorFipe] = None,
     ) -> None:
         self.chave, self.fonte, self.busca, self.limites, self.teto = chave, fonte, busca, limites, teto
         self.semaforo = semaforo
         self.armazem, self.ttl, self.usuario = armazem, ttl, usuario
+        self.enriquecedor_fipe = enriquecedor_fipe
         self.trava = threading.Lock()
         self.cursor: Any = None
         self.paginas: list[PaginaBusca] = []
@@ -233,6 +236,8 @@ class SessaoBusca:
                     )
                 if pag.parou_por == olx.BLOQUEIO:
                     return pag, False
+                if self.enriquecedor_fipe is not None:
+                    self.enriquecedor_fipe.enriquecer(pag.anuncios)
                 agora_utc = datetime.now(timezone.utc)
                 tempo, quando = time.monotonic() - inicio, agora_utc.replace(microsecond=agora_utc.microsecond // 1000 * 1000)  # o banco guarda até milissegundos
                 self._guardar(pag, tempo, quando)
@@ -250,17 +255,21 @@ class Servico:
 
     def __init__(
         self, fonte: Fonte, ttl: float, limites: Optional[LimitesBusca] = None, teto: int = config.MAX_PAGINAS_SOB_DEMANDA,
-        armazem: Optional[Armazem] = None,
+        armazem: Optional[Armazem] = None, enriquecedor_fipe: Optional[EnriquecedorFipe] = None,
     ) -> None:
         self.fonte, self.ttl, self.limites, self.teto = fonte, ttl, limites or LimitesBusca(), teto
         self.armazem = armazem
+        self.enriquecedor_fipe = enriquecedor_fipe
         self.trava = threading.Lock()
         self.semaforo = threading.Semaphore(1)
         self.cache: dict[str, SessaoBusca] = {}
         self._limpou_em = 0.0
 
     def _nova(self, chave: str, busca: Busca) -> SessaoBusca:
-        return SessaoBusca(chave, self.fonte, busca, self.limites, self.teto, self.semaforo, self.armazem, self.ttl)
+        return SessaoBusca(
+            chave, self.fonte, busca, self.limites, self.teto, self.semaforo, self.armazem, self.ttl,
+            enriquecedor_fipe=self.enriquecedor_fipe,
+        )
 
     def _do_banco(self, chave: str, busca: Busca, id_: int) -> Optional[SessaoBusca]:
         """Monta a sessão guardada no banco, com as páginas e o ponto onde a busca continua."""
@@ -480,6 +489,7 @@ def criar_app(
     cors_origens: Optional[list[str]] = None,
     max_paginas_demanda: int = config.MAX_PAGINAS_SOB_DEMANDA,
     armazem: Optional[Armazem] = None,
+    enriquecedor_fipe: Optional[EnriquecedorFipe] = None,
 ) -> FastAPI:
     """`armazem` liga o cache no banco. Sem ele o cache é só de memória, como antes."""
     app = FastAPI(title="Garimpo Auto")
@@ -487,13 +497,14 @@ def criar_app(
         CORSMiddleware, allow_origins=cors_origens if cors_origens is not None else config.CORS_ORIGENS,
         allow_methods=["GET"], allow_headers=["*"],
     )
-    servico = Servico(fonte, ttl, limites, max_paginas_demanda, armazem)
+    servico = Servico(fonte, ttl, limites, max_paginas_demanda, armazem, enriquecedor_fipe)
     app.state.servico = servico
 
     @app.on_event("startup")
     def _preparar_banco() -> None:
         """Ao subir, confere o banco e aplica as migrations. Se ele estiver fora, o servidor sobe do mesmo jeito."""
         if armazem is None:
+            log.warning("Subi sem o banco. A busca segue normal e não consulta a FIPE.")
             return
         try:
             armazem.migrar()
@@ -635,4 +646,5 @@ def criar_app(
     return app
 
 
-app = criar_app(armazem=Armazem(config.DATABASE_URL, confere_segundos=config.BANCO_CONFERE_SEGUNDOS) if config.DATABASE_URL else None)
+_armazem = Armazem(config.DATABASE_URL, confere_segundos=config.BANCO_CONFERE_SEGUNDOS) if config.DATABASE_URL else None
+app = criar_app(armazem=_armazem, enriquecedor_fipe=criar_enriquecedor(_armazem))

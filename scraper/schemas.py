@@ -14,6 +14,16 @@ CAMPOS_OBRIGATORIOS = ("preco", "ano", "modelo")
 
 
 @dataclass
+class ReferenciaFipe:
+    codigo: str
+    preco: float
+    diferenca_percentual: int
+    mes_referencia: str
+    confianca: Literal["alta"]
+    preco_estranho: bool = False
+
+
+@dataclass
 class Anuncio:
     source: str
     external_id: str
@@ -44,6 +54,8 @@ class Anuncio:
     novo: bool = False  # apareceu desde a última busca igual (só com o banco ligado e depois da 1ª busca)
     incompleto: bool = False
     campos_faltando: list[str] = field(default_factory=list)
+    fipe: Optional[ReferenciaFipe] = None
+    fipe_bloqueio: Optional[str] = None
     # Item cru da fonte, já sem nome nem telefone de anunciante (vai para raw_listings).
     raw: dict[str, Any] = field(default_factory=dict, repr=False)
 

@@ -169,7 +169,7 @@ class CasadorFipe:
         self.ano_atual = ano_atual
 
     def escolher(self, a: Anuncio) -> Optional[EscolhaFipe]:
-        if not a.marca or not a.modelo or a.ano is None or not a.combustivel:
+        if not a.marca or not a.modelo or a.ano is None or not a.combustivel or a.preco is None or a.preco <= 0:
             return None
         referencia = self.catalogo.referencia_atual()
         marca_base = _marca_base(a.marca)

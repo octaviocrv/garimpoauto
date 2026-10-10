@@ -17,7 +17,7 @@ sys.path.insert(0, str(RAIZ))
 
 import armazem as modulo  # noqa: E402
 from armazem import Armazem, BancoFora, hash_da_chave, pagina_de_json, pagina_para_json  # noqa: E402
-from schemas import PaginaBusca  # noqa: E402
+from schemas import PaginaBusca, ReferenciaFipe  # noqa: E402
 from sources import olx  # noqa: E402
 from tests.apoio_banco import RelogioBanco, novo_armazem, zerar_banco_de_teste  # noqa: E402
 from tests.test_olx import anuncio_cru  # noqa: E402
@@ -102,12 +102,14 @@ def test_pagina_ida_e_volta_no_json_mantem_datas_novo_e_tira_o_item_cru():
     p = pagina(2, [1, 2])
     p.anuncios[0] = olx.normalizar(anuncio_cru("1", date=1791572438, lastBumpAgeSecs="0"))
     p.anuncios[0].novo = True
+    p.anuncios[0].fipe = ReferenciaFipe("005384-8", 40000, 25, "outubro de 2026", "alta")
     p.anuncios[0].raw = {"segredo": 1}
     volta = pagina_de_json(pagina_para_json(p))
     assert volta.numero == 2 and volta.total_ads == 10 and volta.cortados_por_filtro == {"km": 1}
     assert [a.external_id for a in volta.anuncios] == ["1", "2"]
     assert volta.anuncios[0].novo is True and volta.anuncios[1].novo is False
     assert volta.anuncios[0].raw == {}
+    assert volta.anuncios[0].fipe == p.anuncios[0].fipe
     assert volta.anuncios[0].publicado_em == p.anuncios[0].publicado_em and volta.anuncios[0].publicado_em.tzinfo
 
 

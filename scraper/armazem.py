@@ -23,7 +23,7 @@ from urllib.parse import unquote, urlparse
 
 import pymysql
 
-from schemas import Anuncio, PaginaBusca
+from schemas import Anuncio, PaginaBusca, ReferenciaFipe
 
 log = logging.getLogger("garimpo.banco")
 if not logging.getLogger().handlers and not log.handlers:  # fora do uvicorn, ainda assim aparece
@@ -73,6 +73,8 @@ def pagina_de_json(texto: str) -> PaginaBusca:
         for campo in _DATAS:
             if a[campo] is not None:
                 a[campo] = datetime.fromisoformat(a[campo])
+        if a.get("fipe") is not None:
+            a["fipe"] = ReferenciaFipe(**a["fipe"])
         anuncios.append(Anuncio(**a))
     return PaginaBusca(anuncios=anuncios, **d)
 
