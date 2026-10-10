@@ -123,3 +123,23 @@ def test_pagina_so_com_repetidos_encerra_a_busca_dizendo_o_motivo():
     cursor.proxima()
     p2 = cursor.proxima()
     assert p2.parou_por == "pagina_vazia" and "repetidos" in p2.aviso and cursor.terminou
+
+
+def test_pagina_menor_que_a_primeira_e_a_ultima_mesmo_que_o_total_da_olx_seja_maior():
+    """No teste real (fiat argo, MG) a OLX listou 1.360 e dizia ter 1.411: a página 29 veio vazia."""
+    cheia = [anuncio_cru(str(i)) for i in range(1, 6)]
+    incompleta = [anuncio_cru(str(i)) for i in range(6, 8)]
+    cursor, sessao, _ = abrir([RespostaFalsa(200, html_com_ads(cheia, 50)), RespostaFalsa(200, html_com_ads(incompleta, 50))])
+    p1, p2 = cursor.proxima(), cursor.proxima()
+    assert p1.parou_por is None
+    assert p2.parou_por == "pagina_vazia" and cursor.terminou and len(p2.anuncios) == 2
+    assert len(sessao.urls_de_listagem) == 2  # não precisa gastar uma 3ª leitura para descobrir
+
+
+def test_pagina_com_um_repetido_mas_cheia_nao_encerra():
+    a = [anuncio_cru(str(i)) for i in range(1, 6)]
+    b = [a[-1]] + [anuncio_cru(str(i)) for i in range(6, 10)]  # 5 itens, 1 já visto
+    cursor, _, _ = abrir([RespostaFalsa(200, html_com_ads(a, 50)), RespostaFalsa(200, html_com_ads(b, 50))])
+    cursor.proxima()
+    p2 = cursor.proxima()
+    assert p2.coletados == 4 and p2.parou_por is None

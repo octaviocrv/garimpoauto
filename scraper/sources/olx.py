@@ -702,6 +702,7 @@ class CursorOlx:
         self._acumulado = 0
         self._total_ads: Optional[int] = None
         self._ultimo_pedido: Optional[float] = None
+        self._tamanho_pagina: Optional[int] = None  # quantos anúncios a página 1 trouxe (a OLX manda 50)
         self._codigos: Optional[dict[str, str]] = None
         self._ignorar: tuple[str, ...] = ()
         self._na_origem: list[str] = []
@@ -756,6 +757,8 @@ class CursorOlx:
             )
         if total is not None and (total > 0 or self._total_ads is None):
             self._total_ads = total
+        if self._tamanho_pagina is None:
+            self._tamanho_pagina = len(itens)
         novos: list[Anuncio] = []
         for item in itens:
             id_ = str(item["listId"])
@@ -772,6 +775,9 @@ class CursorOlx:
             aviso = "A página só tinha anúncios repetidos." if itens else "A página veio sem anúncios."
         elif self._total_ads is not None and len(self._vistos) >= self._total_ads:
             parou_por = TOTAL_ADS
+        elif pagina > 1 and len(itens) < (self._tamanho_pagina or 0):
+            # Página menor que a 1ª é a última: o total da OLX costuma ficar uns 3% acima do que ela lista de verdade
+            parou_por, aviso = PAGINA_VAZIA, "Última página da lista (veio incompleta)."
         elif pagina >= self.teto:
             parou_por = MAX_PAGINAS
         aprovados, cortados = filtrar_local_contando(novos, self.busca, ignorar=self._ignorar)
