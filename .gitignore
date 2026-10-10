@@ -17,3 +17,11 @@ apps/*/.env.*
 # Arquivos locais e dumps
 core
 core.*
+
+# Python e credenciais locais
+**/.venv/
+**/__pycache__/
+*.py[cod]
+**/.env
+**/.env.*
+!**/.env.example
