@@ -164,7 +164,333 @@ a:focus-visible { outline: 3px solid #14b8a6; outline-offset: 3px; }
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ---- Busca e análise ---- */
+
+.search-page,
+.analysis-page {
+  background:
+    radial-gradient(ellipse 70% 34% at 50% -8%, rgba(0, 240, 255, 0.1), transparent 70%),
+    #050708;
+  isolation: isolate;
+}
+
+.search-page::before,
+.analysis-page::before {
+  background-image:
+    linear-gradient(rgba(0, 240, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.022) 1px, transparent 1px);
+  background-size: 48px 48px;
+  content: '';
+  inset: 0;
+  -webkit-mask-image: linear-gradient(to bottom, #000, transparent 70%);
+  mask-image: linear-gradient(to bottom, #000, transparent 70%);
+  pointer-events: none;
+  position: fixed;
+  z-index: -1;
+}
+
+.search-header,
+.analysis-header {
+  background: rgba(5, 8, 9, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.search-console {
+  background:
+    linear-gradient(130deg, rgba(0, 240, 255, 0.055), transparent 40%),
+    linear-gradient(165deg, rgba(12, 28, 31, 0.9), rgba(5, 8, 9, 0.96));
+  border: 1px solid rgba(0, 240, 255, 0.18);
+  border-radius: 24px;
+  box-shadow: 0 30px 80px -44px rgba(0, 240, 255, 0.28), inset 0 1px rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  padding: 24px;
+  position: relative;
+}
+
+.search-console::before {
+  background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.7), transparent);
+  content: '';
+  height: 1px;
+  left: 5%;
+  position: absolute;
+  right: 45%;
+  top: 0;
+}
+
+.search-console__intro {
+  align-items: center;
+  display: flex;
+  min-height: 180px;
+  position: relative;
+}
+
+.search-console__mascot {
+  bottom: -52px;
+  height: 250px;
+  opacity: 0.82;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  right: 3%;
+  width: 270px;
+}
+
+.search-console__mascot::after {
+  background: linear-gradient(to top, #081013 5%, transparent 55%);
+  content: '';
+  inset: 0;
+  position: absolute;
+}
+
+.search-console__mascot img {
+  height: 100%;
+  mix-blend-mode: screen;
+  object-fit: cover;
+  width: 100%;
+}
+
+.search-console__scan {
+  background: linear-gradient(to bottom, transparent, rgba(0, 240, 255, 0.18), transparent);
+  height: 60px;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 20%;
+  z-index: 1;
+}
+
+.search-console__form {
+  align-items: stretch;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+.search-console__form:focus-within {
+  border-color: rgba(0, 240, 255, 0.46);
+  box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.06), 0 0 30px -12px rgba(0, 240, 255, 0.35);
+}
+
+.search-console__query {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 18px;
+}
+
+.search-console__submit {
+  align-items: center;
+  background: linear-gradient(135deg, #0f9f9a, #08736f);
+  color: white;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 700;
+  gap: 8px;
+  justify-content: center;
+  min-height: 56px;
+  padding: 0 24px;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.search-console__submit:hover {
+  box-shadow: 0 0 28px -10px rgba(0, 240, 255, 0.75);
+}
+
+.filter-panel,
+.search-status,
+.results-toolbar {
+  background: rgba(10, 15, 16, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  margin-top: 16px;
+}
+
+.filter-panel { padding: 20px; }
+.search-status { padding: 14px 16px; }
+.results-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 16px 18px;
+}
+
+.search-field {
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-field option,
+.search-console select option { background: #0b1011; color: #f3f4f6; }
+
+.search-status.is-loading {
+  border-color: rgba(0, 240, 255, 0.22);
+  box-shadow: inset 3px 0 #00f0ff;
+}
+
+.search-status__pulse,
+.vehicle-card__pulse {
+  animation: search-pulse 1.8s ease-in-out infinite;
+  background: #67e8f9;
+  border-radius: 999px;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.85);
+  flex: none;
+  height: 6px;
+  width: 6px;
+}
+
+.vehicle-card {
+  background: linear-gradient(160deg, rgba(16, 24, 26, 0.98), rgba(6, 9, 10, 0.98) 65%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  box-shadow: 0 22px 50px -38px rgba(0, 0, 0, 0.95);
+  contain: layout paint style;
+  content-visibility: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 440px;
+  overflow: hidden;
+  position: relative;
+  transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+}
+
+.vehicle-card:hover {
+  border-color: rgba(0, 240, 255, 0.28);
+  box-shadow: 0 26px 58px -34px rgba(0, 240, 255, 0.22);
+  transform: translateY(-3px);
+}
+
+.vehicle-card.is-good { border-color: rgba(45, 212, 191, 0.4); }
+.vehicle-card.is-hot {
+  border-color: rgba(251, 191, 36, 0.52);
+  box-shadow: 0 22px 55px -38px rgba(251, 191, 36, 0.48);
+}
+
+.vehicle-card__media {
+  aspect-ratio: 16 / 10;
+  background: #020303;
+  overflow: hidden;
+  position: relative;
+}
+
+.vehicle-card__shade {
+  background: linear-gradient(to top, rgba(4, 8, 9, 0.92), transparent 56%);
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.vehicle-card__time {
+  align-items: center;
+  backdrop-filter: blur(8px);
+  background: rgba(2, 8, 10, 0.8);
+  border: 1px solid rgba(103, 232, 249, 0.32);
+  border-radius: 9px;
+  bottom: 12px;
+  color: #cffafe;
+  display: flex;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  gap: 7px;
+  left: 12px;
+  letter-spacing: 0.06em;
+  padding: 7px 9px;
+  position: absolute;
+  text-transform: uppercase;
+}
+
+.vehicle-card__primary {
+  align-items: center;
+  background: rgba(13, 148, 136, 0.15);
+  border: 1px solid rgba(45, 212, 191, 0.3);
+  border-radius: 12px;
+  color: #ccfbf1;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 8px;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 14px;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.vehicle-card__primary:hover {
+  background: rgba(13, 148, 136, 0.26);
+  border-color: rgba(94, 234, 212, 0.55);
+}
+
+.analysis-hero {
+  background: linear-gradient(150deg, rgba(13, 32, 35, 0.9), rgba(5, 8, 9, 0.96));
+  border: 1px solid rgba(0, 240, 255, 0.16);
+  border-radius: 22px;
+  box-shadow: 0 30px 70px -45px rgba(0, 240, 255, 0.3);
+  display: flex;
+  overflow: hidden;
+}
+
+.analysis-hero__media {
+  flex: none;
+  min-height: 245px;
+  position: relative;
+  width: 42%;
+}
+
+.analysis-verdict {
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  display: flex;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 18px;
+}
+
+.analysis-verdict.is-good { border-color: rgba(45, 212, 191, 0.32); }
+.analysis-verdict.is-hot {
+  background: rgba(251, 191, 36, 0.05);
+  border-color: rgba(251, 191, 36, 0.38);
+}
+
+.analysis-column {
+  background: rgba(255, 255, 255, 0.018);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 18px;
+  padding: 18px;
+}
+
+.analysis-item {
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 13px;
+  padding: 14px;
+}
+
+@keyframes search-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.75); }
+}
+
+@media (max-width: 639px) {
+  .search-console { border-radius: 18px; padding: 20px 16px; }
+  .search-console__intro { min-height: 170px; }
+  .search-console__intro > div:first-child { position: relative; z-index: 2; }
+  .search-console__mascot { opacity: 0.28; right: -75px; }
+  .search-console__form { flex-direction: column; }
+  .search-console__submit { min-height: 52px; }
+  .results-toolbar { align-items: flex-start; flex-direction: column; }
+  .analysis-hero { flex-direction: column; }
+  .analysis-hero__media { aspect-ratio: 16 / 9; min-height: 0; width: 100%; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .hs-spin, .hs-caret, .hs-sug, .hs-fade-in, .hs-rise { animation: none; }
-  .hs-bar { transition: none; }
+  .hs-spin, .hs-caret, .hs-sug, .hs-fade-in, .hs-rise, .search-status__pulse, .vehicle-card__pulse { animation: none; }
+  .hs-bar, .vehicle-card, .vehicle-card img { transition: none; }
 }

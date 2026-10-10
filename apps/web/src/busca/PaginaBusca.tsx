@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, RefreshCw, Search, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, CarFront, ChevronDown, Gauge, RefreshCw, Search, SlidersHorizontal, Sparkles } from 'lucide-react'
 import { CardCarro } from './CardCarro'
 import { Diagnostico } from './Diagnostico'
 import { Garimpar } from './Garimpar'
@@ -15,13 +15,13 @@ import type { Anuncio } from '../types'
 
 const DEV = new URLSearchParams(window.location.search).get('dev') === '1'
 
-const campo = 'min-h-11 w-full rounded-lg border border-white/10 bg-black/40 px-3 text-white placeholder:text-gray-600 focus:border-teal-500 focus:outline-none'
-const botao = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-gray-600 bg-black/40 px-4 text-gray-300 transition-all hover:border-gray-400'
+const campo = 'search-field min-h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-white placeholder:text-gray-600 focus:border-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-300/10'
+const botao = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 text-gray-300 transition-colors hover:border-cyan-300/30 hover:bg-cyan-300/[0.06] hover:text-white'
 
 function Campo({ nome, children }: { nome: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1 text-xs text-gray-400">
-      {nome}
+    <label className="flex flex-col gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-gray-500">
+      <span>{nome}</span>
       {children}
     </label>
   )
@@ -91,53 +91,101 @@ export function PaginaBusca() {
   const nadaAchado = busca.fase === 'pronto' && lista.length === 0
 
   return (
-    <div className="min-h-svh bg-[#050505] font-sans text-white">
-      <header className="border-b border-white/10 bg-[#0a0a0a]">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-5">
+    <div className="search-page min-h-svh font-sans text-white">
+      <header className="search-header">
+        <div className="mx-auto flex h-[4.5rem] max-w-[90rem] items-center justify-between gap-3 px-5 lg:px-8">
           <span className="flex items-center gap-3">
-            <span className="grid h-10 w-10 flex-none place-items-center overflow-hidden rounded-full border-2 border-teal-600 bg-teal-900">
+            <span className="relative grid h-11 w-11 flex-none place-items-center overflow-hidden rounded-full border border-cyan-300/50 bg-teal-950 shadow-[0_0_24px_rgba(0,240,255,0.16)]">
               <img src="/mascot/han-profile.jpeg" alt="" className="h-full w-full object-cover" />
             </span>
-            <span className="whitespace-nowrap text-lg font-bold">Garimpo Auto</span>
+            <span>
+              <span className="block whitespace-nowrap text-base font-extrabold leading-none tracking-[-0.02em]">Garimpo Auto</span>
+              <span className="mt-1 block font-mono text-[9px] uppercase tracking-[0.2em] text-cyan-300/60">Central de oportunidades</span>
+            </span>
           </span>
-          <a href="#inicio" className="inline-flex min-h-11 items-center gap-1 text-sm text-gray-400 transition-colors hover:text-white">
+          <a href="#inicio" className="inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-sm text-gray-400 transition-colors hover:bg-white/5 hover:text-white">
             <ArrowLeft size={16} aria-hidden="true" /> Início
           </a>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-5 py-6">
-        <form onSubmit={buscarAgora} className="flex flex-col gap-3 sm:flex-row">
-          <input
-            type="search"
-            aria-label="Qual carro você quer?"
-            className={campo}
-            placeholder={T.placeholder}
-            value={r.texto}
-            onChange={(e) => mudar('texto', e.target.value)}
-            enterKeyHint="search"
-            autoFocus
-          />
-          <select aria-label="Estado" className={`${campo} sm:max-w-[12rem]`} value={r.estado} onChange={(e) => mudarEstado(e.target.value)}>
-            {ESTADOS.map(([sigla, nome]) => <option key={sigla} value={sigla}>{nome}</option>)}
-          </select>
-          <div className="flex gap-3">
+      <main className="relative mx-auto max-w-[90rem] px-4 py-7 sm:px-5 lg:px-8 lg:py-10">
+        <section className="search-console" aria-labelledby="search-title">
+          <div className="search-console__intro">
+            <div>
+              <p className="mb-3 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">
+                <Sparkles size={14} aria-hidden="true" /> Radar de oportunidades
+              </p>
+              <h1 id="search-title" className="max-w-2xl text-3xl font-extrabold leading-[1.08] tracking-[-0.045em] text-white sm:text-4xl">
+                Encontre o carro certo.<br /><span className="text-cyan-300">Antes de todo mundo.</span>
+              </h1>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-gray-400">
+                Busque, filtre e compare anúncios recentes em uma leitura só.
+              </p>
+            </div>
+            <div className="search-console__mascot" aria-hidden="true">
+              <div className="search-console__scan" />
+              <img src="/mascot/han-fullbody.jpeg" alt="" />
+            </div>
+          </div>
+
+          <form onSubmit={buscarAgora} className="search-console__form">
+            <label className="search-console__query">
+              <Search size={20} className="flex-none text-cyan-300" aria-hidden="true" />
+              <span className="sr-only">Qual carro você quer?</span>
+              <input
+                type="search"
+                aria-label="Qual carro você quer?"
+                className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-gray-600 sm:text-lg"
+                placeholder={T.placeholder}
+                value={r.texto}
+                onChange={(e) => mudar('texto', e.target.value)}
+                enterKeyHint="search"
+                autoFocus
+              />
+            </label>
+            <label className="relative flex items-center border-t border-white/10 sm:border-l sm:border-t-0">
+              <span className="sr-only">Estado</span>
+              <select aria-label="Estado" className="h-14 w-full appearance-none bg-transparent px-4 pr-9 text-sm text-gray-200 outline-none sm:w-48" value={r.estado} onChange={(e) => mudarEstado(e.target.value)}>
+                {ESTADOS.map(([sigla, nome]) => <option key={sigla} value={sigla}>{nome}</option>)}
+              </select>
+              <ChevronDown size={15} className="pointer-events-none absolute right-4 text-gray-500" aria-hidden="true" />
+            </label>
             <button
               type="submit"
-              className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-teal-600 px-6 font-medium text-white transition-all hover:bg-teal-500 disabled:opacity-40"
+              className="search-console__submit"
             >
-              <Search size={16} aria-hidden="true" /> {T.buscar}
+              <Search size={17} aria-hidden="true" /> {T.buscar}
             </button>
-            <button type="button" onClick={() => setPainel((p) => !p)} aria-expanded={painel} className={botao}>
-              <SlidersHorizontal size={16} aria-hidden="true" /> {T.filtros}{filtrosAtivos > 0 ? ` (${filtrosAtivos})` : ''}
+          </form>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="hidden items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-gray-600 sm:flex">
+              <Gauge size={13} aria-hidden="true" /> Busca atualizada em tempo real
+            </p>
+            <button type="button" onClick={() => setPainel((p) => !p)} aria-expanded={painel} className={`${botao} ml-auto`}>
+              <SlidersHorizontal size={16} aria-hidden="true" /> {T.filtros}
+              {filtrosAtivos > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-cyan-300 px-1 text-[10px] font-bold text-cyan-950">{filtrosAtivos}</span>}
+              <ChevronDown size={14} className={`transition-transform ${painel ? 'rotate-180' : ''}`} aria-hidden="true" />
             </button>
           </div>
-        </form>
+        </section>
 
         {painel && (
-          <div className="mt-3 rounded-lg border border-white/10 bg-[#0a0a0a] p-4">
-            <p className="mb-3 text-sm text-gray-400">{T.dicaFiltros}</p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="filter-panel">
+            <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold text-gray-100">Refine seu garimpo</p>
+                <p className="mt-1 text-xs text-gray-500">{T.dicaFiltros}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setR((x) => ({ ...RASCUNHO_VAZIO, texto: x.texto, estado: x.estado }))}
+                className="min-h-9 rounded-lg px-3 text-xs font-semibold text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
+              >
+                {T.limparFiltros}
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-3 lg:grid-cols-5">
               {r.estado !== 'todos' && (
                 <Campo nome={T.regiao}>
                   <select
@@ -173,23 +221,16 @@ export function PaginaBusca() {
               {escolha('anunciante', 'Anunciante', ANUNCIANTES)}
               {texto('cidade', 'Cidade')}
               {escolha('ordenar', 'Ordenar por', ORDENS)}
-              <button
-                type="button"
-                onClick={() => setR((x) => ({ ...RASCUNHO_VAZIO, texto: x.texto, estado: x.estado }))}
-                className="min-h-11 self-end rounded-lg border border-gray-600 px-4 text-sm text-gray-300 hover:border-gray-400"
-              >
-                {T.limparFiltros}
-              </button>
             </div>
             {(regioes.erro || zonas.erro) && <p className="mt-3 text-sm text-yellow-100/90">{regioes.erro ?? zonas.erro}</p>}
           </div>
         )}
 
         {buscando && (
-          <div className="mt-4 rounded-lg border border-teal-600/40 bg-teal-900/10 px-4 py-3" aria-live="polite">
+          <div className="search-status is-loading" aria-live="polite">
             <div className="flex items-center justify-between gap-3">
-              <p className="font-medium text-teal-400">{T.garimpando}</p>
-              <button type="button" onClick={parar} className="min-h-11 rounded-lg border border-gray-600 px-4 text-sm text-gray-300 hover:border-gray-400">
+              <p className="flex items-center gap-2 font-semibold text-cyan-300"><span className="search-status__pulse" />{T.garimpando}</p>
+              <button type="button" onClick={parar} className="min-h-10 rounded-xl border border-white/10 px-4 text-sm text-gray-300 hover:border-white/25">
                 {T.parar}
               </button>
             </div>
@@ -198,11 +239,11 @@ export function PaginaBusca() {
         )}
 
         {busca.fase === 'parada' && (
-          <p className="mt-4 rounded-lg border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-gray-300">{T.parada}</p>
+          <p className="search-status text-sm text-gray-300">{T.parada}</p>
         )}
 
         {busca.fase === 'falhou' && (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-yellow-200/20 bg-yellow-200/5 px-4 py-3 text-sm text-yellow-100/90">
+          <div className="search-status flex flex-wrap items-center justify-between gap-3 border-yellow-200/20 bg-yellow-200/5 text-sm text-yellow-100/90">
             <p>{busca.erro ?? T.semCarro}</p>
             <button
               type="button"
@@ -215,13 +256,17 @@ export function PaginaBusca() {
         )}
 
         {busca.fase === 'pronto' && resposta && !nadaAchado && (
-          <div className="mt-4 flex min-h-[4.5rem] flex-wrap content-start items-center justify-between gap-x-4 gap-y-1 sm:min-h-0">
-            <p className="text-sm text-gray-300" aria-live="polite">{resposta.informacao}</p>
+          <div className="results-toolbar">
+            <div>
+              <p className="flex items-center gap-2 font-semibold text-gray-100" aria-live="polite">
+                <CarFront size={17} className="text-cyan-300" aria-hidden="true" /> {resposta.informacao}
+              </p>
+              <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-gray-600">{meta.join(' · ')}</p>
+            </div>
             <div className="flex flex-wrap items-center gap-3">
               {novos > 0 && (
-                <p className="rounded-full bg-teal-400 px-3 py-1 text-xs font-bold text-black">{novosDesde(novos)}</p>
+                <p className="rounded-full border border-cyan-200/30 bg-cyan-300/15 px-3 py-1.5 text-xs font-bold text-cyan-200">{novosDesde(novos)}</p>
               )}
-              <p className="text-xs text-gray-500">{meta.join(' · ')}</p>
               <button type="button" onClick={() => busca.pedido && buscar(busca.pedido, true)} className={`${botao} text-sm`}>
                 <RefreshCw size={14} aria-hidden="true" /> {T.buscarDeNovo}
               </button>
@@ -235,7 +280,7 @@ export function PaginaBusca() {
           </div>
         )}
 
-        <div className="mt-4">
+        <div className="mt-5">
           {DEV && resposta && <Diagnostico resposta={resposta} anuncios={lista} />}
 
           {busca.fase === 'inicial' && <p className="py-16 text-center text-gray-400">{T.inicial}</p>}
@@ -258,9 +303,12 @@ export function PaginaBusca() {
                   </button>
                 </div>
               )}
-              <p className="mb-3 text-xs text-gray-500">{T.legendaSinais}</p>
+              <div className="mb-4 flex items-center gap-3">
+                <span className="h-px flex-1 bg-gradient-to-r from-cyan-300/20 to-transparent" />
+                <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-gray-600">{T.legendaSinais}</p>
+              </div>
               {busca.blocos.map((bloco, n) => (
-                <ul key={n} className={`grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ${n > 0 ? 'mt-4' : ''}`}>
+                <ul key={n} className={`vehicle-grid grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 ${n > 0 ? 'mt-5' : ''}`}>
                   {bloco.map((a) => (
                     <CardCarro key={a.external_id} a={a} sinais={busca.sinais[a.external_id]} agora={busca.agora}
                       novo={sabeSeTemNovo && a.novo} demo={DEMO && fipeLigada}
@@ -274,7 +322,7 @@ export function PaginaBusca() {
                   type="button"
                   onClick={verMais}
                   disabled={busca.carregandoMais}
-                  className="mx-auto mt-6 flex min-h-12 items-center justify-center rounded-lg bg-teal-600 px-8 font-medium text-white transition-all hover:bg-teal-500 disabled:opacity-60"
+                  className="search-console__submit mx-auto mt-8 min-h-12 rounded-xl px-8 disabled:opacity-60"
                 >
                   {busca.carregandoMais ? T.buscandoMais : busca.falhouMais ? T.tentarDeNovo : T.verMais}
                 </button>

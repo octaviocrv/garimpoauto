@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { ChevronRight, Clock, ExternalLink, Flame, Pickaxe, Route, Star, ThumbsUp, TrendingDown, type LucideIcon } from 'lucide-react'
+import { ArrowUpRight, ChevronRight, Clock3, Flame, MapPin, Pickaxe, Route, Star, ThumbsUp, TrendingDown, type LucideIcon } from 'lucide-react'
 import type { Anuncio } from '../types'
 import type { Analise } from './analise'
 import { fipeDe, type ReferenciaFipe } from './fipe'
@@ -9,7 +9,7 @@ import { T } from './textos'
 const preco = (v: number) => `R$ ${v.toLocaleString('pt-BR')}`
 const SEM_SINAIS: Sinal[] = []
 
-const ICONE: Record<TipoSinal, LucideIcon> = { preco: TrendingDown, km: Route, recente: Clock }
+const ICONE: Record<TipoSinal, LucideIcon> = { preco: TrendingDown, km: Route, recente: Clock3 }
 // Ouro Garimpo é só do preço (o brand-kit reserva o ouro pra bom negócio). O resto é teal.
 const COR_SINAL: Record<TipoSinal, string> = {
   preco: 'bg-amber-300/10 text-amber-300',
@@ -21,7 +21,7 @@ function FipeDoCard({ f }: { f: ReferenciaFipe }) {
   const abaixo = f.diferencaReais > 0
   const igual = f.diferencaReais === 0
   return (
-    <div className="rounded-lg border border-dashed border-orange-400/70 bg-orange-400/5 px-3 py-2 text-sm">
+    <div className="rounded-xl border border-dashed border-orange-400/50 bg-orange-400/[0.06] px-3 py-2 text-sm">
       {f.exemplo && (
         <p className="mb-1 inline-block rounded-full bg-orange-400 px-2 py-0.5 text-xs font-bold text-black">{T.exemplo}</p>
       )}
@@ -46,30 +46,64 @@ interface Props {
 function Card({ a, sinais = SEM_SINAIS, agora, novo, demo, analise, onGarimpar }: Props) {
   const foto = a.imagens[0]
   const local = [a.cidade, a.estado].filter(Boolean).join(', ')
-  const detalhes = [a.ano, a.km !== null ? `${a.km.toLocaleString('pt-BR')} km` : null, local].filter(Boolean)
   const quando = dataCurta(a.anunciado_em, agora)
-  const jaTemDataNoSinal = sinais.some((s) => s.tipo === 'recente')
   const fipe = demo ? fipeDe(a) : null
   const nivel = analise?.nivel ?? null
+  const sinalRecente = sinais.find((s) => s.tipo === 'recente')
+  const outrosSinais = sinais.filter((s) => s.tipo !== 'recente')
+  const textoTempo = sinalRecente?.texto ?? (quando ? `${prefixoData(a)} ${quando}` : null)
   const vale = sinais.length + (novo ? 1 : 0) >= 2
-  const borda = nivel === 'quente' ? 'border-amber-300/80 ring-1 ring-amber-300/60'
-    : vale || nivel === 'boa' ? 'border-teal-400/70 ring-1 ring-teal-400/50' : 'border-white/10'
+  const tom = nivel === 'quente' ? 'is-hot' : vale || nivel === 'boa' ? 'is-good' : ''
   return (
-    <li className={`flex flex-col overflow-hidden rounded-lg border bg-[#0a0a0a] ${borda}`}>
-      <div className="relative aspect-[4/3] w-full bg-black/60">
+    <li className={`vehicle-card group ${tom}`}>
+      <div className="vehicle-card__media">
         {foto && (
-          <img src={foto} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
+          <img src={foto} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.025]" />
         )}
+        <div className="vehicle-card__shade" aria-hidden="true" />
         {novo && (
-          <span className="absolute left-2 top-2 rounded-full bg-teal-400 px-3 py-1 text-xs font-bold text-black">{T.novo}</span>
+          <span className="absolute left-3 top-3 rounded-full border border-cyan-200/50 bg-cyan-300 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-950 shadow-[0_0_20px_rgba(34,211,238,0.35)]">{T.novo}</span>
         )}
+        {textoTempo && (
+          <div className="vehicle-card__time">
+            <span className="vehicle-card__pulse" aria-hidden="true" />
+            <Clock3 size={14} aria-hidden="true" />
+            <span>{textoTempo}</span>
+          </div>
+        )}
+        <span className="absolute bottom-3 right-3 rounded-md border border-white/15 bg-black/70 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-white/70">
+          {a.source}
+        </span>
       </div>
-      <div className="flex flex-1 flex-col gap-2 p-4">
+      <div className="flex flex-1 flex-col p-4 sm:p-[18px]">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-300/70">Valor anunciado</p>
+            <p className={`mt-0.5 text-[1.7rem] font-extrabold leading-none tracking-[-0.045em] ${a.preco === null ? 'text-gray-500' : 'text-white'}`}>
+              {a.preco === null ? 'Sob consulta' : preco(a.preco)}
+            </p>
+          </div>
+          {a.nota_anunciante !== null && (
+            <span className="inline-flex flex-none items-center gap-1.5 rounded-full border border-amber-300/25 bg-amber-300/10 px-2.5 py-1.5 text-xs font-bold text-amber-100">
+              <Star size={13} className="fill-amber-300 text-amber-300" aria-hidden="true" />
+              {a.nota_anunciante.toLocaleString('pt-BR')}
+            </span>
+          )}
+        </div>
+        <p className="line-clamp-2 min-h-[2.75rem] text-[1.05rem] font-bold leading-snug tracking-[-0.015em] text-gray-100">
+          {a.modelo_original ?? a.titulo ?? 'Modelo não informado'}
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-400">
+          {a.ano && <span className="font-semibold text-gray-300">{a.ano}</span>}
+          {a.km !== null && <span>{a.km.toLocaleString('pt-BR')} km</span>}
+          {local && <span className="inline-flex items-center gap-1"><MapPin size={12} aria-hidden="true" /> {local}</span>}
+        </div>
+
         {nivel && analise && (
           <button
             type="button"
             onClick={() => onGarimpar(a)}
-            className={`flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${nivel === 'quente' ? 'bg-amber-300/15 text-amber-200' : 'bg-teal-400/10 text-teal-300'}`}
+            className={`mt-4 flex min-h-12 items-center gap-2.5 rounded-xl border px-3 py-2 text-left text-sm transition-colors ${nivel === 'quente' ? 'border-amber-300/25 bg-amber-300/10 text-amber-100 hover:bg-amber-300/15' : 'border-cyan-300/20 bg-cyan-300/[0.07] text-cyan-200 hover:bg-cyan-300/10'}`}
           >
             {nivel === 'quente' ? <Flame size={18} className="flex-none" aria-hidden="true" /> : <ThumbsUp size={18} className="flex-none" aria-hidden="true" />}
             <span className="min-w-0 flex-1">
@@ -79,20 +113,14 @@ function Card({ a, sinais = SEM_SINAIS, agora, novo, demo, analise, onGarimpar }
             <ChevronRight size={16} className="flex-none" aria-hidden="true" />
           </button>
         )}
-        <p className={`text-xl font-bold ${a.preco === null ? 'text-gray-500' : 'text-white'}`}>
-          {a.preco === null ? 'Preço não informado' : preco(a.preco)}
-        </p>
-        {fipe && <FipeDoCard f={fipe} />}
-        <p className="text-base font-medium leading-snug text-gray-200">{a.modelo_original ?? a.titulo ?? 'Modelo não informado'}</p>
-        <p className="text-sm text-gray-400">{detalhes.join(' · ')}</p>
-        {quando && !jaTemDataNoSinal && <p className="text-xs text-gray-500">{prefixoData(a)} {quando}</p>}
-        {sinais.length > 0 && (
-          <ul className="flex flex-col gap-1.5">
-            {sinais.map((s) => {
+        {fipe && <div className="mt-3"><FipeDoCard f={fipe} /></div>}
+        {outrosSinais.length > 0 && (
+          <ul className="mt-3 flex flex-wrap gap-1.5">
+            {outrosSinais.map((s) => {
               const Icone = ICONE[s.tipo]
               return (
-                <li key={s.tipo} className={`flex items-start gap-2 rounded-lg px-2.5 py-1.5 text-sm ${COR_SINAL[s.tipo]}`}>
-                  <Icone size={16} className="mt-0.5 flex-none" aria-hidden="true" />
+                <li key={s.tipo} className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs ${COR_SINAL[s.tipo]}`}>
+                  <Icone size={14} className="flex-none" aria-hidden="true" />
                   <span className="min-w-0">
                     <span className="block font-semibold">{s.texto}</span>
                     {s.detalhe && <span className="block text-xs opacity-80">{s.detalhe}</span>}
@@ -102,7 +130,7 @@ function Card({ a, sinais = SEM_SINAIS, agora, novo, demo, analise, onGarimpar }
             })}
           </ul>
         )}
-        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
           {a.anunciante_profissional !== null && (
             <span className="rounded-md border border-teal-600/60 px-2 py-1 font-semibold text-teal-400">
               {a.anunciante_profissional ? 'Loja' : 'Particular'}
@@ -111,27 +139,24 @@ function Card({ a, sinais = SEM_SINAIS, agora, novo, demo, analise, onGarimpar }
           {a.em_destaque && (
             <span className="rounded-md border border-white/15 px-2 py-1 text-gray-400">{T.destaque}</span>
           )}
-          {a.nota_anunciante !== null && (
-            <span className="inline-flex items-center gap-1 text-yellow-200">
-              <Star size={13} aria-hidden="true" /> Nota {a.nota_anunciante.toLocaleString('pt-BR')}
-            </span>
-          )}
         </div>
-        <div className="mt-auto flex flex-col gap-2 pt-1">
+        <div className="mt-auto grid grid-cols-[1fr_auto] gap-2 pt-4">
           <button
             type="button"
             onClick={() => onGarimpar(a)}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 text-sm font-medium text-white transition-all hover:bg-teal-500"
+            className="vehicle-card__primary"
           >
-            <Pickaxe size={16} aria-hidden="true" /> {T.garimpar}
+            <Pickaxe size={16} aria-hidden="true" /> {T.garimpar} <ChevronRight size={15} aria-hidden="true" />
           </button>
           <a
             href={a.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-gray-600 bg-black/40 px-4 text-sm text-gray-300 transition-all hover:border-gray-400 hover:text-white"
+            aria-label={T.verAnuncio}
+            title={T.verAnuncio}
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-gray-400 transition-colors hover:border-cyan-300/30 hover:text-cyan-200"
           >
-            {T.verAnuncio} <ExternalLink size={14} aria-hidden="true" />
+            <ArrowUpRight size={17} aria-hidden="true" />
           </a>
         </div>
       </div>
