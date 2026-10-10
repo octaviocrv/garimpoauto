@@ -26,7 +26,6 @@ export const T = {
   zona: 'Zona',
   qualquerZona: 'Qualquer zona',
   carregando: 'Carregando...',
-  atalhos: 'Achar rápido',
   novo: 'Novo',
   legendaSinais: 'Os sinais vêm do que o anúncio mostra. O preço só compara com os carros já carregados aqui. Borda verde quer dizer 2 ou mais sinais.',
   poucoKm: 'Pouco km pro ano',

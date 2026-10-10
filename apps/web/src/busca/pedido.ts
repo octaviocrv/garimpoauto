@@ -51,7 +51,7 @@ export const RASCUNHO_VAZIO: Rascunho = {
 
 export const FILTROS_DO_RASCUNHO: (keyof Rascunho)[] = [
   'marca', 'modelo', 'versao', 'anoMin', 'anoMax', 'precoMin', 'precoMax', 'kmMin', 'kmMax',
-  'cambio', 'combustivel', 'anunciante', 'cidade',
+  'cambio', 'combustivel', 'anunciante', 'cidade', 'regiao', 'zona',
 ]
 
 const numero = (v: string): number | undefined => {

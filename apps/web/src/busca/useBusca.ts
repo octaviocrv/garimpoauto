@@ -13,6 +13,7 @@ export interface EstadoBusca {
   fase: Fase
   pedido: Pedido | null
   anuncios: Anuncio[]
+  blocos: Anuncio[][] // os mesmos carros, um bloco por página, pra cada página ter a própria grade
   resposta: RespostaPagina | null // a última que chegou (tem proxima_pagina, informacao, avisos...)
   primeira: RespostaPagina | null // a da página 1, que tem a hora da coleta
   carregandoMais: boolean
@@ -25,7 +26,7 @@ export interface EstadoBusca {
 }
 
 export const INICIAL: EstadoBusca = {
-  fase: 'inicial', pedido: null, anuncios: [], resposta: null, primeira: null,
+  fase: 'inicial', pedido: null, anuncios: [], blocos: [], resposta: null, primeira: null,
   carregandoMais: false, falhouMais: false, erro: null, sinais: {}, avisos: [], agora: 0,
 }
 
@@ -59,6 +60,7 @@ export function reduzir(e: EstadoBusca, a: Acao): EstadoBusca {
       return {
         ...e, fase: 'pronto', carregandoMais: false, falhouMais: false, erro: null, resposta: r,
         primeira: primeira ? r : e.primeira, anuncios, agora,
+        blocos: primeira ? [r.anuncios] : [...e.blocos, r.anuncios],
         sinais: { ...(primeira ? {} : e.sinais), ...sinaisDaPagina(r.anuncios, anuncios, agora) },
         avisos: mesclarAvisos(primeira ? [] : e.avisos, r.avisos),
       }

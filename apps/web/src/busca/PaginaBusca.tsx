@@ -14,9 +14,6 @@ import { useBusca } from './useBusca'
 const DEV = new URLSearchParams(window.location.search).get('dev') === '1'
 
 const campo = 'min-h-11 w-full rounded-lg border border-white/10 bg-black/40 px-3 text-white placeholder:text-gray-600 focus:border-teal-500 focus:outline-none'
-const atalho = 'inline-flex min-h-11 items-center rounded-full border px-4 text-sm transition-colors'
-// Atalhos de Belo Horizonte e Contagem, os lugares de quem usa o Garimpo Auto hoje. Só aparecem em Minas.
-const REGIAO_BH = 'belo-horizonte-e-regiao'
 const botao = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-gray-600 bg-black/40 px-4 text-gray-300 transition-all hover:border-gray-400'
 
 function Campo({ nome, children }: { nome: string; children: React.ReactNode }) {
@@ -64,11 +61,6 @@ export function PaginaBusca() {
 
   const mudarEstado = (estado: string) => setR((x) => ({ ...x, estado, regiao: '', zona: '' })) // região é do estado
   const mudarRegiao = (regiao: string) => setR((x) => ({ ...x, regiao, zona: '' })) // zona é da região
-  const temBH = r.estado === 'MG' && regioes.itens.some((l) => l.slug === REGIAO_BH)
-  const noBarreiro = r.regiao === REGIAO_BH && r.zona === 'barreiro'
-  const emContagem = r.regiao === REGIAO_BH && r.zona === '' && r.cidade.trim().toLowerCase() === 'contagem'
-  const irParaBarreiro = () => setR((x) => ({ ...x, regiao: REGIAO_BH, zona: 'barreiro', cidade: '' }))
-  const irParaContagem = () => setR((x) => ({ ...x, regiao: REGIAO_BH, zona: '', cidade: 'Contagem' }))
 
   const buscarAgora = (e: React.FormEvent) => {
     e.preventDefault()
@@ -135,52 +127,31 @@ export function PaginaBusca() {
           </div>
         </form>
 
-        {r.estado !== 'todos' && (
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[repeat(2,minmax(0,16rem))_1fr]">
-            <select
-              aria-label={T.regiao}
-              className={campo}
-              value={r.regiao}
-              disabled={regioes.carregando || regioes.itens.length === 0}
-              onChange={(e) => mudarRegiao(e.target.value)}
-            >
-              <option value="">{regioes.carregando ? T.carregando : T.qualquerRegiao}</option>
-              {regioes.itens.map((l) => <option key={l.slug} value={l.slug}>{l.nome}</option>)}
-            </select>
-            {r.regiao !== '' && (zonas.carregando || zonas.itens.length > 0) && (
-              <select
-                aria-label={T.zona}
-                className={campo}
-                value={r.zona}
-                disabled={zonas.carregando}
-                onChange={(e) => mudar('zona', e.target.value)}
-              >
-                <option value="">{zonas.carregando ? T.carregando : T.qualquerZona}</option>
-                {zonas.itens.map((l) => <option key={l.slug} value={l.slug}>{l.nome}</option>)}
-              </select>
-            )}
-            {temBH && (
-              <div className="flex flex-wrap items-center gap-2 sm:col-start-3 sm:row-start-1" role="group" aria-label={T.atalhos}>
-                <button type="button" onClick={irParaBarreiro} aria-pressed={noBarreiro}
-                  className={`${atalho} ${noBarreiro ? 'border-teal-400 bg-teal-400/15 text-teal-300' : 'border-white/15 text-gray-300 hover:border-gray-400'}`}>
-                  Barreiro
-                </button>
-                <button type="button" onClick={irParaContagem} aria-pressed={emContagem}
-                  className={`${atalho} ${emContagem ? 'border-teal-400 bg-teal-400/15 text-teal-300' : 'border-white/15 text-gray-300 hover:border-gray-400'}`}>
-                  Contagem
-                </button>
-              </div>
-            )}
-            {(regioes.erro || zonas.erro) && (
-              <p className="text-sm text-yellow-100/90 sm:col-span-3">{regioes.erro ?? zonas.erro}</p>
-            )}
-          </div>
-        )}
-
         {painel && (
           <div className="mt-3 rounded-lg border border-white/10 bg-[#0a0a0a] p-4">
             <p className="mb-3 text-sm text-gray-400">{T.dicaFiltros}</p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {r.estado !== 'todos' && (
+                <Campo nome={T.regiao}>
+                  <select
+                    className={campo}
+                    value={r.regiao}
+                    disabled={regioes.carregando || regioes.itens.length === 0}
+                    onChange={(e) => mudarRegiao(e.target.value)}
+                  >
+                    <option value="">{regioes.carregando ? T.carregando : T.qualquerRegiao}</option>
+                    {regioes.itens.map((l) => <option key={l.slug} value={l.slug}>{l.nome}</option>)}
+                  </select>
+                </Campo>
+              )}
+              {r.estado !== 'todos' && r.regiao !== '' && (zonas.carregando || zonas.itens.length > 0) && (
+                <Campo nome={T.zona}>
+                  <select className={campo} value={r.zona} disabled={zonas.carregando} onChange={(e) => mudar('zona', e.target.value)}>
+                    <option value="">{zonas.carregando ? T.carregando : T.qualquerZona}</option>
+                    {zonas.itens.map((l) => <option key={l.slug} value={l.slug}>{l.nome}</option>)}
+                  </select>
+                </Campo>
+              )}
               {texto('marca', 'Marca')}
               {texto('modelo', 'Modelo')}
               {texto('versao', 'Versão')}
@@ -203,6 +174,7 @@ export function PaginaBusca() {
                 {T.limparFiltros}
               </button>
             </div>
+            {(regioes.erro || zonas.erro) && <p className="mt-3 text-sm text-yellow-100/90">{regioes.erro ?? zonas.erro}</p>}
           </div>
         )}
 
@@ -280,12 +252,14 @@ export function PaginaBusca() {
                 </div>
               )}
               <p className="mb-3 text-xs text-gray-500">{T.legendaSinais}</p>
-              <ul className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {lista.map((a) => (
-                  <CardCarro key={a.external_id} a={a} sinais={busca.sinais[a.external_id]} agora={busca.agora}
-                    novo={sabeSeTemNovo && a.novo} demo={DEMO && fipeLigada} />
-                ))}
-              </ul>
+              {busca.blocos.map((bloco, n) => (
+                <ul key={n} className={`grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ${n > 0 ? 'mt-4' : ''}`}>
+                  {bloco.map((a) => (
+                    <CardCarro key={a.external_id} a={a} sinais={busca.sinais[a.external_id]} agora={busca.agora}
+                      novo={sabeSeTemNovo && a.novo} demo={DEMO && fipeLigada} />
+                  ))}
+                </ul>
+              ))}
               {busca.falhouMais && <p className="mt-6 text-center text-sm text-yellow-100/90">{T.maisFalhou}</p>}
               {resposta?.tem_mais && (
                 <button
