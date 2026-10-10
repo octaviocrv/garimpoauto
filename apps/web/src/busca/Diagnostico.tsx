@@ -34,7 +34,7 @@ export function Diagnostico({
       </dl>
       {resultado.avisos.map((a) => (
         <p key={a.codigo} className="mt-3 break-words text-gray-400">
-          <span className="text-teal-400">{a.codigo}</span> {a.detalhe_tecnico}
+          <span className="text-teal-400">{a.codigo}</span> {a.detalhe_tecnico ?? ""}
         </p>
       ))}
     </details>

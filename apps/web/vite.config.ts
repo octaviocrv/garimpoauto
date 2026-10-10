@@ -9,7 +9,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: process.env.GARIMPO_API ?? 'http://127.0.0.1:8000',
+        target: 'http://127.0.0.1:8000',
         rewrite: (caminho) => caminho.replace(/^\/api/, ''),
       },
     },

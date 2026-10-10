@@ -47,7 +47,7 @@ export type CodigoAviso = 'teto_paginas' | 'teto_tempo' | 'muitos_resultados' | 
 export interface Aviso {
   codigo: CodigoAviso
   mensagem: string
-  detalhe_tecnico: string // só aparece na tela com ?dev=1
+  detalhe_tecnico?: string // o servidor só manda com dev=1, a tela só mostra com ?dev=1
 }
 
 export interface Funil {
