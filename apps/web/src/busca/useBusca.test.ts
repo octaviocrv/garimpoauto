@@ -5,7 +5,13 @@ import type { Pedido } from './pedido'
 import { T } from './textos'
 
 const pedido: Pedido = { texto: 'gol', ordenar: 'recentes', estado: 'MG' }
-const carro = (id: string): Anuncio => ({ external_id: id, em_destaque: false } as Anuncio)
+// Carro de mentira com tudo vazio como o servidor manda (null), só o que o teste usa é preenchido.
+const base = {
+  titulo: null, marca: null, modelo: null, modelo_original: null, ano: null, km: null, preco: null, anunciado_em: null,
+  renovado_em: null, publicado_em: null, em_destaque: false, repetido_de: null, anunciante_profissional: null,
+  nota_anunciante: null, imagens: [],
+}
+const carro = (id: string): Anuncio => ({ ...base, external_id: id } as unknown as Anuncio)
 
 function resposta(pagina: number, ids: string[], extra: Partial<RespostaPagina> = {}): RespostaPagina {
   return {
@@ -94,19 +100,22 @@ describe('estado da busca', () => {
 describe('a lista não muda sozinha quando chega página nova', () => {
   const AGORA = new Date(2026, 9, 10, 15, 0).getTime()
   const igual = (id: string, preco: number): Anuncio =>
-    ({ external_id: id, marca: 'Fiat', modelo: 'Argo', ano: 2019, km: null, preco, anunciado_em: null, em_destaque: false } as Anuncio)
+    ({ ...base, external_id: id, marca: 'Fiat', modelo: 'Argo', ano: 2019, preco } as unknown as Anuncio)
   const resp = (pagina: number, anuncios: Anuncio[], extra: Partial<RespostaPagina> = {}) => ({ ...resposta(pagina, []), anuncios, ...extra })
   const pagina1 = [igual('a', 50000), igual('b', 52000), igual('c', 51000), igual('d', 50000), igual('e', 40000)]
 
   it('os carros já na tela guardam os mesmos sinais, mesmo com carro novo mudando a conta', () => {
     let e = reduzir(reduzir(INICIAL, { tipo: 'iniciar', pedido }), { tipo: 'chegou', resposta: resp(1, pagina1), agora: AGORA })
     const antes = e.sinais
+    const analisesAntes = e.analises
     expect(antes.e).toHaveLength(1)
     // a página 2 traz 5 carros baratos que puxariam a conta pra baixo e apagariam o sinal do "e"
     const barato = [1, 2, 3, 4, 5].map((i) => igual(`n${i}`, 39000))
     e = reduzir(e, { tipo: 'chegou', resposta: resp(2, barato) })
     expect(e.sinais.e).toBe(antes.e)
     expect(e.sinais.a).toBe(antes.a)
+    expect(e.analises.e).toBe(analisesAntes.e) // o nível também não muda sozinho
+    expect(Object.keys(e.analises)).toHaveLength(10)
     expect(Object.keys(e.sinais)).toHaveLength(10)
   })
 
@@ -129,6 +138,7 @@ describe('a lista não muda sozinha quando chega página nova', () => {
     const e = reduzir(reduzir(INICIAL, { tipo: 'iniciar', pedido }), { tipo: 'chegou', resposta: resp(1, pagina1), agora: AGORA })
     const novo = reduzir(e, { tipo: 'iniciar', pedido })
     expect(novo.sinais).toEqual({})
+    expect(novo.analises).toEqual({})
     expect(novo.avisos).toEqual([])
   })
 })

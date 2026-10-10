@@ -4,6 +4,7 @@ import { useCallback, useEffect, useReducer, useRef } from 'react'
 import { buscarPagina, ErroBusca } from '../api'
 import type { Anuncio, Aviso, RespostaPagina } from '../types'
 import type { Pedido } from './pedido'
+import { analisesDaPagina, type Analise } from './analise'
 import { sinaisDaPagina, type Sinal } from './sinais'
 import { T } from './textos'
 
@@ -21,13 +22,14 @@ export interface EstadoBusca {
   erro: string | null // frase pronta quando a busca nem começou
   // Nada abaixo muda para um carro que já está na tela. Só cresce quando chega página nova.
   sinais: Record<string, Sinal[]> // calculados quando o carro chegou, nunca refeitos
+  analises: Record<string, Analise> // idem: o nível Quente ou Boa e a tela do Garimpar vêm daqui
   avisos: Aviso[] // de todas as páginas, sem repetir, pra o aviso não sumir quando chega a página 2
   agora: number // a hora de referência das datas e dos sinais, fixada na página 1
 }
 
 export const INICIAL: EstadoBusca = {
   fase: 'inicial', pedido: null, anuncios: [], blocos: [], resposta: null, primeira: null,
-  carregandoMais: false, falhouMais: false, erro: null, sinais: {}, avisos: [], agora: 0,
+  carregandoMais: false, falhouMais: false, erro: null, sinais: {}, analises: {}, avisos: [], agora: 0,
 }
 
 export type Acao =
@@ -62,6 +64,7 @@ export function reduzir(e: EstadoBusca, a: Acao): EstadoBusca {
         primeira: primeira ? r : e.primeira, anuncios, agora,
         blocos: primeira ? [r.anuncios] : [...e.blocos, r.anuncios],
         sinais: { ...(primeira ? {} : e.sinais), ...sinaisDaPagina(r.anuncios, anuncios, agora) },
+        analises: { ...(primeira ? {} : e.analises), ...analisesDaPagina(r.anuncios, anuncios, agora) },
         avisos: mesclarAvisos(primeira ? [] : e.avisos, r.avisos),
       }
     }

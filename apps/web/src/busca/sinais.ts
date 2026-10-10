@@ -52,10 +52,10 @@ export function dataCurta(iso: string | null, agora: number): string | null {
 
 export const prefixoData = (a: Anuncio) => (a.renovado_em ? 'Renovado' : 'Anunciado')
 
-const chave = (a: Anuncio): string | null =>
+export const chave = (a: Anuncio): string | null =>
   a.modelo && a.ano !== null ? `${a.marca ?? ''}|${a.modelo}|${a.ano}`.toLowerCase() : null
 
-function mediana(v: number[]): number {
+export function mediana(v: number[]): number {
   const o = [...v].sort((x, y) => x - y)
   const m = Math.floor(o.length / 2)
   return o.length % 2 ? o[m] : (o[m - 1] + o[m]) / 2

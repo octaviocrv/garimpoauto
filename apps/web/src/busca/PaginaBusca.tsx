@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, RefreshCw, Search, SlidersHorizontal } from 'lucide-react'
 import { CardCarro } from './CardCarro'
 import { Diagnostico } from './Diagnostico'
+import { Garimpar } from './Garimpar'
 import { DEMO } from './fipe'
 import {
   ANUNCIANTES, CAMBIOS, COMBUSTIVEIS, ESTADOS, FILTROS_DO_RASCUNHO, ORDENS, RASCUNHO_VAZIO, montarPedido,
@@ -10,6 +11,7 @@ import {
 import { useRegioes, useZonas } from './regioes'
 import { T, buscadoAs, naOlx, novosDesde } from './textos'
 import { useBusca } from './useBusca'
+import type { Anuncio } from '../types'
 
 const DEV = new URLSearchParams(window.location.search).get('dev') === '1'
 
@@ -31,6 +33,8 @@ export function PaginaBusca() {
   const [painel, setPainel] = useState(false)
   const [demorando, setDemorando] = useState(false)
   const [fipeLigada, setFipeLigada] = useState(true)
+  const [aberto, setAberto] = useState<Anuncio | null>(null) // o carro da tela do Garimpar
+  const fecharGarimpar = useCallback(() => setAberto(null), [])
   const regioes = useRegioes(r.estado)
   const zonas = useZonas(r.estado, r.regiao)
 
@@ -256,7 +260,8 @@ export function PaginaBusca() {
                 <ul key={n} className={`grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ${n > 0 ? 'mt-4' : ''}`}>
                   {bloco.map((a) => (
                     <CardCarro key={a.external_id} a={a} sinais={busca.sinais[a.external_id]} agora={busca.agora}
-                      novo={sabeSeTemNovo && a.novo} demo={DEMO && fipeLigada} />
+                      novo={sabeSeTemNovo && a.novo} demo={DEMO && fipeLigada}
+                      analise={busca.analises[a.external_id]} onGarimpar={setAberto} />
                   ))}
                 </ul>
               ))}
@@ -275,6 +280,7 @@ export function PaginaBusca() {
           )}
         </div>
       </main>
+      {aberto && <Garimpar a={aberto} analise={busca.analises[aberto.external_id]} onFechar={fecharGarimpar} />}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { memo } from 'react'
-import { Clock, ExternalLink, Route, Star, TrendingDown, type LucideIcon } from 'lucide-react'
+import { ChevronRight, Clock, ExternalLink, Flame, Pickaxe, Route, Star, ThumbsUp, TrendingDown, type LucideIcon } from 'lucide-react'
 import type { Anuncio } from '../types'
+import type { Analise } from './analise'
 import { fipeDe, type ReferenciaFipe } from './fipe'
 import { dataCurta, prefixoData, type Sinal, type TipoSinal } from './sinais'
 import { T } from './textos'
@@ -38,18 +39,23 @@ interface Props {
   agora: number // hora de referência da busca, pra a data não mudar sozinha
   novo: boolean // a página já decidiu se pode mostrar o selo
   demo: boolean // FIPE de exemplo ligada
+  analise?: Analise // calculada quando o carro chegou
+  onGarimpar: (a: Anuncio) => void // abre a tela do Garimpar. Tem que ser uma função estável por causa do memo
 }
 
-function Card({ a, sinais = SEM_SINAIS, agora, novo, demo }: Props) {
+function Card({ a, sinais = SEM_SINAIS, agora, novo, demo, analise, onGarimpar }: Props) {
   const foto = a.imagens[0]
   const local = [a.cidade, a.estado].filter(Boolean).join(', ')
   const detalhes = [a.ano, a.km !== null ? `${a.km.toLocaleString('pt-BR')} km` : null, local].filter(Boolean)
   const quando = dataCurta(a.anunciado_em, agora)
   const jaTemDataNoSinal = sinais.some((s) => s.tipo === 'recente')
   const fipe = demo ? fipeDe(a) : null
+  const nivel = analise?.nivel ?? null
   const vale = sinais.length + (novo ? 1 : 0) >= 2
+  const borda = nivel === 'quente' ? 'border-amber-300/80 ring-1 ring-amber-300/60'
+    : vale || nivel === 'boa' ? 'border-teal-400/70 ring-1 ring-teal-400/50' : 'border-white/10'
   return (
-    <li className={`flex flex-col overflow-hidden rounded-lg border bg-[#0a0a0a] ${vale ? 'border-teal-400/70 ring-1 ring-teal-400/50' : 'border-white/10'}`}>
+    <li className={`flex flex-col overflow-hidden rounded-lg border bg-[#0a0a0a] ${borda}`}>
       <div className="relative aspect-[4/3] w-full bg-black/60">
         {foto && (
           <img src={foto} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
@@ -59,6 +65,20 @@ function Card({ a, sinais = SEM_SINAIS, agora, novo, demo }: Props) {
         )}
       </div>
       <div className="flex flex-1 flex-col gap-2 p-4">
+        {nivel && analise && (
+          <button
+            type="button"
+            onClick={() => onGarimpar(a)}
+            className={`flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${nivel === 'quente' ? 'bg-amber-300/15 text-amber-200' : 'bg-teal-400/10 text-teal-300'}`}
+          >
+            {nivel === 'quente' ? <Flame size={18} className="flex-none" aria-hidden="true" /> : <ThumbsUp size={18} className="flex-none" aria-hidden="true" />}
+            <span className="min-w-0 flex-1">
+              <span className="block font-bold">{nivel === 'quente' ? T.quente : T.boa}</span>
+              <span className="block text-xs opacity-90">{analise.resumo}</span>
+            </span>
+            <ChevronRight size={16} className="flex-none" aria-hidden="true" />
+          </button>
+        )}
         <p className={`text-xl font-bold ${a.preco === null ? 'text-gray-500' : 'text-white'}`}>
           {a.preco === null ? 'Preço não informado' : preco(a.preco)}
         </p>
@@ -97,14 +117,23 @@ function Card({ a, sinais = SEM_SINAIS, agora, novo, demo }: Props) {
             </span>
           )}
         </div>
-        <a
-          href={a.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-auto inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-gray-600 bg-black/40 px-4 pt-0 text-sm text-gray-300 transition-all hover:border-gray-400 hover:text-white"
-        >
-          Ver anúncio original <ExternalLink size={14} aria-hidden="true" />
-        </a>
+        <div className="mt-auto flex flex-col gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => onGarimpar(a)}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 text-sm font-medium text-white transition-all hover:bg-teal-500"
+          >
+            <Pickaxe size={16} aria-hidden="true" /> {T.garimpar}
+          </button>
+          <a
+            href={a.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-gray-600 bg-black/40 px-4 text-sm text-gray-300 transition-all hover:border-gray-400 hover:text-white"
+          >
+            {T.verAnuncio} <ExternalLink size={14} aria-hidden="true" />
+          </a>
+        </div>
       </div>
     </li>
   )
