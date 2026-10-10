@@ -127,3 +127,102 @@ def test_todo_estado_tem_a_lista_de_regioes():
     for uf in ("AC", "SP", "RJ", "DF", "BA", "PR"):
         j = c.get("/regioes", params={"estado": uf}).json()
         assert j["regioes"], uf
+
+
+# --- zona (entre a região e a cidade) ------------------------------------------
+
+
+def test_lista_de_zonas_de_uma_regiao():
+    c, _ = cliente([])
+    j = c.get("/zonas", params={"estado": "MG", "regiao": BH}).json()
+    assert j["estado"] == "MG" and j["regiao"] == BH
+    slugs = {z["slug"] for z in j["zonas"]}
+    assert {"barreiro", "pampulha", "zona-centro-sul"} <= slugs
+    assert all(z["nome"] for z in j["zonas"])
+
+
+def test_zonas_aceita_a_regiao_pelo_nome_e_usa_o_estado_padrao():
+    c, _ = cliente([])
+    j = c.get("/zonas", params={"regiao": "Belo Horizonte e região"}).json()
+    assert j["estado"] == "MG" and j["regiao"] == BH and j["zonas"]
+
+
+def test_zonas_sem_regiao_ou_com_regiao_errada_da_erro_tranquilo():
+    c, _ = cliente([])
+    assert c.get("/zonas", params={"estado": "MG"}).json() == {"erro": server.MSG_ZONA_SEM_REGIAO}
+    assert c.get("/zonas", params={"estado": "MG", "regiao": "regiao-de-marte"}).json() == {"erro": server.MSG_REGIAO}
+    assert c.get("/zonas", params={"estado": "xx", "regiao": BH}).status_code == 422
+
+
+def test_regiao_sem_zonas_devolve_lista_vazia_e_nao_erro():
+    c, _ = cliente([])
+    sem_zonas = next(
+        (uf, r) for uf, regs in __import__("localidades")._dados()["estados"].items() for r, z in regs.items() if not z
+    )
+    j = c.get("/zonas", params={"estado": sem_zonas[0], "regiao": sem_zonas[1]}).json()
+    assert j["zonas"] == []
+
+
+@pytest.mark.parametrize("rota", ["/buscar/pagina", "/buscar", "/buscar/stream"])
+def test_zona_vai_no_caminho_da_olx_nas_tres_rotas(rota):
+    c, fonte = cliente([pagina_real("olx_civic_p1")])
+    r = c.get(rota, params={"texto": "civic", "estado": "MG", "regiao": BH, "zona": "barreiro"})
+    assert r.status_code == 200
+    assert fonte.sessao.urls_de_listagem[0].endswith(f"/estado-mg/{BH}/barreiro?q=civic&sf=1")
+
+
+def test_com_zona_a_resposta_diz_que_filtrou_na_origem():
+    c, _ = cliente([pagina_real("olx_civic_p1")])
+    j = pagina(c, estado="MG", regiao=BH, zona="barreiro").json()
+    assert {"regiao", "zona"} <= set(j["filtros_na_origem"]) and "zona" not in j["filtros_locais"]
+    assert j["busca"]["zona"] == "barreiro" and j["avisos"] == []
+
+
+def test_zona_escrita_de_outro_jeito_vira_o_mesmo_pedido_e_o_mesmo_cache():
+    c, fonte = cliente([pagina_real("olx_civic_p1")])
+    pagina(c, estado="MG", regiao=BH, zona="Zona Centro Sul")
+    j = pagina(c, estado="MG", regiao=BH, zona="zona-centro-sul").json()
+    assert fonte.abertas == 1 and j["do_cache"] is True and j["busca"]["zona"] == "zona-centro-sul"
+
+
+def test_zona_e_regiao_diferentes_nao_dividem_cache():
+    c, fonte = cliente([pagina_real("olx_civic_p1")] * 3)
+    pagina(c, estado="MG", regiao=BH, zona="barreiro")
+    pagina(c, estado="MG", regiao=BH, zona="pampulha")
+    pagina(c, estado="MG", regiao=BH)
+    assert fonte.abertas == 3
+
+
+@pytest.mark.parametrize("zona,regiao", [("zona-marciana", BH), ("barreiro", "regiao-de-divinopolis")])
+def test_zona_que_nao_existe_naquela_regiao_da_422_e_nao_busca_nada(zona, regiao):
+    c, fonte = cliente([])
+    r = pagina(c, estado="MG", regiao=regiao, zona=zona)
+    assert r.status_code == 422 and r.json() == {"erro": server.MSG_ZONA}
+    assert fonte.abertas == 0 and fonte.sessao.urls == []
+
+
+@pytest.mark.parametrize("rota", ["/buscar/pagina", "/buscar", "/buscar/stream"])
+def test_zona_sem_regiao_da_422_com_texto_tranquilo(rota):
+    c, fonte = cliente([])
+    r = c.get(rota, params={"texto": "civic", "estado": "MG", "zona": "barreiro"})
+    assert r.status_code == 422 and r.json() == {"erro": server.MSG_ZONA_SEM_REGIAO}
+    assert fonte.abertas == 0
+
+
+def test_zona_com_brasil_todo_tambem_pede_a_regiao_primeiro():
+    c, _ = cliente([])
+    assert pagina(c, estado="todos", zona="barreiro").json() == {"erro": server.MSG_ZONA_SEM_REGIAO}
+
+
+def test_mensagens_de_zona_sem_travessao_dois_pontos_ou_ponto_e_virgula():
+    for frase in (server.MSG_ZONA, server.MSG_ZONA_SEM_REGIAO):
+        assert not any(ch in frase for ch in "—–;:")
+
+
+def test_com_zona_o_total_e_a_frase_sao_os_da_zona():
+    c, _ = cliente([pagina_real("olx_zona_barreiro")])
+    j = pagina(c, estado="MG", regiao=BH, zona="barreiro").json()
+    assert j["total_na_fonte"] == 52 and len(j["anuncios"]) == 50
+    assert {a["cidade"] for a in j["anuncios"]} == {"Belo Horizonte"}
+    assert j["informacao"] == "Mostrando 50 de 52 carros. Toca em Ver mais pra ver o resto."
+    assert j["tem_mais"] is True and j["proxima_pagina"] == 2

@@ -69,6 +69,18 @@ A OLX aceita região e cidade na URL, no caminho `estado-xx/região/zona/cidade`
 - **Quem não tem página própria:** a OLX só tem página para parte das cidades (em MG, 154 locais de uns 850 municípios). **Belo Horizonte não é uma página só**: a capital é dividida em 9 zonas (Barreiro, Centro-Sul, Leste, Nordeste, Noroeste, Norte, Oeste, Pampulha e Venda Nova).
 - **Sem estado** ("Brasil todo") não dá para procurar a cidade na lista, então ela segue filtrada depois da coleta, sem aviso. `filtros_locais` mostra isso.
 
+### Zona (entre a região e a cidade)
+
+A zona é uma divisão da região, e a OLX a aceita no caminho: `estado-mg/belo-horizonte-e-regiao/barreiro`. Belo Horizonte, por exemplo, é dividida em 9 zonas (Barreiro, Pampulha, Venda Nova, Centro-Sul, Leste, Nordeste, Noroeste, Norte e Oeste), e cada uma tem só anúncios da capital.
+
+- **Seletor:** `GET /zonas?estado=MG&regiao=belo-horizonte-e-regiao` devolve `{"estado", "regiao", "zonas": [{"slug", "nome"}, ...]}`. A região é obrigatória (sem ela, 422 com "Pra escolher a zona, escolhe a região primeiro."). Região sem zonas devolve lista vazia. Os nomes com acento estão coletados para Minas. Nos outros estados o nome sai do endereço (às vezes sem acento) até rodar `gerar_localidades.py --zonas UF`.
+- **`zona`:** parâmetro novo de `/buscar`, `/buscar/pagina` e `/buscar/stream`. Aceita o `slug` ou o nome da zona. Só vale junto com `regiao`. Zona sem região dá 422 com a mesma frase acima. Zona que não existe naquela região dá 422 com "Não achei essa zona, escolhe uma da lista?" e a busca nem começa.
+- **Com zona:** o `total_na_fonte`, a frase `informacao` e a paginação são os da zona, e `filtros_na_origem` traz `"zona"` junto de `"regiao"`.
+- **Só entram zonas que a OLX serve.** O sitemap lista zonas que a OLX responde com o **Brasil todo**. Em Minas, só a região de BH tem zonas de verdade (14 de 37, mais Manhuaçu em Governador Valadares), e as outras 22 ficam fora da lista. Nos demais estados as zonas ainda são as do sitemap, até rodar `gerar_localidades.py --zonas UF`.
+- **Proteção na primeira página:** quando a busca tem região, zona ou cidade, o servidor confere o estado dos anúncios que chegaram. Se vier outro estado, a OLX não conhecia o local e respondeu o Brasil todo. O servidor recua um nível (cidade, depois zona, depois região), pede de novo, volta a filtrar aquele nível depois da coleta e avisa com o `filtro_aproximado` ("Não achei a zona X na lista da OLX..."). Nenhum anúncio de outro estado chega na lista.
+- **Zona e cidade juntas:** se a cidade fica nessa zona, vai até a cidade. Se não, a zona manda e a cidade é filtrada depois da coleta.
+- **`/buscar/pagina` e o cache:** zona entra na chave, e escrever a zona de outro jeito ("Zona Centro Sul" ou `zona-centro-sul`) cai no mesmo cache.
+
 A lista de locais vem de `scraper/dados_olx/localidades.json`, gerada por `gerar_localidades.py` a partir dos sitemaps da OLX (rodar de vez em quando).
 
 ### Exemplo real (fiat argo, MG, cidade Contagem)

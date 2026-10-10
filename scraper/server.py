@@ -44,6 +44,8 @@ MSG_ERRO = "Não achei esse carro agora, tenta de novo?"
 MSG_MAIS_FALHOU = "Não consegui buscar mais agora, tenta de novo daqui a pouco?"
 MSG_PEDIDO = "Esse pedido de busca não está certo, confere os filtros?"
 MSG_REGIAO = "Não achei essa região nesse estado, escolhe uma da lista?"
+MSG_ZONA = "Não achei essa zona, escolhe uma da lista?"
+MSG_ZONA_SEM_REGIAO = "Pra escolher a zona, escolhe a região primeiro."
 ESPERA_PING = 15.0  # segundos sem novidade até mandar um sinal de vida no stream
 
 
@@ -334,6 +336,7 @@ def criar_app(
         ordenar: Optional[str] = None,
         estado: Optional[str] = None,
         regiao: Optional[str] = None,
+        zona: Optional[str] = None,
         cidade: Optional[str] = None,
     ) -> Busca:
         estado = (estado or "").strip() or estado_padrao
@@ -345,12 +348,20 @@ def criar_app(
             if slug is None:
                 raise PedidoInvalido(MSG_REGIAO)
             regiao = slug  # o endereço da OLX: escrever de jeitos diferentes não muda o cache
+        if zona and zona.strip():
+            if not (regiao and regiao.strip()):
+                raise PedidoInvalido(MSG_ZONA_SEM_REGIAO)
+            if estado and localidades.tem_dados(estado):
+                achada = localidades.achar_zona(estado, regiao, zona)
+                if achada is None:
+                    raise PedidoInvalido(MSG_ZONA)
+                zona = achada
         try:
             return Busca(
                 texto=texto, marca=marca, modelo=modelo, versao=versao, ano_min=ano_min, ano_max=ano_max,
                 preco_min=preco_min, preco_max=preco_max, km_min=km_min, km_max=km_max,
                 cambio=cambio, combustivel=combustivel, anunciante=anunciante, ordenar=ordenar,
-                estado=estado, regiao=regiao, cidade=cidade,
+                estado=estado, regiao=regiao, zona=zona, cidade=cidade,
             )
         except ValidationError:
             raise RequestValidationError([])
@@ -366,6 +377,19 @@ def criar_app(
         if not localidades.tem_dados(uf):
             raise PedidoInvalido(MSG_PEDIDO)
         return {"estado": uf, "regioes": localidades.regioes(uf)}
+
+    @app.get("/zonas")
+    def zonas(regiao: Optional[str] = None, estado: Optional[str] = None) -> dict[str, Any]:
+        """As zonas de uma região, para o seletor da tela (escolhe o estado, depois a região, depois a zona)."""
+        uf = ((estado or "").strip() or estado_padrao).upper()
+        if not localidades.tem_dados(uf):
+            raise PedidoInvalido(MSG_PEDIDO)
+        if not (regiao and regiao.strip()):
+            raise PedidoInvalido(MSG_ZONA_SEM_REGIAO)
+        slug = localidades.achar_regiao(uf, regiao)
+        if slug is None:
+            raise PedidoInvalido(MSG_REGIAO)
+        return {"estado": uf, "regiao": slug, "zonas": localidades.zonas(uf, slug)}
 
     @app.get("/buscar/pagina")
     def pagina(
