@@ -7,6 +7,9 @@ raiz="$(cd "$(dirname "$0")" && pwd)"
 if [ ! -x "$raiz/scraper/.venv/bin/uvicorn" ]; then
   echo "Falta o ambiente Python em scraper/.venv (veja scraper/requirements.txt)." >&2; exit 1
 fi
+if curl -s -m2 http://127.0.0.1:8000/saude >/dev/null 2>&1; then
+  echo "Já tem um servidor na porta 8000 (talvez de uma versão antiga). Feche ele antes (Ctrl+C no terminal dele) e rode de novo." >&2; exit 1
+fi
 [ -d "$raiz/apps/web/node_modules" ] || (cd "$raiz/apps/web" && npm install)
 
 trap 'kill 0' EXIT
