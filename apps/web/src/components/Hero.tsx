@@ -125,7 +125,7 @@ export function Hero() {
               <a key={l.href} href={l.href} className="hidden text-gray-400 transition-colors hover:text-white sm:inline">{l.label}</a>
             ))}
             {/* Abaixo de 360px o Entrar vai pra dentro do menu, pra o nome caber inteiro */}
-            <a href="#acompanhar" className="rounded-lg bg-teal-600 px-4 py-2.5 font-semibold transition-all hover:bg-teal-500 max-[359px]:hidden sm:px-5">Entrar</a>
+            <a href="#/buscar" className="rounded-lg bg-teal-600 px-4 py-2.5 font-semibold transition-all hover:bg-teal-500 max-[359px]:hidden sm:px-5">Entrar</a>
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
@@ -157,7 +157,7 @@ export function Hero() {
             </a>
           ))}
           <a
-            href="#acompanhar"
+            href="#/buscar"
             onClick={() => setMenuOpen(false)}
             className="my-2 flex min-h-12 items-center justify-center rounded-lg bg-teal-600 font-semibold hover:bg-teal-500 min-[360px]:hidden"
           >
@@ -194,7 +194,7 @@ export function Hero() {
           {/* Mobile: botões empilhados em largura total, fáceis de tocar */}
           <div style={rise(3)} className="hs-rise mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:flex-wrap sm:gap-4">
             <a
-              href="#acompanhar"
+              href="#/buscar"
               className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-teal-600 px-6 py-3 font-medium text-white transition-all hover:bg-teal-500 xl:px-9 xl:py-4 xl:text-lg"
             >
               Entrar no sistema{' '}
