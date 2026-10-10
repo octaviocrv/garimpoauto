@@ -90,3 +90,45 @@ describe('estado da busca', () => {
     expect(e.resposta?.tem_mais).toBe(false)
   })
 })
+
+describe('a lista não muda sozinha quando chega página nova', () => {
+  const AGORA = new Date(2026, 9, 10, 15, 0).getTime()
+  const igual = (id: string, preco: number): Anuncio =>
+    ({ external_id: id, marca: 'Fiat', modelo: 'Argo', ano: 2019, km: null, preco, anunciado_em: null, em_destaque: false } as Anuncio)
+  const resp = (pagina: number, anuncios: Anuncio[], extra: Partial<RespostaPagina> = {}) => ({ ...resposta(pagina, []), anuncios, ...extra })
+  const pagina1 = [igual('a', 50000), igual('b', 52000), igual('c', 51000), igual('d', 50000), igual('e', 40000)]
+
+  it('os carros já na tela guardam os mesmos sinais, mesmo com carro novo mudando a conta', () => {
+    let e = reduzir(reduzir(INICIAL, { tipo: 'iniciar', pedido }), { tipo: 'chegou', resposta: resp(1, pagina1), agora: AGORA })
+    const antes = e.sinais
+    expect(antes.e).toHaveLength(1)
+    // a página 2 traz 5 carros baratos que puxariam a conta pra baixo e apagariam o sinal do "e"
+    const barato = [1, 2, 3, 4, 5].map((i) => igual(`n${i}`, 39000))
+    e = reduzir(e, { tipo: 'chegou', resposta: resp(2, barato) })
+    expect(e.sinais.e).toBe(antes.e)
+    expect(e.sinais.a).toBe(antes.a)
+    expect(Object.keys(e.sinais)).toHaveLength(10)
+  })
+
+  it('a ordem dos carros só cresce no fim e a hora de referência não muda', () => {
+    let e = reduzir(reduzir(INICIAL, { tipo: 'iniciar', pedido }), { tipo: 'chegou', resposta: resp(1, pagina1), agora: AGORA })
+    e = reduzir(e, { tipo: 'chegou', resposta: resp(2, [igual('z', 1000)]), agora: AGORA + 999999 })
+    expect(e.anuncios.map((a) => a.external_id)).toEqual(['a', 'b', 'c', 'd', 'e', 'z'])
+    expect(e.agora).toBe(AGORA)
+  })
+
+  it('aviso da página 1 não some quando chega a página 2, e não repete', () => {
+    const aviso = { codigo: 'filtro_aproximado' as const, mensagem: 'Não achei a cidade X na lista da OLX.' }
+    let e = reduzir(reduzir(INICIAL, { tipo: 'iniciar', pedido }), { tipo: 'chegou', resposta: resp(1, pagina1, { avisos: [aviso] }) })
+    e = reduzir(e, { tipo: 'chegou', resposta: resp(2, [igual('z', 1)], { avisos: [aviso] }) })
+    e = reduzir(e, { tipo: 'chegou', resposta: resp(3, [igual('y', 1)], { avisos: [] }) })
+    expect(e.avisos).toEqual([aviso])
+  })
+
+  it('busca nova começa sem sinais nem avisos da anterior', () => {
+    const e = reduzir(reduzir(INICIAL, { tipo: 'iniciar', pedido }), { tipo: 'chegou', resposta: resp(1, pagina1), agora: AGORA })
+    const novo = reduzir(e, { tipo: 'iniciar', pedido })
+    expect(novo.sinais).toEqual({})
+    expect(novo.avisos).toEqual([])
+  })
+})

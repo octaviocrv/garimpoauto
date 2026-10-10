@@ -14,6 +14,8 @@ export interface Pedido {
   combustivel?: string
   anunciante?: string
   cidade?: string
+  regiao?: string // slug, só com estado
+  zona?: string // slug, só com região
   ordenar: string
   estado: string // sigla, ou "todos" para o Brasil todo
 }
@@ -34,6 +36,8 @@ export interface Rascunho {
   combustivel: string
   anunciante: string
   cidade: string
+  regiao: string
+  zona: string
   ordenar: string
 }
 
@@ -42,7 +46,7 @@ export const ESTADO_PADRAO = 'MG'
 export const RASCUNHO_VAZIO: Rascunho = {
   texto: '', estado: ESTADO_PADRAO, marca: '', modelo: '', versao: '', anoMin: '', anoMax: '',
   precoMin: '', precoMax: '', kmMin: '', kmMax: '', cambio: '', combustivel: '', anunciante: '',
-  cidade: '', ordenar: 'recentes',
+  cidade: '', regiao: '', zona: '', ordenar: 'recentes',
 }
 
 export const FILTROS_DO_RASCUNHO: (keyof Rascunho)[] = [
@@ -66,8 +70,11 @@ export function montarPedido(r: Rascunho): Pedido | null {
   const [preco_min, preco_max] = ordenado(numero(r.precoMin), numero(r.precoMax))
   const [km_min, km_max] = ordenado(numero(r.kmMin), numero(r.kmMax))
   const texto_ou_nada = (v: string) => v.trim() || undefined
+  const estado = r.estado || ESTADO_PADRAO
+  const regiao = estado === 'todos' ? undefined : texto_ou_nada(r.regiao) // região exige estado
+  const zona = regiao ? texto_ou_nada(r.zona) : undefined // zona exige região
   return {
-    texto, ordenar: r.ordenar || 'recentes', estado: r.estado || ESTADO_PADRAO,
+    texto, ordenar: r.ordenar || 'recentes', estado, regiao, zona,
     marca: texto_ou_nada(r.marca), modelo: texto_ou_nada(r.modelo), versao: texto_ou_nada(r.versao),
     ano_min, ano_max, preco_min, preco_max, km_min, km_max,
     cambio: r.cambio || undefined, combustivel: r.combustivel || undefined,

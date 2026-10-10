@@ -2,16 +2,21 @@ import { useEffect, useState } from 'react'
 import { ArrowLeft, RefreshCw, Search, SlidersHorizontal } from 'lucide-react'
 import { CardCarro } from './CardCarro'
 import { Diagnostico } from './Diagnostico'
+import { DEMO } from './fipe'
 import {
   ANUNCIANTES, CAMBIOS, COMBUSTIVEIS, ESTADOS, FILTROS_DO_RASCUNHO, ORDENS, RASCUNHO_VAZIO, montarPedido,
   nomeDoEstado, type Rascunho,
 } from './pedido'
-import { T, buscadoAs, naOlx } from './textos'
+import { useRegioes, useZonas } from './regioes'
+import { T, buscadoAs, naOlx, novosDesde } from './textos'
 import { useBusca } from './useBusca'
 
 const DEV = new URLSearchParams(window.location.search).get('dev') === '1'
 
 const campo = 'min-h-11 w-full rounded-lg border border-white/10 bg-black/40 px-3 text-white placeholder:text-gray-600 focus:border-teal-500 focus:outline-none'
+const atalho = 'inline-flex min-h-11 items-center rounded-full border px-4 text-sm transition-colors'
+// Atalhos de Belo Horizonte e Contagem, os lugares de quem usa o Garimpo Auto hoje. Só aparecem em Minas.
+const REGIAO_BH = 'belo-horizonte-e-regiao'
 const botao = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-gray-600 bg-black/40 px-4 text-gray-300 transition-all hover:border-gray-400'
 
 function Campo({ nome, children }: { nome: string; children: React.ReactNode }) {
@@ -28,6 +33,9 @@ export function PaginaBusca() {
   const [r, setR] = useState<Rascunho>(RASCUNHO_VAZIO)
   const [painel, setPainel] = useState(false)
   const [demorando, setDemorando] = useState(false)
+  const [fipeLigada, setFipeLigada] = useState(true)
+  const regioes = useRegioes(r.estado)
+  const zonas = useZonas(r.estado, r.regiao)
 
   const buscando = busca.fase === 'buscando'
   const resposta = busca.resposta
@@ -54,6 +62,14 @@ export function PaginaBusca() {
     </Campo>
   )
 
+  const mudarEstado = (estado: string) => setR((x) => ({ ...x, estado, regiao: '', zona: '' })) // região é do estado
+  const mudarRegiao = (regiao: string) => setR((x) => ({ ...x, regiao, zona: '' })) // zona é da região
+  const temBH = r.estado === 'MG' && regioes.itens.some((l) => l.slug === REGIAO_BH)
+  const noBarreiro = r.regiao === REGIAO_BH && r.zona === 'barreiro'
+  const emContagem = r.regiao === REGIAO_BH && r.zona === '' && r.cidade.trim().toLowerCase() === 'contagem'
+  const irParaBarreiro = () => setR((x) => ({ ...x, regiao: REGIAO_BH, zona: 'barreiro', cidade: '' }))
+  const irParaContagem = () => setR((x) => ({ ...x, regiao: REGIAO_BH, zona: '', cidade: 'Contagem' }))
+
   const buscarAgora = (e: React.FormEvent) => {
     e.preventDefault()
     const pedido = montarPedido(r)
@@ -68,7 +84,10 @@ export function PaginaBusca() {
     resposta?.total_na_fonte ? naOlx(resposta.total_na_fonte) : null,
     primeira?.coletado_em ? buscadoAs(primeira.coletado_em) : null,
   ].filter(Boolean)
-  const avisos = (resposta?.avisos ?? []).filter((a) => a.codigo !== 'fonte_parcial') // a falha a tela já conta do jeito dela
+  const avisos = busca.avisos.filter((a) => a.codigo !== 'fonte_parcial') // a falha a tela já conta do jeito dela
+  // Selo e contagem de novos só quando o servidor tem banco e já houve busca igual antes. null é "não sei".
+  const sabeSeTemNovo = busca.primeira?.primeira_busca === false
+  const novos = sabeSeTemNovo ? resposta?.novos ?? 0 : 0
   const nadaAchado = busca.fase === 'pronto' && lista.length === 0
 
   return (
@@ -99,7 +118,7 @@ export function PaginaBusca() {
             enterKeyHint="search"
             autoFocus
           />
-          <select aria-label="Estado" className={`${campo} sm:max-w-[12rem]`} value={r.estado} onChange={(e) => mudar('estado', e.target.value)}>
+          <select aria-label="Estado" className={`${campo} sm:max-w-[12rem]`} value={r.estado} onChange={(e) => mudarEstado(e.target.value)}>
             {ESTADOS.map(([sigla, nome]) => <option key={sigla} value={sigla}>{nome}</option>)}
           </select>
           <div className="flex gap-3">
@@ -115,6 +134,48 @@ export function PaginaBusca() {
             </button>
           </div>
         </form>
+
+        {r.estado !== 'todos' && (
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[repeat(2,minmax(0,16rem))_1fr]">
+            <select
+              aria-label={T.regiao}
+              className={campo}
+              value={r.regiao}
+              disabled={regioes.carregando || regioes.itens.length === 0}
+              onChange={(e) => mudarRegiao(e.target.value)}
+            >
+              <option value="">{regioes.carregando ? T.carregando : T.qualquerRegiao}</option>
+              {regioes.itens.map((l) => <option key={l.slug} value={l.slug}>{l.nome}</option>)}
+            </select>
+            {r.regiao !== '' && (zonas.carregando || zonas.itens.length > 0) && (
+              <select
+                aria-label={T.zona}
+                className={campo}
+                value={r.zona}
+                disabled={zonas.carregando}
+                onChange={(e) => mudar('zona', e.target.value)}
+              >
+                <option value="">{zonas.carregando ? T.carregando : T.qualquerZona}</option>
+                {zonas.itens.map((l) => <option key={l.slug} value={l.slug}>{l.nome}</option>)}
+              </select>
+            )}
+            {temBH && (
+              <div className="flex flex-wrap items-center gap-2 sm:col-start-3 sm:row-start-1" role="group" aria-label={T.atalhos}>
+                <button type="button" onClick={irParaBarreiro} aria-pressed={noBarreiro}
+                  className={`${atalho} ${noBarreiro ? 'border-teal-400 bg-teal-400/15 text-teal-300' : 'border-white/15 text-gray-300 hover:border-gray-400'}`}>
+                  Barreiro
+                </button>
+                <button type="button" onClick={irParaContagem} aria-pressed={emContagem}
+                  className={`${atalho} ${emContagem ? 'border-teal-400 bg-teal-400/15 text-teal-300' : 'border-white/15 text-gray-300 hover:border-gray-400'}`}>
+                  Contagem
+                </button>
+              </div>
+            )}
+            {(regioes.erro || zonas.erro) && (
+              <p className="text-sm text-yellow-100/90 sm:col-span-3">{regioes.erro ?? zonas.erro}</p>
+            )}
+          </div>
+        )}
 
         {painel && (
           <div className="mt-3 rounded-lg border border-white/10 bg-[#0a0a0a] p-4">
@@ -175,9 +236,12 @@ export function PaginaBusca() {
         )}
 
         {busca.fase === 'pronto' && resposta && !nadaAchado && (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+          <div className="mt-4 flex min-h-[4.5rem] flex-wrap content-start items-center justify-between gap-x-4 gap-y-1 sm:min-h-0">
             <p className="text-sm text-gray-300" aria-live="polite">{resposta.informacao}</p>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              {novos > 0 && (
+                <p className="rounded-full bg-teal-400 px-3 py-1 text-xs font-bold text-black">{novosDesde(novos)}</p>
+              )}
               <p className="text-xs text-gray-500">{meta.join(' · ')}</p>
               <button type="button" onClick={() => busca.pedido && buscar(busca.pedido, true)} className={`${botao} text-sm`}>
                 <RefreshCw size={14} aria-hidden="true" /> {T.buscarDeNovo}
@@ -188,7 +252,7 @@ export function PaginaBusca() {
 
         {avisos.length > 0 && busca.fase === 'pronto' && (
           <div className="mt-3 space-y-1 rounded-lg border border-yellow-200/20 bg-yellow-200/5 px-4 py-3 text-sm text-yellow-100/90">
-            {avisos.map((a) => <p key={a.codigo}>{a.mensagem}</p>)}
+            {avisos.map((a) => <p key={`${a.codigo}|${a.mensagem}`}>{a.mensagem}</p>)}
           </div>
         )}
 
@@ -207,8 +271,20 @@ export function PaginaBusca() {
 
           {lista.length > 0 && (
             <>
-              <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {lista.map((a) => <CardCarro key={a.external_id} a={a} />)}
+              {DEMO && (
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-orange-400/70 bg-orange-400/5 px-4 py-3 text-sm text-orange-200">
+                  <p>{T.demoLigado}</p>
+                  <button type="button" onClick={() => setFipeLigada((v) => !v)} className={`${botao} text-sm`}>
+                    {fipeLigada ? T.demoEsconder : T.demoMostrar}
+                  </button>
+                </div>
+              )}
+              <p className="mb-3 text-xs text-gray-500">{T.legendaSinais}</p>
+              <ul className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {lista.map((a) => (
+                  <CardCarro key={a.external_id} a={a} sinais={busca.sinais[a.external_id]} agora={busca.agora}
+                    novo={sabeSeTemNovo && a.novo} demo={DEMO && fipeLigada} />
+                ))}
               </ul>
               {busca.falhouMais && <p className="mt-6 text-center text-sm text-yellow-100/90">{T.maisFalhou}</p>}
               {resposta?.tem_mais && (

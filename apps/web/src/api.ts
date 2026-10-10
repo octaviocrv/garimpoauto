@@ -1,6 +1,6 @@
 // Única porta de entrada dos dados: a busca por página do servidor (/buscar/pagina), o "Ver mais".
 // A tela chama /api/... e o Vite repassa para o servidor (veja vite.config.ts).
-import type { RespostaPagina } from './types'
+import type { Lugar, RespostaPagina, RespostaRegioes, RespostaZonas } from './types'
 import type { Pedido } from './busca/pedido'
 import { T } from './busca/textos'
 
@@ -35,4 +35,31 @@ export async function buscarPagina(
     throw new ErroBusca(r.status === 422 ? corpo?.erro ?? T.pedidoRuim : T.semCarro)
   }
   return r.json()
+}
+
+// As listas dos seletores de região e zona. Mesmo jeito de erro da busca: 422 vem como o servidor mandou.
+async function buscarLista<T>(caminho: string, signal: AbortSignal): Promise<T> {
+  let r: Response
+  try {
+    r = await fetch(`${API}${caminho}`, { signal })
+  } catch (e) {
+    if (signal.aborted) throw e
+    throw new ErroBusca(T.listaFalhou)
+  }
+  if (!r.ok) {
+    const corpo = await r.json().catch(() => null)
+    throw new ErroBusca(r.status === 422 ? corpo?.erro ?? T.pedidoRuim : T.listaFalhou)
+  }
+  return r.json()
+}
+
+export async function buscarRegioes(estado: string, signal: AbortSignal): Promise<Lugar[]> {
+  const r = await buscarLista<RespostaRegioes>(`/regioes?estado=${encodeURIComponent(estado)}`, signal)
+  return r.regioes
+}
+
+export async function buscarZonas(estado: string, regiao: string, signal: AbortSignal): Promise<Lugar[]> {
+  const q = new URLSearchParams({ estado, regiao })
+  const r = await buscarLista<RespostaZonas>(`/zonas?${q}`, signal)
+  return r.zonas
 }

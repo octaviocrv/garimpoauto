@@ -2,8 +2,9 @@
 // de cancelar e de começar outra no meio. Só a busca mais nova pode mexer no estado.
 import { useCallback, useEffect, useReducer, useRef } from 'react'
 import { buscarPagina, ErroBusca } from '../api'
-import type { Anuncio, RespostaPagina } from '../types'
+import type { Anuncio, Aviso, RespostaPagina } from '../types'
 import type { Pedido } from './pedido'
+import { sinaisDaPagina, type Sinal } from './sinais'
 import { T } from './textos'
 
 export type Fase = 'inicial' | 'buscando' | 'pronto' | 'parada' | 'falhou'
@@ -17,19 +18,28 @@ export interface EstadoBusca {
   carregandoMais: boolean
   falhouMais: boolean
   erro: string | null // frase pronta quando a busca nem começou
+  // Nada abaixo muda para um carro que já está na tela. Só cresce quando chega página nova.
+  sinais: Record<string, Sinal[]> // calculados quando o carro chegou, nunca refeitos
+  avisos: Aviso[] // de todas as páginas, sem repetir, pra o aviso não sumir quando chega a página 2
+  agora: number // a hora de referência das datas e dos sinais, fixada na página 1
 }
 
 export const INICIAL: EstadoBusca = {
   fase: 'inicial', pedido: null, anuncios: [], resposta: null, primeira: null,
-  carregandoMais: false, falhouMais: false, erro: null,
+  carregandoMais: false, falhouMais: false, erro: null, sinais: {}, avisos: [], agora: 0,
 }
 
 export type Acao =
   | { tipo: 'iniciar'; pedido: Pedido }
-  | { tipo: 'chegou'; resposta: RespostaPagina }
+  | { tipo: 'chegou'; resposta: RespostaPagina; agora?: number } // agora: só os testes passam, na tela é a hora real
   | { tipo: 'verMais' }
   | { tipo: 'caiu'; erro: string }
   | { tipo: 'parar' }
+
+const mesclarAvisos = (antigos: Aviso[], novos: Aviso[]): Aviso[] => {
+  const vistos = new Set(antigos.map((a) => `${a.codigo}|${a.mensagem}`))
+  return [...antigos, ...novos.filter((a) => !vistos.has(`${a.codigo}|${a.mensagem}`))]
+}
 
 export function reduzir(e: EstadoBusca, a: Acao): EstadoBusca {
   switch (a.tipo) {
@@ -44,10 +54,13 @@ export function reduzir(e: EstadoBusca, a: Acao): EstadoBusca {
         if (primeira) return { ...e, fase: 'falhou', erro: T.semCarro, resposta: r }
         return { ...e, carregandoMais: false, falhouMais: true } // mantém a resposta anterior, que já aponta a mesma página
       }
+      const agora = primeira ? a.agora ?? Date.now() : e.agora
+      const anuncios = primeira ? r.anuncios : [...e.anuncios, ...r.anuncios]
       return {
         ...e, fase: 'pronto', carregandoMais: false, falhouMais: false, erro: null, resposta: r,
-        primeira: primeira ? r : e.primeira,
-        anuncios: primeira ? r.anuncios : [...e.anuncios, ...r.anuncios],
+        primeira: primeira ? r : e.primeira, anuncios, agora,
+        sinais: { ...(primeira ? {} : e.sinais), ...sinaisDaPagina(r.anuncios, anuncios, agora) },
+        avisos: mesclarAvisos(primeira ? [] : e.avisos, r.avisos),
       }
     }
     case 'caiu':

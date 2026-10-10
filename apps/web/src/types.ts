@@ -18,6 +18,7 @@ export interface Busca {
   ordenar?: string
   estado?: string | null
   regiao?: string | null
+  zona?: string | null
   cidade?: string | null
 }
 
@@ -41,17 +42,19 @@ export interface Anuncio {
   estado: string | null
   publicado_em: string | null
   renovado_em: string | null
+  anunciado_em: string | null // a data que a pessoa vê: a da renovação, senão a da publicação
   em_destaque: boolean
   repetido_de: string | null
   anunciante_profissional: boolean | null
   nota_anunciante: number | null
   imagens: string[]
+  novo: boolean // só vale com o banco ligado, depois da primeira busca
   incompleto: boolean
   campos_faltando: string[]
 }
 
 export type MotivoParada = 'acabaram_paginas' | 'teto_paginas' | 'teto_tempo' | 'falha_fonte'
-export type CodigoAviso = 'teto_paginas' | 'teto_tempo' | 'muitos_resultados' | 'poucos_resultados' | 'fonte_parcial'
+export type CodigoAviso = 'teto_paginas' | 'teto_tempo' | 'muitos_resultados' | 'poucos_resultados' | 'fonte_parcial' | 'filtro_aproximado'
 
 export interface Aviso {
   codigo: CodigoAviso
@@ -96,4 +99,21 @@ export interface RespostaPagina {
   estado_aplicado: string // sigla, ou "todos"
   coletado_em: string | null
   do_cache: boolean
+  novos?: number // quantos dos carros entregues até aqui são novos desde a última busca igual
+  primeira_busca?: boolean | null // true: nunca houve busca igual. null: servidor sem banco, "não sei"
+}
+
+// GET /regioes e GET /zonas, para os seletores da tela.
+export interface Lugar {
+  slug: string
+  nome: string
+}
+export interface RespostaRegioes {
+  estado: string
+  regioes: Lugar[]
+}
+export interface RespostaZonas {
+  estado: string
+  regiao: string
+  zonas: Lugar[]
 }

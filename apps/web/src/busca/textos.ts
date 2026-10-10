@@ -20,6 +20,20 @@ export const T = {
   dicaFiltros: 'Os filtros valem na próxima busca. Aperta Buscar pra aplicar.',
   destaque: 'Destaque',
   placeholder: 'Qual carro você quer? Tipo gol 2012',
+  listaFalhou: 'Não consegui carregar essa lista agora. A busca funciona do mesmo jeito.',
+  regiao: 'Região',
+  qualquerRegiao: 'Qualquer região',
+  zona: 'Zona',
+  qualquerZona: 'Qualquer zona',
+  carregando: 'Carregando...',
+  atalhos: 'Achar rápido',
+  novo: 'Novo',
+  legendaSinais: 'Os sinais vêm do que o anúncio mostra. O preço só compara com os carros já carregados aqui. Borda verde quer dizer 2 ou mais sinais.',
+  poucoKm: 'Pouco km pro ano',
+  exemplo: 'Exemplo, não é valor real',
+  demoLigado: 'Modo exemplo ligado. A FIPE que aparece aqui é inventada, só pra ver como o card ficaria.',
+  demoEsconder: 'Esconder FIPE de exemplo',
+  demoMostrar: 'Mostrar FIPE de exemplo',
 } as const
 
 export const naOlx = (total: number) => `${total.toLocaleString('pt-BR')} na OLX`
@@ -27,3 +41,5 @@ export const buscadoAs = (iso: string): string => {
   const d = new Date(iso)
   return `buscado às ${d.getHours()}h${String(d.getMinutes()).padStart(2, '0')}`
 }
+
+export const novosDesde = (n: number) => `${n.toLocaleString('pt-BR')} ${n === 1 ? 'novo' : 'novos'} desde a última busca`

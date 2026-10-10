@@ -68,3 +68,24 @@ describe('url da busca por página', () => {
     expect(params(montarUrl(pedido, 3, false, false)).dev).toBeUndefined()
   })
 })
+
+describe('região e zona', () => {
+  const params = (url: string) => Object.fromEntries(new URL(url, 'http://x').searchParams)
+
+  it('vão no pedido e na url', () => {
+    const p = montarPedido({ ...RASCUNHO_VAZIO, texto: 'argo', regiao: 'belo-horizonte-e-regiao', zona: 'barreiro' })!
+    expect(p).toMatchObject({ regiao: 'belo-horizonte-e-regiao', zona: 'barreiro' })
+    expect(params(montarUrl(p, 1, false, false))).toMatchObject({ regiao: 'belo-horizonte-e-regiao', zona: 'barreiro' })
+  })
+
+  it('zona sem região não vai, porque o servidor responderia 422', () => {
+    const p = montarPedido({ ...RASCUNHO_VAZIO, texto: 'argo', zona: 'barreiro' })!
+    expect(p.zona).toBeUndefined()
+  })
+
+  it('Brasil todo não tem região nem zona', () => {
+    const p = montarPedido({ ...RASCUNHO_VAZIO, texto: 'argo', estado: 'todos', regiao: 'x', zona: 'y' })!
+    expect(p.regiao).toBeUndefined()
+    expect(p.zona).toBeUndefined()
+  })
+})
