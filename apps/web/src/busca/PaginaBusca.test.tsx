@@ -121,7 +121,7 @@ describe('vitrine ao abrir', () => {
     container.remove()
   })
 
-  it('ao abrir Garimpar resolve a FIPE e atualiza a leitura do carro', async () => {
+  it('ao abrir Garimpar resolve a FIPE e permite buscar carros iguais', async () => {
     vi.mocked(api.buscarPagina).mockResolvedValue({
       ...resposta,
       anuncios: [{ ...carroComFipe, fipe: null }],
@@ -143,6 +143,18 @@ describe('vitrine ao abrir', () => {
     await act(async () => botao?.click())
     await vi.waitFor(() => expect(api.resolverFipe).toHaveBeenCalledTimes(1))
     await vi.waitFor(() => expect(container.textContent).toContain('R$ 40.000'))
+    const iguais = container.querySelector<HTMLButtonElement>('.ga-buscar-iguais')
+    await act(async () => iguais?.click())
+    await vi.waitFor(() => expect(api.buscarPagina).toHaveBeenCalledTimes(2))
+    expect(vi.mocked(api.buscarPagina).mock.calls[1][0]).toMatchObject({
+      texto: 'Volkswagen Gol',
+      marca: 'Volkswagen',
+      modelo: 'Gol',
+      ano_min: 2016,
+      ano_max: 2016,
+      estado: 'MG',
+    })
+    expect(container.querySelector('[role="dialog"]')).toBeNull()
     act(() => root.unmount())
     container.remove()
   })

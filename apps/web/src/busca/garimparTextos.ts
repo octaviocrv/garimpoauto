@@ -20,6 +20,8 @@ export const GARIMPAR_TEXTOS = {
   anoInformado: 'Ano informado',
   precoInformado: 'Preço informado',
   fipeEncontrada: 'FIPE encontrada',
+  buscarCarrosIguais: 'Buscar carros iguais',
+  buscarCarrosIguaisAjuda: 'Compara o mesmo modelo e ano na localização desta busca.',
   sim: 'sim',
   nao: 'não',
   naoDisponivel: 'ainda não disponível',

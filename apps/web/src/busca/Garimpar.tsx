@@ -10,6 +10,7 @@ import {
   Gauge,
   ImageBroken,
   MapPin,
+  MagnifyingGlass,
   Question,
   ShieldWarning,
   Sparkle,
@@ -164,7 +165,14 @@ function ItemChecklist({ ok, children }: { ok: boolean; children: React.ReactNod
   )
 }
 
-function Veredito({ carro, analise, preco }: { carro: Anuncio; analise: Analise | undefined; preco: Criterio | undefined }) {
+function Veredito({
+  carro, analise, preco, onBuscarIguais,
+}: {
+  carro: Anuncio
+  analise: Analise | undefined
+  preco: Criterio | undefined
+  onBuscarIguais: () => void
+}) {
   const estado = estadoDoVeredito(analise)
   const iguais = totalDeIguais(preco, analise?.mercado)
   const baseCompleta = iguais !== null && iguais >= AMOSTRA_MINIMA
@@ -194,6 +202,15 @@ function Veredito({ carro, analise, preco }: { carro: Anuncio; analise: Analise 
           <ItemChecklist ok={carro.preco !== null}>{GT.precoInformado} {carro.preco !== null ? GT.sim : GT.nao}</ItemChecklist>
           <ItemChecklist ok={carro.fipe?.confianca === 'alta'}>{GT.fipeEncontrada} {carro.fipe?.confianca === 'alta' ? GT.sim : GT.nao}</ItemChecklist>
         </ul>
+      )}
+      {carro.modelo && carro.ano !== null && (
+        <button type="button" className="ga-buscar-iguais" onClick={onBuscarIguais}>
+          <MagnifyingGlass size={18} weight="bold" aria-hidden="true" />
+          <span>
+            <strong>{GT.buscarCarrosIguais}</strong>
+            <small>{GT.buscarCarrosIguaisAjuda}</small>
+          </span>
+        </button>
       )}
       <p className="ga-veredito__nota">{T.comoLer}</p>
     </section>
@@ -445,12 +462,13 @@ function Apoios({ criterios, carro }: { criterios: Criterio[]; carro: Anuncio })
 }
 
 export function Garimpar({
-  a, analise, onFechar, onFipe,
+  a, analise, onFechar, onFipe, onBuscarIguais,
 }: {
   a: Anuncio
   analise: Analise | undefined
   onFechar: () => void
   onFipe: (anuncio: Anuncio) => void
+  onBuscarIguais: (anuncio: Anuncio) => void
 }) {
   const fechar = useRef<HTMLButtonElement>(null)
   const original = useRef(a)
@@ -512,7 +530,12 @@ export function Garimpar({
       <main className="ga-conteudo">
         {falhaFipe && <p role="status" className="ga-fora">{T.fipeFalhou}</p>}
         <Hero carro={carro} recencia={recencia} />
-        <Veredito carro={carro} analise={analise} preco={preco} />
+        <Veredito
+          carro={carro}
+          analise={analise}
+          preco={preco}
+          onBuscarIguais={() => onBuscarIguais(carro)}
+        />
         <SinaisAFavor criterios={criterios} />
 
         <section className="ga-secao ga-entra">

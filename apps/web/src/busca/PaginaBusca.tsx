@@ -5,8 +5,8 @@ import { Diagnostico } from './Diagnostico'
 import { Garimpar } from './Garimpar'
 import { SearchHologram } from './SearchHologram'
 import {
-  ANUNCIANTES, CAMBIOS, COMBUSTIVEIS, ESTADOS, FILTROS_DO_RASCUNHO, ORDENS, RASCUNHO_VAZIO, montarPedidoOuVitrine,
-  nomeDoEstado, type Rascunho,
+  ANUNCIANTES, CAMBIOS, COMBUSTIVEIS, ESTADOS, FILTROS_DO_RASCUNHO, ORDENS, RASCUNHO_VAZIO,
+  buscaDeCarrosIguais, montarPedidoOuVitrine, nomeDoEstado, type Rascunho,
 } from './pedido'
 import { useRegioes, useZonas } from './regioes'
 import { T, buscadoAs, novosDesde } from './textos'
@@ -46,13 +46,20 @@ export function PaginaBusca() {
   const [aberto, setAberto] = useState<Anuncio | null>(null) // o carro da tela do Garimpar
   const fecharGarimpar = useCallback(() => setAberto(null), [])
   const aplicarFipe = useCallback((anuncio: Anuncio) => {
-    setAberto(anuncio)
     atualizarFipe(anuncio.external_id, {
       fipe: anuncio.fipe ?? null,
       fipe_bloqueio: anuncio.fipe_bloqueio ?? null,
       fipe_ausencia: anuncio.fipe_ausencia ?? null,
     })
   }, [atualizarFipe])
+  const buscarIguais = useCallback((anuncio: Anuncio) => {
+    const preparada = buscaDeCarrosIguais(anuncio, busca.pedido)
+    if (!preparada) return
+    setR(preparada.rascunho)
+    setPainel(false)
+    setAberto(null)
+    buscar(preparada.pedido)
+  }, [busca.pedido, buscar])
   const regioes = useRegioes(r.estado)
   const zonas = useZonas(r.estado, r.regiao)
 
@@ -351,6 +358,7 @@ export function PaginaBusca() {
           analise={busca.analises[aberto.external_id]}
           onFechar={fecharGarimpar}
           onFipe={aplicarFipe}
+          onBuscarIguais={buscarIguais}
         />
       )}
     </div>

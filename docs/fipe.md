@@ -36,6 +36,10 @@ repetir a consulta externa.
 Ao abrir o Garimpar, `POST /fipe/anuncio` resolve somente aquele anúncio. Pedidos simultâneos para o
 mesmo anúncio são compartilhados pela tela e o resultado passa a valer também no card.
 
+O botão **Buscar carros iguais** abre uma busca focada em marca, modelo e ano. Ele mantém a
+localização da busca atual e tira filtros de versão, preço, km, câmbio, combustível e anunciante.
+Assim a lista tem mais chance de reunir os cinco preços válidos exigidos pela mediana.
+
 ## Como o casamento decide
 
 O Garimpo Auto confere nesta ordem.

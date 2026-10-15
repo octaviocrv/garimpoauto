@@ -51,6 +51,10 @@ A vitrine só traz FIPE já guardada. Busca com texto ou modelo resolve as combi
 página. O endpoint `POST /fipe/anuncio` recebe os campos do anúncio e devolve `fipe`,
 `fipe_bloqueio` e `fipe_ausencia`, sem baixar novamente a página da OLX.
 
+No Garimpar, **Buscar carros iguais** abre uma busca por marca, modelo e ano do anúncio. Estado,
+região, zona e cidade são preservados. Versão, preço, km, câmbio, combustível e tipo de anunciante
+saem do pedido para não enfraquecer a amostra usada pela mediana.
+
 ### Frases de `informacao`
 - Tem mais: "Mostrando 50 de 1.413 carros. Toca em Ver mais pra ver o resto."
 - Acabou: "Achei 80 carros. Esses são todos."

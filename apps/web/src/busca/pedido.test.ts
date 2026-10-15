@@ -1,10 +1,45 @@
 import { describe, expect, it } from 'vitest'
-import { RASCUNHO_VAZIO, montarPedido, montarPedidoOuVitrine, nomeDoEstado, ESTADOS } from './pedido'
+import { ESTADOS, RASCUNHO_VAZIO, buscaDeCarrosIguais, montarPedido, montarPedidoOuVitrine, nomeDoEstado } from './pedido'
 import { montarUrl } from '../api'
+import type { Anuncio } from '../types'
 
 describe('montarPedido', () => {
   it('sem texto não busca', () => {
     expect(montarPedido({ ...RASCUNHO_VAZIO, texto: '   ' })).toBeNull()
+  })
+
+  describe('buscar carros iguais', () => {
+    const carro = {
+      marca: 'Volkswagen', modelo: 'Gol', ano: 2020, estado: 'MG',
+    } as Anuncio
+
+    it('fixa marca, modelo e ano, preserva a localização e abre os outros filtros', () => {
+      const atual = {
+        texto: 'gol barato', marca: 'Volkswagen', modelo: 'Gol', versao: 'Trendline',
+        ano_min: 2018, ano_max: 2022, preco_max: 40000, km_max: 50000,
+        cambio: 'manual', combustivel: 'flex', anunciante: 'particular',
+        estado: 'MG', regiao: 'belo-horizonte-e-regiao', zona: 'barreiro',
+        cidade: 'Belo Horizonte', ordenar: 'menor_preco',
+      }
+      const preparada = buscaDeCarrosIguais(carro, atual)
+      expect(preparada?.pedido).toEqual({
+        texto: 'Volkswagen Gol', marca: 'Volkswagen', modelo: 'Gol',
+        ano_min: 2020, ano_max: 2020, ordenar: 'menor_preco',
+        estado: 'MG', regiao: 'belo-horizonte-e-regiao', zona: 'barreiro',
+        cidade: 'Belo Horizonte',
+      })
+      expect(preparada?.rascunho).toMatchObject({
+        texto: 'Volkswagen Gol', marca: 'Volkswagen', modelo: 'Gol',
+        anoMin: '2020', anoMax: '2020', estado: 'MG',
+        regiao: 'belo-horizonte-e-regiao', zona: 'barreiro', cidade: 'Belo Horizonte',
+        precoMax: '', kmMax: '', cambio: '', combustivel: '', anunciante: '',
+      })
+    })
+
+    it('não inventa busca quando falta modelo ou ano', () => {
+      expect(buscaDeCarrosIguais({ ...carro, modelo: null }, null)).toBeNull()
+      expect(buscaDeCarrosIguais({ ...carro, ano: null }, null)).toBeNull()
+    })
   })
 
   it('padrão é Minas e ordem por mais recentes, sem filtro nenhum', () => {

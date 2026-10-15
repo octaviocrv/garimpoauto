@@ -26,6 +26,21 @@ const comFipe = (id: string, preco: number, precoFipe: number, extra: Partial<An
 })
 const semMercado = (alvo: Anuncio) => analisesDaPagina([alvo], agrupar([alvo]), AGORA)[alvo.external_id]
 
+describe('base de carros iguais', () => {
+  it('agrupa marca, modelo e ano, sem misturar outro modelo ou outro ano', () => {
+    const alvo = carro('alvo', { preco: 45000, modelo_original: 'Argo Drive 1.0' })
+    const lista = [
+      alvo,
+      ...[50000, 51000, 52000, 53000].map((preco, i) =>
+        carro(`igual-${i}`, { preco, modelo_original: `Argo versão ${i}` })),
+      carro('outro-ano', { ano: 2020, preco: 1000 }),
+      carro('outro-modelo', { modelo: 'Cronos', preco: 2000 }),
+    ]
+    const resultado = analisesDaPagina([alvo], agrupar(lista), AGORA).alvo
+    expect(resultado.mercado).toMatchObject({ n: 5, mediana: 51000, minimo: 45000, maximo: 53000 })
+  })
+})
+
 describe('nível do carro', () => {
   it('Quente: margem alta, sem alerta e pelo menos 2 pontos a favor', () => {
     const a = analise(carro('x', { preco: 42000, km: 35000, anunciante_profissional: false }))

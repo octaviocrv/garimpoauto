@@ -1,3 +1,5 @@
+import type { Anuncio } from '../types'
+
 // O que a pessoa preenche na tela e como isso vira o pedido que o servidor entende.
 export interface Pedido {
   texto: string
@@ -47,6 +49,42 @@ export const RASCUNHO_VAZIO: Rascunho = {
   texto: '', estado: ESTADO_PADRAO, marca: '', modelo: '', versao: '', anoMin: '', anoMax: '',
   precoMin: '', precoMax: '', kmMin: '', kmMax: '', cambio: '', combustivel: '', anunciante: '',
   cidade: '', regiao: '', zona: '', ordenar: 'recentes',
+}
+
+export function buscaDeCarrosIguais(
+  anuncio: Anuncio, atual: Pedido | null,
+): { pedido: Pedido; rascunho: Rascunho } | null {
+  if (!anuncio.modelo || anuncio.ano === null) return null
+  const estado = atual?.estado || anuncio.estado || ESTADO_PADRAO
+  const texto = [anuncio.marca, anuncio.modelo].filter(Boolean).join(' ')
+  const pedido: Pedido = {
+    texto,
+    marca: anuncio.marca || undefined,
+    modelo: anuncio.modelo,
+    ano_min: anuncio.ano,
+    ano_max: anuncio.ano,
+    ordenar: atual?.ordenar || 'recentes',
+    estado,
+    regiao: atual?.regiao,
+    zona: atual?.zona,
+    cidade: atual?.cidade,
+  }
+  return {
+    pedido,
+    rascunho: {
+      ...RASCUNHO_VAZIO,
+      texto,
+      estado,
+      marca: anuncio.marca ?? '',
+      modelo: anuncio.modelo,
+      anoMin: String(anuncio.ano),
+      anoMax: String(anuncio.ano),
+      ordenar: pedido.ordenar,
+      regiao: pedido.regiao ?? '',
+      zona: pedido.zona ?? '',
+      cidade: pedido.cidade ?? '',
+    },
+  }
 }
 
 export const FILTROS_DO_RASCUNHO: (keyof Rascunho)[] = [

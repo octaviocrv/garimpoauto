@@ -239,6 +239,30 @@
 .ga-veredito h2 { font-size: clamp(20px, 2.4vw, 30px); font-weight: 700; letter-spacing: -0.025em; line-height: 1.05; margin: 4px 0 0; }
 .ga-veredito__motivo { align-self: center; color: #bdc9c6; font-size: 14px; line-height: 1.65; margin: 0; }
 .ga-veredito__nota { color: #73827f; font-size: 11px; grid-column: 1 / -1; line-height: 1.55; margin: 0; }
+.ga-buscar-iguais {
+  align-items: center;
+  background: rgba(94, 234, 212, 0.1);
+  border: 1px solid rgba(94, 234, 212, 0.3);
+  border-radius: 7px;
+  color: #ccfbf1;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 12px;
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-height: 48px;
+  padding: 8px 14px;
+  text-align: left;
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+.ga-buscar-iguais:hover {
+  background: rgba(94, 234, 212, 0.16);
+  border-color: rgba(94, 234, 212, 0.5);
+  transform: translateY(-1px);
+}
+.ga-buscar-iguais span { display: grid; gap: 2px; }
+.ga-buscar-iguais strong { font-size: 14px; }
+.ga-buscar-iguais small { color: #91aaa5; font-size: 11px; font-weight: 500; }
 
 .ga-checklist {
   display: grid;
