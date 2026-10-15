@@ -20,7 +20,7 @@ from armazem import Armazem, banco_de_url  # noqa: E402
 URL_TESTE = os.environ.get("GARIMPO_DATABASE_URL_TESTE")
 TABELAS = (
     "busca_pagina", "busca_sessao", "busca_visto", "busca_execucao",
-    "fipe_casamento", "fipe_cache_estado", "fipe_preco", "fipe_ano", "fipe_modelo", "fipe_marca",
+    "fipe_ausencia", "fipe_casamento", "fipe_cache_estado", "fipe_preco", "fipe_ano", "fipe_modelo", "fipe_marca",
     "fipe_referencia", "fipe_requisicao_dia", "schema_migracoes",
 )
 

@@ -19,6 +19,11 @@ mês novo, o catálogo antigo continua guardado e o preço novo só é buscado q
 O resultado do casamento também fica guardado por anúncio. Abrir a mesma página não consulta a
 FIPE de novo.
 
+Decisões como sem candidato e confiança baixa ficam em `fipe_casamento`. Falhas operacionais ficam
+em `fipe_ausencia`, separadas por anúncio, entrada e motivo. Repetições são contadas sem criar uma
+linha nova. Os motivos são sem orçamento, tempo esgotado, banco fora, fonte indisponível e erro
+inesperado.
+
 ## Como o casamento decide
 
 O Garimpo Auto confere nesta ordem.
@@ -71,7 +76,9 @@ O servidor dedica por padrão até 4 segundos à FIPE por página e usa no máxi
 mesmo tempo. Quem não terminar nesse tempo fica sem FIPE naquela página.
 
 Sem banco, nenhuma chamada é feita. Erro de rede, resposta 429 ou orçamento esgotado não derrubam a
-busca. A página segue sem a referência que faltou.
+busca. A página segue sem a referência que faltou e leva um motivo padronizado. Quando o banco está
+fora, a ocorrência fica na memória e é gravada depois que ele volta. A gravação acontece fora do
+caminho da resposta para não aumentar o teto de tempo da página.
 
 ## Aquecer antes da vitrine
 

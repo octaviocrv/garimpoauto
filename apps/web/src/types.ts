@@ -62,6 +62,7 @@ export interface Anuncio {
   campos_faltando: string[]
   fipe?: ReferenciaFipe | null
   fipe_bloqueio?: 'anuncio_promocional' | 'km_incoerente' | null
+  fipe_ausencia?: 'sem_candidato' | 'confianca_media' | 'confianca_baixa' | 'sem_orcamento' | 'tempo_esgotado' | 'banco_fora' | 'fonte_indisponivel' | 'erro_inesperado' | null
 }
 
 export type MotivoParada = 'acabaram_paginas' | 'teto_paginas' | 'teto_tempo' | 'falha_fonte'

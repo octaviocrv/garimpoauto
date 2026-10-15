@@ -11,6 +11,10 @@ from pydantic import BaseModel, field_validator, model_validator
 
 # Campos sem os quais o anúncio não serve para comparar com a FIPE.
 CAMPOS_OBRIGATORIOS = ("preco", "ano", "modelo")
+MotivoAusenciaFipe = Literal[
+    "sem_candidato", "confianca_media", "confianca_baixa", "sem_orcamento",
+    "tempo_esgotado", "banco_fora", "fonte_indisponivel", "erro_inesperado",
+]
 
 
 @dataclass
@@ -56,6 +60,7 @@ class Anuncio:
     campos_faltando: list[str] = field(default_factory=list)
     fipe: Optional[ReferenciaFipe] = None
     fipe_bloqueio: Optional[str] = None
+    fipe_ausencia: Optional[MotivoAusenciaFipe] = None
     # Item cru da fonte, já sem nome nem telefone de anunciante (vai para raw_listings).
     raw: dict[str, Any] = field(default_factory=dict, repr=False)
 

@@ -459,6 +459,35 @@ class Armazem:
 
         return self._usar(f)
 
+    def fipe_salvar_ausencias(self, ocorrencias: list[dict[str, str]]) -> None:
+        if not ocorrencias:
+            return
+        agora = self.agora()
+
+        def f(cur: Any) -> None:
+            cur.executemany(
+                "INSERT INTO fipe_ausencia (fonte, anuncio_id, entrada_hash, motivo, detalhe, "
+                "ocorrencias, primeira_em, ultima_em) VALUES (%s, %s, %s, %s, %s, 1, %s, %s) "
+                "ON DUPLICATE KEY UPDATE detalhe = VALUES(detalhe), ocorrencias = ocorrencias + 1, "
+                "ultima_em = VALUES(ultima_em)",
+                [
+                    (
+                        o["fonte"], o["anuncio_id"], o["entrada_hash"], o["motivo"],
+                        o.get("detalhe"), agora, agora,
+                    )
+                    for o in ocorrencias
+                ],
+            )
+
+        self._usar(f)
+
+    def fipe_resumo_ausencias(self) -> dict[str, int]:
+        def f(cur: Any) -> dict[str, int]:
+            cur.execute("SELECT motivo, SUM(ocorrencias) AS total FROM fipe_ausencia GROUP BY motivo")
+            return {str(r["motivo"]): int(r["total"]) for r in cur.fetchall()}
+
+        return self._usar(f)
+
     def fipe_salvar_estado(self, referencia: str, tipo: str, chave: str, estado: dict[str, Any]) -> None:
         texto = json.dumps(estado, ensure_ascii=False)
 

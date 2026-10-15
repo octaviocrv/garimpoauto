@@ -10,9 +10,9 @@ from typing import Optional
 
 import config
 from armazem import Armazem, BancoFora
-from casamento_fipe import CasadorFipe, CasamentoFipe
+from casamento_fipe import CasadorFipe, CasamentoFipe, hash_entrada
 from catalogo_fipe import CatalogoFipe
-from schemas import Anuncio, ReferenciaFipe
+from schemas import Anuncio, MotivoAusenciaFipe, ReferenciaFipe
 from sources.fipe import FipeOnline, FonteFipeIndisponivel, LimiteFipeAtingido
 
 log = logging.getLogger("garimpo.fipe")
@@ -28,6 +28,8 @@ class EnriquecedorFipe:
         self.executor = ThreadPoolExecutor(max_workers=min(2, max(1, paralelismo)), thread_name_prefix="fipe")
         self._avisados: set[str] = set()
         self._trava_aviso = threading.Lock()
+        self._ausencias: list[dict[str, str]] = []
+        self._trava_ausencias = threading.Lock()
 
     def _avisar_uma_vez(self, chave: str, mensagem: str) -> None:
         with self._trava_aviso:
@@ -36,18 +38,64 @@ class EnriquecedorFipe:
             self._avisados.add(chave)
         log.warning(mensagem)
 
-    def _casar(self, indice: int, anuncio: Anuncio) -> tuple[int, Optional[CasamentoFipe]]:
+    def _enfileirar_ausencia(
+        self, anuncio: Anuncio, motivo: MotivoAusenciaFipe, detalhe: str,
+    ) -> None:
+        chave = (anuncio.source, anuncio.external_id, hash_entrada(anuncio), motivo)
+        with self._trava_ausencias:
+            self._ausencias.append({
+                "fonte": chave[0], "anuncio_id": chave[1], "entrada_hash": chave[2],
+                "motivo": motivo, "detalhe": detalhe,
+            })
+
+    def _descarregar_ausencias(self) -> None:
+        if self.armazem.fora:
+            return
+        with self._trava_ausencias:
+            ocorrencias = list(self._ausencias)
+            self._ausencias.clear()
+        if not ocorrencias:
+            return
         try:
-            return indice, self.casador.casar(anuncio)
+            self.armazem.fipe_salvar_ausencias(ocorrencias)
+        except BancoFora:
+            with self._trava_ausencias:
+                self._ausencias.extend(ocorrencias)
+        except Exception:
+            with self._trava_ausencias:
+                self._ausencias.extend(ocorrencias)
+            log.exception("Erro ao guardar motivo da ausência da FIPE.")
+
+    def _despachar_ausencias(self) -> None:
+        with self._trava_ausencias:
+            tem_ausencias = bool(self._ausencias)
+        if tem_ausencias and not self.armazem.fora:
+            self.executor.submit(self._descarregar_ausencias)
+
+    def _casar(
+        self, indice: int, anuncio: Anuncio,
+    ) -> tuple[int, Optional[CasamentoFipe], Optional[MotivoAusenciaFipe]]:
+        try:
+            return indice, self.casador.casar(anuncio), None
         except BancoFora:
             self._avisar_uma_vez("banco", "Banco fora do ar. A busca segue sem consultar a FIPE.")
+            motivo: MotivoAusenciaFipe = "banco_fora"
+            detalhe = "Banco fora do ar"
         except LimiteFipeAtingido:
             self._avisar_uma_vez("limite", "Limite diário da FIPE atingido. A busca segue sem novos valores.")
+            motivo = "sem_orcamento"
+            detalhe = "Limite diário da FIPE atingido"
         except FonteFipeIndisponivel:
             self._avisar_uma_vez("fonte", "A FIPE não respondeu. A busca segue normalmente.")
+            motivo = "fonte_indisponivel"
+            detalhe = "Fonte FIPE indisponível"
         except Exception:
             log.exception("Erro ao enriquecer anúncio com FIPE.")
-        return indice, None
+            motivo = "erro_inesperado"
+            detalhe = "Erro inesperado ao consultar a FIPE"
+        self._enfileirar_ausencia(anuncio, motivo, detalhe)
+        self._despachar_ausencias()
+        return indice, None, motivo
 
     @staticmethod
     def _aplicar(anuncio: Anuncio, resultado: CasamentoFipe) -> None:
@@ -57,6 +105,11 @@ class EnriquecedorFipe:
             or resultado.preco is None or resultado.mes_referencia is None or anuncio.preco is None
         ):
             anuncio.fipe = None
+            anuncio.fipe_ausencia = {
+                "sem_candidato": "sem_candidato",
+                "media": "confianca_media",
+                "baixa": "confianca_baixa",
+            }.get(resultado.confianca, "sem_candidato")
             return
         diferenca = round((resultado.preco - anuncio.preco) / resultado.preco * 100)
         anuncio.fipe = ReferenciaFipe(
@@ -67,11 +120,16 @@ class EnriquecedorFipe:
             confianca="alta",
             preco_estranho=resultado.preco_estranho,
         )
+        anuncio.fipe_ausencia = None
 
     def enriquecer(self, anuncios: list[Anuncio]) -> None:
+        self._despachar_ausencias()
         if not anuncios or self.armazem.fora:
             if self.armazem.fora:
                 self._avisar_uma_vez("banco", "Banco fora do ar. A busca segue sem consultar a FIPE.")
+                for anuncio in anuncios:
+                    anuncio.fipe_ausencia = "banco_fora"
+                    self._enfileirar_ausencia(anuncio, "banco_fora", "Banco fora do ar")
             return
         prazo = self.monotonic() + self.tempo_pagina
         proximo = 0
@@ -94,10 +152,19 @@ class EnriquecedorFipe:
                 break
             for futuro in concluidos:
                 pendentes.pop(futuro, None)
-                indice, resultado = futuro.result()
+                indice, resultado, ausencia = futuro.result()
                 if resultado is not None:
                     self._aplicar(anuncios[indice], resultado)
+                elif ausencia is not None:
+                    anuncios[indice].fipe_ausencia = ausencia
             agendar()
+        sem_tempo = set(pendentes.values()) | set(range(proximo, len(anuncios)))
+        for indice in sem_tempo:
+            anuncios[indice].fipe_ausencia = "tempo_esgotado"
+            self._enfileirar_ausencia(
+                anuncios[indice], "tempo_esgotado", "Tempo da FIPE esgotado nesta página",
+            )
+        self._despachar_ausencias()
 
 
 def criar_enriquecedor(armazem: Optional[Armazem]) -> Optional[EnriquecedorFipe]:

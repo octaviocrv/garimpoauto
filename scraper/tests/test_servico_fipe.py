@@ -9,6 +9,7 @@ sys.path.insert(0, str(RAIZ))
 from casamento_fipe import CasamentoFipe  # noqa: E402
 from schemas import Anuncio, ReferenciaFipe  # noqa: E402
 from servico_fipe import EnriquecedorFipe  # noqa: E402
+from sources.fipe import FonteFipeIndisponivel, LimiteFipeAtingido  # noqa: E402
 from tests.test_server import cliente  # noqa: E402
 
 
@@ -19,6 +20,10 @@ def anuncio(id_, preco=30000):
 class ArmazemEstado:
     def __init__(self, fora=False):
         self.fora = fora
+        self.ausencias = []
+
+    def fipe_salvar_ausencias(self, ocorrencias):
+        self.ausencias.extend(ocorrencias)
 
 
 class CasadorControlado:
@@ -43,6 +48,14 @@ class CasadorControlado:
                 self.ativas -= 1
 
 
+class CasadorComErro:
+    def __init__(self, erro):
+        self.erro = erro
+
+    def casar(self, carro):
+        raise self.erro
+
+
 def casamento(confianca="alta", bloqueio=None, estranho=False):
     if confianca != "alta":
         return CasamentoFipe("338", None, None, "outubro de 2026", confianca, "Sem confiança alta", bloqueio)
@@ -59,8 +72,12 @@ def test_so_confianca_alta_chega_no_anuncio_e_diferenca_e_calculada():
     enriquecedor = EnriquecedorFipe(casador, ArmazemEstado(), tempo_pagina=1)
     enriquecedor.enriquecer(carros)
     assert carros[0].fipe == ReferenciaFipe("005384-8", 40000, 25, "outubro de 2026", "alta", False)
-    assert carros[1].fipe is None
-    assert carros[2].fipe is None and carros[2].fipe_bloqueio == "km_incoerente"
+    assert carros[0].fipe_ausencia is None
+    assert carros[1].fipe is None and carros[1].fipe_ausencia == "confianca_media"
+    assert (
+        carros[2].fipe is None and carros[2].fipe_bloqueio == "km_incoerente"
+        and carros[2].fipe_ausencia == "confianca_baixa"
+    )
 
 
 def test_no_maximo_duas_consultas_rodam_em_paralelo():
@@ -79,15 +96,40 @@ def test_teto_da_pagina_deixa_o_restante_sem_fipe():
     enriquecedor.enriquecer(carros)
     assert time.monotonic() - inicio < 0.1
     assert all(carro.fipe is None for carro in carros)
+    assert all(carro.fipe_ausencia == "tempo_esgotado" for carro in carros)
     assert len(casador.chamadas) <= 2
 
 
 def test_banco_fora_nao_consulta_fipe():
     casador = CasadorControlado({"a": casamento()})
+    armazem = ArmazemEstado(fora=True)
     carro = anuncio("a")
-    EnriquecedorFipe(casador, ArmazemEstado(fora=True), tempo_pagina=1).enriquecer([carro])
+    enriquecedor = EnriquecedorFipe(casador, armazem, tempo_pagina=1)
+    enriquecedor.enriquecer([carro])
     assert casador.chamadas == []
     assert carro.fipe is None
+    assert carro.fipe_ausencia == "banco_fora"
+    assert armazem.ausencias == []
+    armazem.fora = False
+    enriquecedor.enriquecer([])
+    enriquecedor.executor.shutdown(wait=True)
+    assert [x["motivo"] for x in armazem.ausencias] == ["banco_fora"]
+
+
+def test_falhas_operacionais_ficam_no_anuncio_e_sao_guardadas():
+    casos = [
+        (LimiteFipeAtingido(), "sem_orcamento"),
+        (FonteFipeIndisponivel(), "fonte_indisponivel"),
+        (RuntimeError("falha"), "erro_inesperado"),
+    ]
+    for erro, motivo in casos:
+        armazem = ArmazemEstado()
+        carro = anuncio(motivo)
+        enriquecedor = EnriquecedorFipe(CasadorComErro(erro), armazem, tempo_pagina=1)
+        enriquecedor.enriquecer([carro])
+        enriquecedor.executor.shutdown(wait=True)
+        assert carro.fipe_ausencia == motivo
+        assert [x["motivo"] for x in armazem.ausencias] == [motivo]
 
 
 class EnriquecedorResposta:

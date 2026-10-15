@@ -67,7 +67,7 @@ def abrir_sessao(banco, usuario=""):
 def test_migrations_rodam_na_ordem_e_so_uma_vez(relogio):
     zerar_banco_de_teste()
     a = novo_armazem(relogio)
-    assert a.migrar() == ["001_cache_de_busca", "002_vistos", "003_fipe"]
+    assert a.migrar() == ["001_cache_de_busca", "002_vistos", "003_fipe", "004_ausencia_fipe"]
     assert a.migrar() == []
     outro = novo_armazem(relogio)  # outro servidor subindo no mesmo banco
     assert outro.migrar() == []
@@ -83,10 +83,21 @@ def test_migration_fipe_cria_catalogo_casamentos_e_orcamento(relogio):
         {next(iter(linha.values())) for linha in cur.fetchall()},
     )[1])
     assert tabelas == {
-        "fipe_ano", "fipe_cache_estado", "fipe_casamento", "fipe_marca",
+        "fipe_ano", "fipe_ausencia", "fipe_cache_estado", "fipe_casamento", "fipe_marca",
         "fipe_modelo", "fipe_preco", "fipe_referencia", "fipe_requisicao_dia",
     }
     a.fechar()
+
+
+def test_ausencias_fipe_sao_acumuladas_por_anuncio_motivo_e_entrada(banco):
+    ocorrencia = {
+        "fonte": "olx", "anuncio_id": "123", "entrada_hash": "a" * 64,
+        "motivo": "sem_orcamento", "detalhe": "Limite diário da FIPE atingido",
+    }
+    banco.fipe_salvar_ausencias([ocorrencia])
+    banco.fipe_salvar_ausencias([ocorrencia])
+    banco.fipe_salvar_ausencias([{**ocorrencia, "motivo": "fonte_indisponivel"}])
+    assert banco.fipe_resumo_ausencias() == {"fonte_indisponivel": 1, "sem_orcamento": 2}
 
 
 def test_os_comandos_do_arquivo_sql_sao_separados_sem_os_comentarios():
@@ -103,6 +114,7 @@ def test_pagina_ida_e_volta_no_json_mantem_datas_novo_e_tira_o_item_cru():
     p.anuncios[0] = olx.normalizar(anuncio_cru("1", date=1791572438, lastBumpAgeSecs="0"))
     p.anuncios[0].novo = True
     p.anuncios[0].fipe = ReferenciaFipe("005384-8", 40000, 25, "outubro de 2026", "alta")
+    p.anuncios[1].fipe_ausencia = "sem_orcamento"
     p.anuncios[0].raw = {"segredo": 1}
     volta = pagina_de_json(pagina_para_json(p))
     assert volta.numero == 2 and volta.total_ads == 10 and volta.cortados_por_filtro == {"km": 1}
@@ -110,6 +122,7 @@ def test_pagina_ida_e_volta_no_json_mantem_datas_novo_e_tira_o_item_cru():
     assert volta.anuncios[0].novo is True and volta.anuncios[1].novo is False
     assert volta.anuncios[0].raw == {}
     assert volta.anuncios[0].fipe == p.anuncios[0].fipe
+    assert volta.anuncios[1].fipe_ausencia == "sem_orcamento"
     assert volta.anuncios[0].publicado_em == p.anuncios[0].publicado_em and volta.anuncios[0].publicado_em.tzinfo
 
 
