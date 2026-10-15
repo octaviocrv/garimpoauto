@@ -32,6 +32,11 @@ O Garimpo Auto confere nesta ordem.
 Campos separados da OLX valem mais que o título. Candidatos incompatíveis com motor, portas ou
 câmbio saem antes das consultas de anos para economizar o limite diário.
 
+O nome da marca aceita complementos do catálogo quando a correspondência continua única, como
+`Chevrolet` e `GM - Chevrolet`. Os modelos são procurados primeiro pela família e depois ranqueados
+pela versão completa. Abreviações de pelo menos três letras, diferenças de pontuação e caixa não
+criam regras específicas por carro.
+
 ### Confiança alta
 
 Marca, modelo, ano e combustível conferem. A versão tem uma diferença clara para a segunda opção.

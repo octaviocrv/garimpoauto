@@ -17,6 +17,7 @@ from schemas import Anuncio
 from sources.fipe import AnoFonte, OpcaoFonte, PrecoFonte, ReferenciaFonte
 
 ConfiancaFipe = Literal["alta", "media", "baixa", "sem_candidato"]
+VERSAO_CASAMENTO = 2
 
 
 @dataclass(frozen=True)
@@ -58,11 +59,13 @@ def normalizar(texto: Optional[str]) -> str:
     sem_acento = unicodedata.normalize("NFD", texto or "")
     sem_acento = "".join(c for c in sem_acento if unicodedata.category(c) != "Mn")
     sem_acento = sem_acento.lower().replace(",", ".")
+    sem_acento = re.sub(r"(?<!\d)\.|\.(?!\d)", " ", sem_acento)
     return " ".join(re.sub(r"[^a-z0-9.]+", " ", sem_acento).split())
 
 
 def hash_entrada(a: Anuncio) -> str:
     dados = [
+        VERSAO_CASAMENTO,
         a.marca, a.modelo, a.modelo_original, a.titulo, a.ano, a.combustivel,
         a.cambio, a.portas, a.preco, a.km,
     ]
@@ -89,6 +92,11 @@ def _marca_base(texto: str) -> str:
     return " ".join(tokens)
 
 
+def _marcas_compativeis(anuncio: str, fipe: str) -> bool:
+    a, f = set(_marca_base(anuncio).split()), set(_marca_base(fipe).split())
+    return bool(a and f) and (a <= f or f <= a)
+
+
 def _motor(texto: str) -> Optional[str]:
     achado = re.search(r"\b([0-9]\.[0-9])\b", normalizar(texto))
     return achado.group(1) if achado else None
@@ -101,9 +109,9 @@ def _portas_fipe(texto: str) -> Optional[int]:
 
 def _cambio_fipe(texto: str) -> Optional[str]:
     n = normalizar(texto)
-    if any(x in n for x in (" automatic", " aut ", "i motion", " tiptronic", " dsg")):
+    if re.search(r"\b(automatico|aut|cvt|tiptronic|dsg)\b", n) or "i motion" in n:
         return "automatico"
-    if any(x in n for x in (" mec ", " manual")):
+    if re.search(r"\b(mec|manual)\b", n):
         return "manual"
     return None
 
@@ -119,8 +127,12 @@ def _compativel_com_campos(a: Anuncio, candidato: OpcaoFonte) -> bool:
         aceitas = {a.portas, a.portas + 1} if a.portas in (2, 4) else {a.portas}
         if portas not in aceitas:
             return False
+    cambio_anuncio = normalizar(a.cambio)
+    cambio_titulo = _cambio_fipe(f"{a.modelo_original or ''} {a.titulo or ''}")
+    if cambio_anuncio and cambio_titulo and cambio_anuncio != cambio_titulo:
+        return False
     cambio = _cambio_fipe(texto)
-    if a.cambio and cambio and normalizar(a.cambio) != cambio:
+    if cambio_anuncio and cambio and cambio_anuncio != cambio:
         return False
     return True
 
@@ -144,9 +156,37 @@ def _pontuar(a: Anuncio, modelo: OpcaoFonte) -> float:
     comuns = {"gol", "total", "flex", "mi", "mec", "mecanico", "geracao"}
     a_tokens = set(origem.split()) - comuns
     b_tokens = set(destino.split()) - comuns
-    uniao = a_tokens | b_tokens
-    jaccard = len(a_tokens & b_tokens) / len(uniao) if uniao else 0.0
+    usados: set[str] = set()
+    iguais = 0
+    for token_a in sorted(a_tokens, key=len, reverse=True):
+        token_b = next((
+            x for x in b_tokens - usados
+            if token_a == x or (min(len(token_a), len(x)) >= 3 and (token_a.startswith(x) or x.startswith(token_a)))
+        ), None)
+        if token_b is not None:
+            usados.add(token_b)
+            iguais += 1
+    uniao = len(a_tokens) + len(b_tokens) - iguais
+    jaccard = iguais / uniao if uniao else 0.0
     return sequencia * 0.65 + jaccard * 0.35
+
+
+def _mesma_familia_modelo(anuncio: Anuncio, candidato: OpcaoFonte) -> bool:
+    origem = normalizar(anuncio.modelo or anuncio.modelo_original or anuncio.titulo).split()
+    destino = normalizar(candidato.nome).split()
+    if not origem or not destino or origem[0] != destino[0]:
+        return False
+    if len(origem[0]) <= 2 and len(origem) > 1 and len(destino) > 1:
+        return origem[1] == destino[1]
+    return True
+
+
+def _ranquear_modelos(anuncio: Anuncio, modelos: list[OpcaoFonte]) -> list[tuple[float, OpcaoFonte]]:
+    candidatos = [
+        modelo for modelo in modelos
+        if _mesma_familia_modelo(anuncio, modelo) and _compativel_com_campos(anuncio, modelo)
+    ]
+    return sorted(((_pontuar(anuncio, modelo), modelo) for modelo in candidatos), key=lambda x: (-x[0], x[1].codigo))
 
 
 def _motivo(confianca: ConfiancaFipe, pontuacao: float, margem: float) -> str:
@@ -172,19 +212,11 @@ class CasadorFipe:
         if not a.marca or not a.modelo or a.ano is None or not a.combustivel or a.preco is None or a.preco <= 0:
             return None
         referencia = self.catalogo.referencia_atual()
-        marca_base = _marca_base(a.marca)
-        marcas = [m for m in self.catalogo.marcas(referencia.codigo) if _marca_base(m.nome) == marca_base]
+        marcas = [m for m in self.catalogo.marcas(referencia.codigo) if _marcas_compativeis(a.marca, m.nome)]
         if len(marcas) != 1:
             return None
         marca = marcas[0]
-        modelo_base = normalizar(a.modelo).split()
-        if not modelo_base:
-            return None
-        candidatos = [
-            m for m in self.catalogo.modelos(referencia.codigo, marca.codigo)
-            if normalizar(m.nome).split()[:len(modelo_base)] == modelo_base and _compativel_com_campos(a, m)
-        ]
-        ranqueados = sorted(((_pontuar(a, m), m) for m in candidatos), key=lambda x: (-x[0], x[1].codigo))
+        ranqueados = _ranquear_modelos(a, self.catalogo.modelos(referencia.codigo, marca.codigo))
         com_ano: list[tuple[float, OpcaoFonte, AnoFonte]] = []
         for pontuacao, modelo in ranqueados[:self.maximo_candidatos_anos]:
             anos = self.catalogo.anos(referencia.codigo, marca.codigo, modelo.codigo)
