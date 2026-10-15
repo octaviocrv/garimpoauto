@@ -84,6 +84,25 @@ class Anuncio:
         return d
 
 
+class AnuncioParaFipe(BaseModel):
+    source: str
+    external_id: str
+    url: str
+    titulo: Optional[str] = None
+    marca: Optional[str] = None
+    modelo: Optional[str] = None
+    modelo_original: Optional[str] = None
+    ano: Optional[int] = None
+    km: Optional[int] = None
+    preco: Optional[int] = None
+    cambio: Optional[str] = None
+    combustivel: Optional[str] = None
+    portas: Optional[int] = None
+
+    def para_anuncio(self) -> Anuncio:
+        return Anuncio(**self.model_dump())
+
+
 @dataclass
 class PaginaBusca:
     """Uma página devolvida pela busca. A última traz `parou_por` preenchido."""

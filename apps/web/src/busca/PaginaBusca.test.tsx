@@ -8,6 +8,10 @@ import { PaginaBusca } from './PaginaBusca'
 import { T } from './textos'
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockReturnValue({ matches: true }),
+})
 
 vi.mock('../api', async (importOriginal) => {
   const original = await importOriginal<typeof import('../api')>()
@@ -16,6 +20,7 @@ vi.mock('../api', async (importOriginal) => {
     buscarPagina: vi.fn(),
     buscarRegioes: vi.fn(() => Promise.resolve([])),
     buscarZonas: vi.fn(() => Promise.resolve([])),
+    resolverFipe: vi.fn(),
   }
 })
 
@@ -112,6 +117,32 @@ describe('vitrine ao abrir', () => {
     })
 
     await vi.waitFor(() => expect(container.textContent?.match(/25% abaixo da FIPE/g)).toHaveLength(1))
+    act(() => root.unmount())
+    container.remove()
+  })
+
+  it('ao abrir Garimpar resolve a FIPE e atualiza a leitura do carro', async () => {
+    vi.mocked(api.buscarPagina).mockResolvedValue({
+      ...resposta,
+      anuncios: [{ ...carroComFipe, fipe: null }],
+      entregues: 1,
+      coletados: 1,
+      total_na_fonte: 1,
+    })
+    vi.mocked(api.resolverFipe).mockResolvedValue({
+      fipe: carroComFipe.fipe,
+      fipe_bloqueio: null,
+      fipe_ausencia: null,
+    })
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    await act(async () => root.render(<PaginaBusca />))
+    await vi.waitFor(() => expect(container.textContent).toContain(T.garimpar))
+    const botao = container.querySelector<HTMLButtonElement>('.vehicle-card__primary')
+    await act(async () => botao?.click())
+    await vi.waitFor(() => expect(api.resolverFipe).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() => expect(container.textContent).toContain('R$ 40.000'))
     act(() => root.unmount())
     container.remove()
   })

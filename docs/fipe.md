@@ -24,6 +24,18 @@ em `fipe_ausencia`, separadas por anúncio, entrada e motivo. Repetições são 
 linha nova. Os motivos são sem orçamento, tempo esgotado, banco fora, fonte indisponível e erro
 inesperado.
 
+## Quando consulta
+
+A vitrine nunca abre chamadas novas à fonte FIPE. Ela apenas lê casamentos que já estão no banco.
+Por isso um card da vitrine só mostra o selo quando o resultado já estava guardado.
+
+Uma busca digitada ou filtrada por modelo resolve as combinações distintas daquela página. Anúncios
+com a mesma marca, modelo, versão, ano, combustível, câmbio e portas reaproveitam o casamento, sem
+repetir a consulta externa.
+
+Ao abrir o Garimpar, `POST /fipe/anuncio` resolve somente aquele anúncio. Pedidos simultâneos para o
+mesmo anúncio são compartilhados pela tela e o resultado passa a valer também no card.
+
 ## Como o casamento decide
 
 O Garimpo Auto confere nesta ordem.

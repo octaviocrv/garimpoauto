@@ -9,6 +9,7 @@ A tela ainda usa `/buscar/stream`. Este documento descreve o jeito novo, igual a
 | `GET /buscar/pagina` | Uma página por vez, para o "Ver mais". Novo |
 | `GET /buscar/stream` | Várias páginas de uma vez por SSE (até 8). Continua igual |
 | `GET /buscar` | O mesmo do stream em um JSON só. Continua igual |
+| `POST /fipe/anuncio` | Resolve a FIPE de um carro ao abrir o Garimpar |
 
 Os três usam os mesmos parâmetros de busca (`texto`, que pode vir vazio, veja "Busca sem texto", `marca`, `modelo`, `versao`, `ano_min`, `ano_max`, `preco_min`, `preco_max`, `km_min`, `km_max`, `cambio`, `combustivel`, `anunciante`, `ordenar`, `estado`, `regiao`, `cidade`, `dev`, `atualizar`) e **a mesma sessão de busca no servidor**. Página lida por um deles serve para os outros, e o servidor nunca baixa de novo da OLX uma página que já tem.
 
@@ -45,6 +46,10 @@ A tela pode juntar as páginas numa lista só, anexando `anuncios` de cada respo
 | `primeira_busca` | `true` se nunca houve busca igual antes (aí ninguém é novo). `null` se o servidor está sem banco |
 
 Cada carro em `anuncios` traz também `novo` (`true` ou `false`). `/buscar` e o `fim` do stream trazem `novos` e `primeira_busca`, e cada evento `pagina` do stream traz `novos`.
+
+A vitrine só traz FIPE já guardada. Busca com texto ou modelo resolve as combinações distintas da
+página. O endpoint `POST /fipe/anuncio` recebe os campos do anúncio e devolve `fipe`,
+`fipe_bloqueio` e `fipe_ausencia`, sem baixar novamente a página da OLX.
 
 ### Frases de `informacao`
 - Tem mais: "Mostrando 50 de 1.413 carros. Toca em Ver mais pra ver o resto."

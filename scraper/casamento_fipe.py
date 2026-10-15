@@ -72,6 +72,13 @@ def hash_entrada(a: Anuncio) -> str:
     return hashlib.sha256(json.dumps(dados, ensure_ascii=False).encode()).hexdigest()
 
 
+def chave_combinacao(a: Anuncio) -> tuple[object, ...]:
+    return (
+        normalizar(a.marca), normalizar(a.modelo), normalizar(a.modelo_original or a.titulo),
+        a.ano, normalizar(a.combustivel), normalizar(a.cambio), a.portas,
+    )
+
+
 def bloqueio_do_anuncio(a: Anuncio, ano_atual: Optional[int] = None) -> Optional[str]:
     titulo = normalizar(a.titulo)
     frases_promocionais = (
@@ -208,6 +215,41 @@ class CasadorFipe:
         self.maximo_candidatos_anos = maximo_candidatos_anos
         self.ano_atual = ano_atual
 
+    @staticmethod
+    def _resultado_guardado(guardado: dict) -> CasamentoFipe:
+        return CasamentoFipe(
+            referencia_codigo=guardado["referencia_codigo"], codigo_fipe=guardado["codigo_fipe"],
+            preco=float(guardado["preco"]) if guardado["preco"] is not None else None,
+            mes_referencia=guardado["mes_referencia"], confianca=guardado["confianca"],
+            motivo=guardado["motivo"], bloqueio=guardado["bloqueio"],
+            preco_estranho=bool(guardado["preco_estranho"]),
+        )
+
+    def guardado(self, a: Anuncio) -> Optional[CasamentoFipe]:
+        guardado = self.armazem.fipe_casamento(a.source, a.external_id, hash_entrada(a))
+        return self._resultado_guardado(guardado) if guardado else None
+
+    def reaproveitar(self, a: Anuncio, base: CasamentoFipe) -> CasamentoFipe:
+        guardado = self.guardado(a)
+        if guardado is not None:
+            return guardado
+        bloqueio = bloqueio_do_anuncio(a, self.ano_atual)
+        if bloqueio:
+            motivo = "Anúncio promocional" if bloqueio == "anuncio_promocional" else "Quilometragem incoerente com o ano"
+            resultado = CasamentoFipe(None, None, None, None, "sem_candidato", motivo, bloqueio=bloqueio)
+        else:
+            resultado = CasamentoFipe(
+                base.referencia_codigo, base.codigo_fipe, base.preco, base.mes_referencia,
+                base.confianca, base.motivo,
+                preco_estranho=(
+                    base.preco is not None and a.preco is not None and a.preco < base.preco * 0.5
+                ),
+            )
+        self.armazem.fipe_salvar_casamento(
+            a.source, a.external_id, hash_entrada(a), resultado.para_banco(),
+        )
+        return resultado
+
     def escolher(self, a: Anuncio) -> Optional[EscolhaFipe]:
         if not a.marca or not a.modelo or a.ano is None or not a.combustivel or a.preco is None or a.preco <= 0:
             return None
@@ -244,15 +286,9 @@ class CasadorFipe:
 
     def casar(self, a: Anuncio) -> CasamentoFipe:
         entrada = hash_entrada(a)
-        guardado = self.armazem.fipe_casamento(a.source, a.external_id, entrada)
-        if guardado:
-            return CasamentoFipe(
-                referencia_codigo=guardado["referencia_codigo"], codigo_fipe=guardado["codigo_fipe"],
-                preco=float(guardado["preco"]) if guardado["preco"] is not None else None,
-                mes_referencia=guardado["mes_referencia"], confianca=guardado["confianca"],
-                motivo=guardado["motivo"], bloqueio=guardado["bloqueio"],
-                preco_estranho=bool(guardado["preco_estranho"]),
-            )
+        guardado = self.guardado(a)
+        if guardado is not None:
+            return guardado
         bloqueio = bloqueio_do_anuncio(a, self.ano_atual)
         if bloqueio:
             motivo = "Anúncio promocional" if bloqueio == "anuncio_promocional" else "Quilometragem incoerente com o ano"

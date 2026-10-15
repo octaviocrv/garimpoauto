@@ -49,6 +49,7 @@ export const T = {
   fipeCodigo: 'Código FIPE',
   fipeMes: 'Mês de referência',
   fipeReferencia: 'A FIPE é uma referência nacional. O preço real de revenda pode ser outro.',
+  fipeFalhou: 'Não consegui consultar a FIPE agora.',
 } as const
 
 export const naOlx = (total: number) => `${total.toLocaleString('pt-BR')} na OLX`

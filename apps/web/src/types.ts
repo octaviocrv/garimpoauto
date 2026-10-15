@@ -31,6 +31,12 @@ export interface ReferenciaFipe {
   preco_estranho: boolean
 }
 
+export interface ResultadoFipe {
+  fipe: ReferenciaFipe | null
+  fipe_bloqueio: 'anuncio_promocional' | 'km_incoerente' | null
+  fipe_ausencia: Anuncio['fipe_ausencia']
+}
+
 export interface Anuncio {
   source: string
   external_id: string

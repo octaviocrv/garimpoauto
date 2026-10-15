@@ -95,6 +95,28 @@ describe('estado da busca', () => {
     const e = reduzir(comPrimeira(), { tipo: 'chegou', resposta: resposta(2, ['c'], { tem_mais: false, proxima_pagina: null }) })
     expect(e.resposta?.tem_mais).toBe(false)
   })
+
+  it('FIPE sob demanda atualiza só o carro aberto e refaz o veredito dele', () => {
+    const antes = comPrimeira()
+    const e = reduzir(antes, {
+      tipo: 'fipe',
+      anuncioId: 'a',
+      resultado: {
+        fipe: {
+          codigo: '005384-8', preco: 40000, diferenca_percentual: 25,
+          mes_referencia: 'outubro de 2026', confianca: 'alta', preco_estranho: false,
+        },
+        fipe_bloqueio: null,
+        fipe_ausencia: null,
+      },
+    })
+    expect(e.anuncios[0].fipe?.codigo).toBe('005384-8')
+    expect(e.blocos[0][0].fipe?.codigo).toBe('005384-8')
+    expect(e.anuncios[1]).toBe(antes.anuncios[1])
+    expect(e.sinais).toBe(antes.sinais)
+    expect(e.analises.a).not.toBe(antes.analises.a)
+    expect(e.analises.b).toBe(antes.analises.b)
+  })
 })
 
 describe('vitrine', () => {

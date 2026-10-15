@@ -39,12 +39,20 @@ function Campo({ nome, children }: { nome: string; children: React.ReactNode }) 
 }
 
 export function PaginaBusca() {
-  const { estado: busca, buscar, verMais, parar } = useBusca(DEV)
+  const { estado: busca, buscar, verMais, parar, atualizarFipe } = useBusca(DEV)
   const [r, setR] = useState<Rascunho>(RASCUNHO_VAZIO)
   const [painel, setPainel] = useState(false)
   const [demorando, setDemorando] = useState(false)
   const [aberto, setAberto] = useState<Anuncio | null>(null) // o carro da tela do Garimpar
   const fecharGarimpar = useCallback(() => setAberto(null), [])
+  const aplicarFipe = useCallback((anuncio: Anuncio) => {
+    setAberto(anuncio)
+    atualizarFipe(anuncio.external_id, {
+      fipe: anuncio.fipe ?? null,
+      fipe_bloqueio: anuncio.fipe_bloqueio ?? null,
+      fipe_ausencia: anuncio.fipe_ausencia ?? null,
+    })
+  }, [atualizarFipe])
   const regioes = useRegioes(r.estado)
   const zonas = useZonas(r.estado, r.regiao)
 
@@ -337,7 +345,14 @@ export function PaginaBusca() {
           )}
         </div>
       </main>
-      {aberto && <Garimpar a={aberto} analise={busca.analises[aberto.external_id]} onFechar={fecharGarimpar} />}
+      {aberto && (
+        <Garimpar
+          a={aberto}
+          analise={busca.analises[aberto.external_id]}
+          onFechar={fecharGarimpar}
+          onFipe={aplicarFipe}
+        />
+      )}
     </div>
   )
 }

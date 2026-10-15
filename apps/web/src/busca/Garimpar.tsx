@@ -20,6 +20,7 @@ import {
   type Icon,
 } from '@phosphor-icons/react'
 import type { Anuncio } from '../types'
+import { resolverFipe } from '../api'
 import type { Analise, Criterio, Mercado, Nivel } from './analise'
 import { AMOSTRA_MINIMA, IDADE_MINIMA_ANOS, KM_POR_ANO_BAIXO } from './sinais'
 import { fipeDe } from './fipe'
@@ -443,8 +444,34 @@ function Apoios({ criterios, carro }: { criterios: Criterio[]; carro: Anuncio })
   )
 }
 
-export function Garimpar({ a, analise, onFechar }: { a: Anuncio; analise: Analise | undefined; onFechar: () => void }) {
+export function Garimpar({
+  a, analise, onFechar, onFipe,
+}: {
+  a: Anuncio
+  analise: Analise | undefined
+  onFechar: () => void
+  onFipe: (anuncio: Anuncio) => void
+}) {
   const fechar = useRef<HTMLButtonElement>(null)
+  const original = useRef(a)
+  const [carro, setCarro] = useState(a)
+  const [falhaFipe, setFalhaFipe] = useState(false)
+
+  useEffect(() => {
+    let ativo = true
+    const anuncio = original.current
+    resolverFipe(anuncio)
+      .then((resultado) => {
+        if (!ativo) return
+        const atualizado = { ...anuncio, ...resultado }
+        setCarro(atualizado)
+        onFipe(atualizado)
+      })
+      .catch(() => {
+        if (ativo) setFalhaFipe(true)
+      })
+    return () => { ativo = false }
+  }, [onFipe])
 
   useEffect(() => {
     fechar.current?.focus()
@@ -483,8 +510,9 @@ export function Garimpar({ a, analise, onFechar }: { a: Anuncio; analise: Analis
       </header>
 
       <main className="ga-conteudo">
-        <Hero carro={a} recencia={recencia} />
-        <Veredito carro={a} analise={analise} preco={preco} />
+        {falhaFipe && <p role="status" className="ga-fora">{T.fipeFalhou}</p>}
+        <Hero carro={carro} recencia={recencia} />
+        <Veredito carro={carro} analise={analise} preco={preco} />
         <SinaisAFavor criterios={criterios} />
 
         <section className="ga-secao ga-entra">
@@ -496,15 +524,15 @@ export function Garimpar({ a, analise, onFechar }: { a: Anuncio; analise: Analis
             </div>
           </div>
           <div className="ga-grade-medidas">
-            <ReguaKm carro={a} criterio={km} />
-            <FaixaPreco carro={a} criterio={preco} mercado={analise?.mercado} />
+            <ReguaKm carro={carro} criterio={km} />
+            <FaixaPreco carro={carro} criterio={preco} mercado={analise?.mercado} />
             <Margem criterio={margem} />
-            <ReferenciaFipe carro={a} />
+            <ReferenciaFipe carro={carro} />
           </div>
         </section>
 
         <Cuidados criterios={criterios} />
-        <Apoios criterios={criterios} carro={a} />
+        <Apoios criterios={criterios} carro={carro} />
         <p className="ga-fora">{T.aindaNaoEntra}</p>
       </main>
 

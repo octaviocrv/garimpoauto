@@ -13,8 +13,8 @@ from sources.fipe import FonteFipeIndisponivel, LimiteFipeAtingido  # noqa: E402
 from tests.test_server import cliente  # noqa: E402
 
 
-def anuncio(id_, preco=30000):
-    return Anuncio(source="olx", external_id=id_, url="https://exemplo", preco=preco)
+def anuncio(id_, preco=30000, **kw):
+    return Anuncio(source="olx", external_id=id_, url="https://exemplo", preco=preco, **kw)
 
 
 class ArmazemEstado:
@@ -30,6 +30,7 @@ class CasadorControlado:
     def __init__(self, resultados, demora=0):
         self.resultados, self.demora = resultados, demora
         self.chamadas = []
+        self.cache = {}
         self.ativas = 0
         self.max_ativas = 0
         self.trava = threading.Lock()
@@ -42,10 +43,19 @@ class CasadorControlado:
         try:
             if self.demora:
                 time.sleep(self.demora)
-            return self.resultados[carro.external_id]
+            resultado = self.resultados[carro.external_id]
+            self.cache[carro.external_id] = resultado
+            return resultado
         finally:
             with self.trava:
                 self.ativas -= 1
+
+    def guardado(self, carro):
+        return self.cache.get(carro.external_id)
+
+    def reaproveitar(self, carro, resultado):
+        self.cache[carro.external_id] = resultado
+        return resultado
 
 
 class CasadorComErro:
@@ -86,6 +96,29 @@ def test_no_maximo_duas_consultas_rodam_em_paralelo():
     EnriquecedorFipe(casador, ArmazemEstado(), tempo_pagina=1).enriquecer(carros)
     assert casador.max_ativas == 2
     assert all(carro.fipe is not None for carro in carros)
+
+
+def test_busca_resolve_uma_vez_cada_combinacao_e_reaproveita_no_grupo():
+    carros = [
+        anuncio(str(i), marca="VW", modelo="Gol", modelo_original="Gol 1.0", ano=2020, combustivel="flex")
+        for i in range(3)
+    ]
+    casador = CasadorControlado({"0": casamento()})
+    enriquecedor = EnriquecedorFipe(casador, ArmazemEstado(), tempo_pagina=1)
+    enriquecedor.resolver_busca(carros)
+    assert casador.chamadas == ["0"]
+    assert all(carro.fipe is not None for carro in carros)
+    assert set(casador.cache) == {"0", "1", "2"}
+
+
+def test_vitrine_aplica_somente_o_casamento_que_ja_estava_guardado():
+    guardado, sem_cache = anuncio("guardado"), anuncio("novo")
+    casador = CasadorControlado({})
+    casador.cache["guardado"] = casamento()
+    enriquecedor = EnriquecedorFipe(casador, ArmazemEstado(), tempo_pagina=1)
+    enriquecedor.carregar_cache([guardado, sem_cache])
+    assert guardado.fipe is not None and sem_cache.fipe is None
+    assert casador.chamadas == []
 
 
 def test_teto_da_pagina_deixa_o_restante_sem_fipe():
@@ -133,13 +166,31 @@ def test_falhas_operacionais_ficam_no_anuncio_e_sao_guardadas():
 
 
 class EnriquecedorResposta:
-    def enriquecer(self, carros):
+    def __init__(self):
+        self.cache = 0
+        self.buscas = 0
+        self.individuais = 0
+
+    @staticmethod
+    def _aplicar(carros):
         for carro in carros:
             carro.fipe = ReferenciaFipe("005384-8", 40000, 25, "outubro de 2026", "alta")
 
+    def carregar_cache(self, carros):
+        self.cache += 1
+
+    def resolver_busca(self, carros):
+        self.buscas += 1
+        self._aplicar(carros)
+
+    def resolver(self, carro):
+        self.individuais += 1
+        self._aplicar([carro])
+
 
 def test_bloco_fipe_sai_na_resposta_e_fica_fixo_na_pagina():
-    c, fonte = cliente(enriquecedor_fipe=EnriquecedorResposta())
+    enriquecedor = EnriquecedorResposta()
+    c, fonte = cliente(enriquecedor_fipe=enriquecedor)
     primeira = c.get("/buscar/pagina", params={"texto": "gol", "pagina": 1}).json()
     segunda = c.get("/buscar/pagina", params={"texto": "gol", "pagina": 1}).json()
     assert primeira["anuncios"][0]["fipe"] == {
@@ -152,3 +203,17 @@ def test_bloco_fipe_sai_na_resposta_e_fica_fixo_na_pagina():
     }
     assert segunda["anuncios"][0]["fipe"] == primeira["anuncios"][0]["fipe"]
     assert fonte.paginas_pedidas == [("gol", 1)]
+    assert (enriquecedor.cache, enriquecedor.buscas) == (1, 1)
+
+
+def test_vitrine_so_le_o_cache_e_garimpar_resolve_um_anuncio():
+    enriquecedor = EnriquecedorResposta()
+    c, _ = cliente(enriquecedor_fipe=enriquecedor)
+    vitrine = c.get("/buscar/pagina", params={"texto": "", "pagina": 1}).json()
+    assert vitrine["anuncios"][0]["fipe"] is None
+    assert (enriquecedor.cache, enriquecedor.buscas) == (1, 0)
+    carro = vitrine["anuncios"][0]
+    resposta = c.post("/fipe/anuncio", json=carro)
+    assert resposta.status_code == 200
+    assert resposta.json()["fipe"]["codigo"] == "005384-8"
+    assert enriquecedor.individuais == 1

@@ -24,6 +24,7 @@ import json
 import logging
 import threading
 import time
+from dataclasses import asdict
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturoTimeout
 from datetime import datetime, timedelta, timezone
@@ -40,7 +41,7 @@ import localidades
 from armazem import Armazem, BancoFora, hash_da_chave
 from busca import aviso_filtro_aproximado, chave_busca, filtros_locais, montar_resultado, texto_informacao
 from config import LimitesBusca
-from schemas import Anuncio, Aviso, Busca, PaginaBusca, ResultadoBusca
+from schemas import Anuncio, AnuncioParaFipe, Aviso, Busca, PaginaBusca, ResultadoBusca
 from servico_fipe import EnriquecedorFipe, criar_enriquecedor
 from sources import olx
 from sources.base import Fonte
@@ -237,7 +238,9 @@ class SessaoBusca:
                 if pag.parou_por == olx.BLOQUEIO:
                     return pag, False
                 if self.enriquecedor_fipe is not None:
-                    self.enriquecedor_fipe.enriquecer(pag.anuncios)
+                    self.enriquecedor_fipe.carregar_cache(pag.anuncios)
+                    if self.busca.texto.strip() or self.busca.modelo:
+                        self.enriquecedor_fipe.resolver_busca(pag.anuncios)
                 agora_utc = datetime.now(timezone.utc)
                 tempo, quando = time.monotonic() - inicio, agora_utc.replace(microsecond=agora_utc.microsecond // 1000 * 1000)  # o banco guarda até milissegundos
                 self._guardar(pag, tempo, quando)
@@ -495,7 +498,7 @@ def criar_app(
     app = FastAPI(title="Garimpo Auto")
     app.add_middleware(
         CORSMiddleware, allow_origins=cors_origens if cors_origens is not None else config.CORS_ORIGENS,
-        allow_methods=["GET"], allow_headers=["*"],
+        allow_methods=["GET", "POST"], allow_headers=["*"],
     )
     servico = Servico(fonte, ttl, limites, max_paginas_demanda, armazem, enriquecedor_fipe)
     app.state.servico = servico
@@ -574,6 +577,18 @@ def criar_app(
     @app.get("/saude")
     def saude() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.post("/fipe/anuncio")
+    def fipe_anuncio(pedido_fipe: AnuncioParaFipe) -> JSONResponse:
+        if enriquecedor_fipe is None:
+            return JSONResponse({"erro": "A FIPE não está disponível agora."}, status_code=503)
+        anuncio = pedido_fipe.para_anuncio()
+        enriquecedor_fipe.resolver(anuncio)
+        return JSONResponse({
+            "fipe": asdict(anuncio.fipe) if anuncio.fipe is not None else None,
+            "fipe_bloqueio": anuncio.fipe_bloqueio,
+            "fipe_ausencia": anuncio.fipe_ausencia,
+        })
 
     @app.get("/regioes")
     def regioes(estado: Optional[str] = None) -> dict[str, Any]:

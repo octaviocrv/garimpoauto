@@ -8,7 +8,7 @@ import pytest
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
 
-from casamento_fipe import CasadorFipe, _ranquear_modelos, bloqueio_do_anuncio, normalizar  # noqa: E402
+from casamento_fipe import CasadorFipe, CasamentoFipe, _ranquear_modelos, bloqueio_do_anuncio, normalizar  # noqa: E402
 from schemas import Anuncio  # noqa: E402
 from sources.fipe import AnoFonte, OpcaoFonte, PrecoFonte, ReferenciaFonte  # noqa: E402
 from tests.apoio_banco import RelogioBanco, novo_armazem, zerar_banco_de_teste  # noqa: E402
@@ -179,6 +179,21 @@ def test_empate_nunca_vira_confianca_alta(banco):
     assert escolha is not None and escolha.confianca != "alta"
     catalogo.modelos = original
     assert modelos
+
+
+def test_resultado_reaproveitado_preserva_bloqueio_e_preco_de_cada_anuncio(banco):
+    casador = CasadorFipe(CatalogoFixture(), banco, ano_atual=2026)
+    base = CasamentoFipe("338", "005384-8", 40000, "outubro de 2026", "alta", "Casamento exato")
+    bloqueado = carro("bloqueado", "Gol Trendline 1.0", 2020, "1.0", 4)
+    bloqueado.km = 100
+    estranho = carro("estranho", "Gol Trendline 1.0", 2020, "1.0", 4)
+    estranho.preco = 15000
+    resultado_bloqueado = casador.reaproveitar(bloqueado, base)
+    resultado_estranho = casador.reaproveitar(estranho, base)
+    assert resultado_bloqueado.confianca == "sem_candidato"
+    assert resultado_bloqueado.bloqueio == "km_incoerente"
+    assert resultado_estranho.confianca == "alta"
+    assert resultado_estranho.preco_estranho is True
 
 
 def test_dado_faltando_nao_casa_e_resultado_fica_guardado(banco):

@@ -2,9 +2,9 @@
 // de cancelar e de começar outra no meio. Só a busca mais nova pode mexer no estado.
 import { useCallback, useEffect, useReducer, useRef } from 'react'
 import { buscarPagina, ErroBusca } from '../api'
-import type { Anuncio, Aviso, RespostaPagina } from '../types'
+import type { Anuncio, Aviso, RespostaPagina, ResultadoFipe } from '../types'
 import type { Pedido } from './pedido'
-import { agrupar, analisesDaPagina, type Analise } from './analise'
+import { agrupar, analisar, analisesDaPagina, type Analise } from './analise'
 import { sinaisDaPagina, type Sinal } from './sinais'
 import { T } from './textos'
 
@@ -36,6 +36,7 @@ export type Acao =
   | { tipo: 'iniciar'; pedido: Pedido }
   | { tipo: 'chegou'; resposta: RespostaPagina; agora?: number } // agora: só os testes passam, na tela é a hora real
   | { tipo: 'verMais' }
+  | { tipo: 'fipe'; anuncioId: string; resultado: ResultadoFipe }
   | { tipo: 'caiu'; erro: string }
   | { tipo: 'parar' }
 
@@ -50,6 +51,23 @@ export function reduzir(e: EstadoBusca, a: Acao): EstadoBusca {
       return { ...INICIAL, fase: 'buscando', pedido: a.pedido }
     case 'verMais':
       return { ...e, carregandoMais: true, falhouMais: false }
+    case 'fipe': {
+      const atualizar = (anuncio: Anuncio): Anuncio => anuncio.external_id === a.anuncioId
+        ? { ...anuncio, ...a.resultado }
+        : anuncio
+      const anuncios = e.anuncios.map(atualizar)
+      const atualizado = anuncios.find((anuncio) => anuncio.external_id === a.anuncioId)
+      if (!atualizado) return e
+      return {
+        ...e,
+        anuncios,
+        blocos: e.blocos.map((bloco) => bloco.map(atualizar)),
+        analises: {
+          ...e.analises,
+          [a.anuncioId]: analisar(atualizado, agrupar(anuncios), e.agora),
+        },
+      }
+    }
     case 'chegou': {
       const r = a.resposta
       const primeira = r.pagina === 1
@@ -113,7 +131,11 @@ export function useBusca(dev: boolean) {
     despachar({ tipo: 'parar' })
   }, [])
 
+  const atualizarFipe = useCallback((anuncioId: string, resultado: ResultadoFipe) => {
+    despachar({ tipo: 'fipe', anuncioId, resultado })
+  }, [])
+
   useEffect(() => () => atual.current?.abort(), [])
 
-  return { estado, buscar, verMais, parar }
+  return { estado, buscar, verMais, parar, atualizarFipe }
 }

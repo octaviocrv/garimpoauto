@@ -1,6 +1,6 @@
 // Única porta de entrada dos dados: a busca por página do servidor (/buscar/pagina), o "Ver mais".
 // A tela chama /api/... e o Vite repassa para o servidor (veja vite.config.ts).
-import type { Lugar, RespostaPagina, RespostaRegioes, RespostaZonas } from './types'
+import type { Anuncio, Lugar, RespostaPagina, RespostaRegioes, RespostaZonas, ResultadoFipe } from './types'
 import type { Pedido } from './busca/pedido'
 import { T } from './busca/textos'
 
@@ -63,4 +63,25 @@ export async function buscarZonas(estado: string, regiao: string, signal: AbortS
   const q = new URLSearchParams({ estado, regiao })
   const r = await buscarLista<RespostaZonas>(`/zonas?${q}`, signal)
   return r.zonas
+}
+
+const consultasFipe = new Map<string, Promise<ResultadoFipe>>()
+
+export function resolverFipe(anuncio: Anuncio): Promise<ResultadoFipe> {
+  const chave = `${anuncio.source}|${anuncio.external_id}`
+  const existente = consultasFipe.get(chave)
+  if (existente) return existente
+  const consulta = fetch(`${API}/fipe/anuncio`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(anuncio),
+  }).then(async (r) => {
+    if (!r.ok) throw new ErroBusca(T.fipeFalhou)
+    return r.json() as Promise<ResultadoFipe>
+  }).catch((e) => {
+    if (e instanceof ErroBusca) throw e
+    throw new ErroBusca(T.fipeFalhou)
+  }).finally(() => consultasFipe.delete(chave))
+  consultasFipe.set(chave, consulta)
+  return consulta
 }
