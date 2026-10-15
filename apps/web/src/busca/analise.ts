@@ -95,14 +95,21 @@ function mercadoDe(a: Anuncio, grupos: Map<string, Anuncio[]>): { mercado: Merca
 const criterio = (id: IdCriterio, titulo: string, veredito: Veredito, resultado: string, fato: string): Criterio =>
   ({ id, titulo, veredito, resultado, fato })
 
+function carrosQueFaltam(iguais: number, maiuscula = false): string {
+  const faltam = Math.max(0, AMOSTRA_MINIMA - iguais)
+  const verbo = faltam === 1 ? 'falta' : 'faltam'
+  const inicio = maiuscula ? `${verbo[0].toUpperCase()}${verbo.slice(1)}` : verbo
+  return `${inicio} ${faltam} ${faltam === 1 ? 'carro igual' : 'carros iguais'}`
+}
+
 function criterioPreco(a: Anuncio, m: Mercado | null, iguais: number): Criterio {
-  const t = 'Preço contra o mercado'
+  const t = 'Preço comparado aos carros iguais'
   if (a.preco === null || a.preco <= 0) return criterio('preco', t, 'semdado', 'Preço não informado', 'Sem preço não tem como comparar.')
   if (!m) {
     const fato = chave(a)
-      ? `Só ${iguais} ${a.modelo} ${a.ano} carregados e preciso de ${AMOSTRA_MINIMA} pra comparar. Carrega mais carros com Ver mais.`
+      ? `Há ${iguais} ${a.modelo} ${a.ano} com preço na lista. São necessários ${AMOSTRA_MINIMA} para calcular a mediana.`
       : 'O anúncio veio sem modelo ou sem ano, então não dá pra achar carros iguais.'
-    return criterio('preco', t, 'semdado', 'Poucos carros iguais pra comparar', fato)
+    return criterio('preco', t, 'semdado', 'Ainda faltam carros iguais', fato)
   }
   const d = 1 - a.preco / m.mediana
   const fato = `A mediana de ${m.n} ${a.modelo} ${a.ano} carregados é ${reais(m.mediana)}, indo de ${reais(m.minimo)} a ${reais(m.maximo)}.`
@@ -138,7 +145,7 @@ function compararFipe(a: Anuncio): ComparacaoFipe | null {
 }
 
 function criterioFipe(comparacao: ComparacaoFipe | null): Criterio {
-  const t = 'Preço contra a FIPE'
+  const t = 'Preço comparado à FIPE'
   const referencia = 'A FIPE é uma referência nacional. O preço real de revenda pode ser outro.'
   if (comparacao === null) return criterio('fipe', t, 'semdado', 'FIPE não encontrada', 'Sem uma FIPE de confiança alta pra este anúncio.')
   if (comparacao.suspeita) {
@@ -155,9 +162,21 @@ function criterioFipe(comparacao: ComparacaoFipe | null): Criterio {
 const margemAtinge = (g: Margem, m: Mercado, minimo: { pct: number; reais: number }) =>
   g.estimada >= minimo.reais && g.estimada / m.mediana >= minimo.pct
 
-function criterioMargem(a: Anuncio, m: Mercado | null, g: Margem | null): Criterio {
+function criterioMargem(a: Anuncio, m: Mercado | null, g: Margem | null, iguais: number, temFipe: boolean): Criterio {
   const t = 'Margem estimada de revenda'
-  if (!m || !g || a.preco === null) return criterio('margem', t, 'semdado', 'Sem margem calculada', 'A margem precisa da comparação de preço, que ainda não tem dado suficiente.')
+  if (a.preco === null) {
+    return criterio('margem', t, 'semdado', 'Falta o preço do anúncio', 'Sem o preço pedido pelo vendedor não dá para calcular quanto pode sobrar na revenda.')
+  }
+  if (!m || !g) {
+    const explicacaoFipe = temFipe
+      ? 'A FIPE ajuda a conferir o preço, mas não mostra quanto pode sobrar na revenda.'
+      : 'A FIPE ainda não foi encontrada para ajudar a conferir o preço.'
+    return criterio(
+      'margem', t, 'semdado',
+      `${carrosQueFaltam(iguais, true)} para calcular`,
+      `${explicacaoFipe} A margem usa os preços dos carros iguais desta lista.`,
+    )
+  }
   const conta = `${reais(m.mediana)} de mercado, menos ${reais(a.preco)} de preço, menos ${reais(g.custo)} de custo (${pct(CUSTO_REVENDA)} pra reparo e transferência, estimativa nossa).`
   if (a.preco / m.mediana <= 1 - PRECO_SUSPEITO) {
     return criterio('margem', t, 'atencao', `Margem de ${aprox(g.estimada)} não é confiável`, `${conta} O preço está baixo demais pra acreditar nessa margem.`)
@@ -239,7 +258,8 @@ export function analisar(a: Anuncio, grupos: Map<string, Anuncio[]>, agora: numb
   const margem = calcularMargem(a, mercado)
   const fipe = compararFipe(a)
   const criterios = [
-    criterioPreco(a, mercado, iguais), criterioFipe(fipe), criterioMargem(a, mercado, margem), criterioKm(a, mercado, agora),
+    criterioPreco(a, mercado, iguais), criterioFipe(fipe),
+    criterioMargem(a, mercado, margem, iguais, fipe !== null), criterioKm(a, mercado, agora),
     criterioRecencia(a, agora), criterioVendedor(a), criterioFotos(a), criterioRisco(a),
   ]
   if (a.repetido_de) {
@@ -272,11 +292,15 @@ export function analisar(a: Anuncio, grupos: Map<string, Anuncio[]>, agora: numb
     if (fipeIndicaOportunidade && fipe !== null) {
       nivel = 'boa'
       preliminar = true
-      motivo = `${pct(fipe.diferenca)} abaixo da FIPE. Dá pra olhar com carinho, mas falta achar carros iguais pra fechar a conta.`
+      motivo = `${pct(fipe.diferenca)} abaixo da FIPE. O preço merece atenção. Ainda ${carrosQueFaltam(iguais)} para confirmar o mercado da região e calcular a margem.`
+    } else if (fipe !== null && fipe.diferenca < -0.02) {
+      motivo = `Este anúncio está ${pct(-fipe.diferenca)} acima da FIPE. Ainda ${carrosQueFaltam(iguais)} para saber se esse preço é normal na região.`
+    } else if (fipe !== null && fipe.diferenca > 0.02) {
+      motivo = `Este anúncio está ${pct(fipe.diferenca)} abaixo da FIPE. Para virar Boa preliminar pela FIPE, precisa ficar pelo menos ${pct(FIPE_BOA_PRELIMINAR)} abaixo. ${carrosQueFaltam(iguais, true)} para comparar com o mercado da região.`
+    } else if (fipe !== null) {
+      motivo = `Este anúncio está na linha da FIPE. Ainda ${carrosQueFaltam(iguais)} para comparar com o mercado da região e calcular a margem.`
     } else {
-      motivo = fipe === null
-        ? 'Ainda não dá pra calcular a margem. Faltam carros iguais na lista ou uma FIPE de confiança alta.'
-        : 'A FIPE ajuda na leitura, mas ainda faltam carros iguais na lista pra fechar a conta.'
+      motivo = `A FIPE ainda não foi encontrada. Também ${carrosQueFaltam(iguais)} para comparar o preço e calcular a margem de revenda.`
     }
   } else if (margemAtinge(margem, mercado, MARGEM_QUENTE) && semAlerta && favores.length >= FAVORES_PARA_QUENTE) {
     nivel = 'quente'

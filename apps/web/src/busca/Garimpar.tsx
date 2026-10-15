@@ -73,7 +73,7 @@ function criterioDe(lista: Criterio[], id: Criterio['id']) {
 
 function totalDeIguais(preco: Criterio | undefined, mercado: Mercado | null | undefined) {
   if (mercado) return mercado.n
-  const encontrado = preco?.fato.match(/Só (\d+)/)
+  const encontrado = preco?.fato.match(/Há (\d+)/)
   return encontrado ? Number(encontrado[1]) : null
 }
 
@@ -146,10 +146,17 @@ function estadoDoVeredito(analise: Analise | undefined): EstadoVeredito {
   return 'neutro'
 }
 
-function RotuloVeredito({ nivel, estado, preliminar }: { nivel: Nivel | null; estado: EstadoVeredito; preliminar: boolean }) {
+function RotuloVeredito({
+  nivel, estado, preliminar, temFipe,
+}: {
+  nivel: Nivel | null
+  estado: EstadoVeredito
+  preliminar: boolean
+  temFipe: boolean
+}) {
   if (nivel === 'quente') return <>{T.quente}</>
   if (nivel === 'boa') return <>{preliminar ? GT.boaPreliminar : T.boa}</>
-  if (estado === 'sembase') return <>{GT.faltaBase}</>
+  if (estado === 'sembase') return <>{temFipe ? GT.fipeSemMercado : GT.faltaBase}</>
   if (estado === 'carregando') return <>{GT.preparandoLeitura}</>
   return <>{GT.leituraNeutra}</>
 }
@@ -186,7 +193,14 @@ function Veredito({
         />
         <div>
           <p className="ga-sobretitulo">{GT.veredito}</p>
-          <h2><RotuloVeredito nivel={analise?.nivel ?? null} estado={estado} preliminar={analise?.preliminar ?? false} /></h2>
+          <h2>
+            <RotuloVeredito
+              nivel={analise?.nivel ?? null}
+              estado={estado}
+              preliminar={analise?.preliminar ?? false}
+              temFipe={carro.fipe?.confianca === 'alta'}
+            />
+          </h2>
         </div>
       </div>
       <p className="ga-veredito__motivo">

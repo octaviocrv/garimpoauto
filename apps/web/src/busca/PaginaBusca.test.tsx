@@ -130,7 +130,7 @@ describe('vitrine ao abrir', () => {
       total_na_fonte: 1,
     })
     vi.mocked(api.resolverFipe).mockResolvedValue({
-      fipe: carroComFipe.fipe,
+      fipe: { ...carroComFipe.fipe, preco: 28500, diferenca_percentual: -5 },
       fipe_bloqueio: null,
       fipe_ausencia: null,
     })
@@ -142,7 +142,10 @@ describe('vitrine ao abrir', () => {
     const botao = container.querySelector<HTMLButtonElement>('.vehicle-card__primary')
     await act(async () => botao?.click())
     await vi.waitFor(() => expect(api.resolverFipe).toHaveBeenCalledTimes(1))
-    await vi.waitFor(() => expect(container.textContent).toContain('R$ 40.000'))
+    await vi.waitFor(() => expect(container.textContent).toContain('R$ 28.500'))
+    expect(container.textContent).toContain('FIPE encontrada, faltam carros iguais')
+    expect(container.textContent).toContain('Este anúncio está 5% acima da FIPE')
+    expect(container.textContent).toContain('Faltam 4 carros iguais para calcular')
     const iguais = container.querySelector<HTMLButtonElement>('.ga-buscar-iguais')
     await act(async () => iguais?.click())
     await vi.waitFor(() => expect(api.buscarPagina).toHaveBeenCalledTimes(2))

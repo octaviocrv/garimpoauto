@@ -122,6 +122,31 @@ describe('nível do carro', () => {
       expect(a.margem).toBeNull()
       expect(a.criterios.find((c) => c.id === 'fipe')?.resultado).toBe('FIPE não encontrada')
     })
+
+    it.each([
+      [52500, 'Este anúncio está 5% acima da FIPE. Ainda faltam 2 carros iguais para saber se esse preço é normal na região.'],
+      [50000, 'Este anúncio está na linha da FIPE. Ainda faltam 2 carros iguais para comparar com o mercado da região e calcular a margem.'],
+      [47500, 'Este anúncio está 5% abaixo da FIPE. Para virar Boa preliminar pela FIPE, precisa ficar pelo menos 10% abaixo. Faltam 2 carros iguais para comparar com o mercado da região.'],
+    ])('com FIPE e três iguais explica diretamente o preço de %s', (preco, motivo) => {
+      const alvo = comFipe('x', preco, 50000)
+      const lista = [alvo, carro('a', { preco: 49000 }), carro('b', { preco: 51000 })]
+      const a = analisesDaPagina([alvo], agrupar(lista), AGORA).x
+      expect(a.motivo).toBe(motivo)
+      expect(a.criterios.find((c) => c.id === 'margem')).toMatchObject({
+        resultado: 'Faltam 2 carros iguais para calcular',
+        fato: 'A FIPE ajuda a conferir o preço, mas não mostra quanto pode sobrar na revenda. A margem usa os preços dos carros iguais desta lista.',
+      })
+    })
+
+    it('sem FIPE explica separadamente as duas referências que faltam', () => {
+      const alvo = carro('x')
+      const lista = [alvo, carro('a'), carro('b'), carro('c')]
+      const a = analisesDaPagina([alvo], agrupar(lista), AGORA).x
+      expect(a.motivo).toBe(
+        'A FIPE ainda não foi encontrada. Também falta 1 carro igual para comparar o preço e calcular a margem de revenda.',
+      )
+      expect(a.criterios.find((c) => c.id === 'margem')?.resultado).toBe('Falta 1 carro igual para calcular')
+    })
   })
 
   it('Boa: margem razoável mas sem os pontos a favor pra ser Quente', () => {
@@ -149,7 +174,7 @@ describe('nível do carro', () => {
     expect(a.nivel).toBeNull()
     expect(a.margem).toBeNull()
     expect(a.criterios.find((c) => c.id === 'preco')?.veredito).toBe('semdado')
-    expect(a.criterios.find((c) => c.id === 'preco')?.fato).toContain('preciso de 5')
+    expect(a.criterios.find((c) => c.id === 'preco')?.fato).toContain('São necessários 5')
   })
 
   it('sem preço, sem margem e sem nível', () => {
