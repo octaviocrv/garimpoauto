@@ -3,7 +3,7 @@
 // 1) só nasce de dado que o servidor devolveu, e dado faltando vira "sem dado", nunca chute nem zero
 // 2) o preço só é comparado com a lista já carregada
 // 3) cada critério diz de onde veio a conta (`fato`), pra pessoa conferir e discordar
-// 4) a FIPE de exemplo nunca entra aqui. Quando a FIPE real chegar, ela vira outra referência de margem.
+// 4) a FIPE real é uma segunda referência. A mediana dos iguais continua sendo a única base da margem.
 // Não existe nota. O nível (Quente ou Boa) sai de regras simples, escritas aqui embaixo.
 import type { Anuncio } from '../types'
 import {
@@ -12,7 +12,7 @@ import {
 } from './sinais'
 
 export type Veredito = 'favor' | 'atencao' | 'neutro' | 'semdado'
-export type IdCriterio = 'preco' | 'margem' | 'km' | 'recencia' | 'vendedor' | 'fotos' | 'risco' | 'repetido'
+export type IdCriterio = 'preco' | 'fipe' | 'margem' | 'km' | 'recencia' | 'vendedor' | 'fotos' | 'risco' | 'repetido'
 export type Nivel = 'quente' | 'boa'
 
 export interface Criterio {
@@ -39,6 +39,7 @@ export interface Margem {
 
 export interface Analise {
   nivel: Nivel | null
+  preliminar: boolean
   resumo: string | null // a frase curta do card, só quando tem nível
   motivo: string // por que tem ou não tem nível
   criterios: Criterio[]
@@ -52,6 +53,8 @@ export const MARGEM_QUENTE = { pct: 0.1, reais: 3000 }
 export const FAVORES_PARA_QUENTE = 2 // pontos a favor além do preço e da margem
 export const PRECO_BOM = 0.1 // a partir de 10% abaixo da mediana conta a favor
 export const PRECO_SUSPEITO = 0.3 // 30% abaixo ou mais é golpe, leilão ou erro até prova em contrário
+export const FIPE_BOA_PRELIMINAR = 0.1
+export const FIPE_PRECO_SUSPEITO = 0.3
 export const KM_ABAIXO_DOS_IGUAIS = 0.7
 export const KM_ACIMA_DOS_IGUAIS = 1.3
 export const NOTA_LOJA_BAIXA = 3.5
@@ -116,6 +119,37 @@ function calcularMargem(a: Anuncio, m: Mercado | null): Margem | null {
   if (!m || a.preco === null || a.preco <= 0) return null
   const custo = m.mediana * CUSTO_REVENDA
   return { bruta: m.mediana - a.preco, custo, estimada: m.mediana - a.preco - custo }
+}
+
+interface ComparacaoFipe {
+  diferenca: number
+  boa: boolean
+  suspeita: boolean
+}
+
+function compararFipe(a: Anuncio): ComparacaoFipe | null {
+  if (a.fipe?.confianca !== 'alta' || a.fipe.preco <= 0 || a.preco === null || a.preco <= 0) return null
+  const proporcao = a.preco / a.fipe.preco
+  return {
+    diferenca: 1 - proporcao,
+    boa: proporcao <= 1 - FIPE_BOA_PRELIMINAR,
+    suspeita: proporcao <= 1 - FIPE_PRECO_SUSPEITO,
+  }
+}
+
+function criterioFipe(comparacao: ComparacaoFipe | null): Criterio {
+  const t = 'Preço contra a FIPE'
+  const referencia = 'A FIPE é uma referência nacional. O preço real de revenda pode ser outro.'
+  if (comparacao === null) return criterio('fipe', t, 'semdado', 'FIPE não encontrada', 'Sem uma FIPE de confiança alta pra este anúncio.')
+  if (comparacao.suspeita) {
+    return criterio('fipe', t, 'atencao', 'Preço muito abaixo da FIPE', `O anúncio está ${pct(comparacao.diferenca)} abaixo da FIPE. ${referencia}`)
+  }
+  if (comparacao.boa) {
+    return criterio('fipe', t, 'favor', `${pct(comparacao.diferenca)} abaixo da FIPE`, referencia)
+  }
+  if (comparacao.diferenca > 0.02) return criterio('fipe', t, 'neutro', `${pct(comparacao.diferenca)} abaixo da FIPE`, referencia)
+  if (comparacao.diferenca >= -0.02) return criterio('fipe', t, 'neutro', 'Na linha da FIPE', referencia)
+  return criterio('fipe', t, 'atencao', `${pct(-comparacao.diferenca)} acima da FIPE`, referencia)
 }
 
 const margemAtinge = (g: Margem, m: Mercado, minimo: { pct: number; reais: number }) =>
@@ -203,8 +237,9 @@ const NOMES_FAVOR: Partial<Record<IdCriterio, string>> = { km: 'km', recencia: '
 export function analisar(a: Anuncio, grupos: Map<string, Anuncio[]>, agora: number): Analise {
   const { mercado, iguais } = mercadoDe(a, grupos)
   const margem = calcularMargem(a, mercado)
+  const fipe = compararFipe(a)
   const criterios = [
-    criterioPreco(a, mercado, iguais), criterioMargem(a, mercado, margem), criterioKm(a, mercado, agora),
+    criterioPreco(a, mercado, iguais), criterioFipe(fipe), criterioMargem(a, mercado, margem), criterioKm(a, mercado, agora),
     criterioRecencia(a, agora), criterioVendedor(a), criterioFotos(a), criterioRisco(a),
   ]
   if (a.repetido_de) {
@@ -213,16 +248,36 @@ export function analisar(a: Anuncio, grupos: Map<string, Anuncio[]>, agora: numb
   const por = (id: IdCriterio) => criterios.find((c) => c.id === id)
   const grave = (['risco', 'repetido'] as const).some((id) => por(id)?.veredito === 'atencao')
     || (mercado !== null && a.preco !== null && a.preco / mercado.mediana <= 1 - PRECO_SUSPEITO)
+    || fipe?.suspeita === true
   const semAlerta = criterios.every((c) => c.veredito !== 'atencao')
   const favores = criterios.filter((c) => c.veredito === 'favor' && NOMES_FAVOR[c.id])
+  const fipeIndicaOportunidade = fipe?.boa === true && !fipe.suspeita
+  const mercadoIndicaOportunidade = mercado !== null && margem !== null && margemAtinge(margem, mercado, MARGEM_BOA)
+  const referenciasDivergem = fipe !== null && mercado !== null
+    && fipeIndicaOportunidade !== mercadoIndicaOportunidade
 
   let nivel: Nivel | null = null
+  let preliminar = false
   let motivo: string
   const est = margem ? aprox(margem.estimada) : ''
-  if (grave) {
+  if (fipe?.suspeita) {
+    motivo = 'Preço muito abaixo da FIPE. Confere bem antes, pode ser leilão, problema de documento ou golpe.'
+  } else if (grave) {
     motivo = 'Tem um alerta forte (risco, anúncio repetido ou preço baixo demais), então o Garimpo não destaca.'
+  } else if (referenciasDivergem) {
+    motivo = fipeIndicaOportunidade
+      ? 'Abaixo da FIPE, mas na linha dos carros iguais da lista. Fica de olho.'
+      : 'Os carros iguais indicam oportunidade, mas a FIPE não confirma. Fica de olho.'
   } else if (!mercado || !margem) {
-    motivo = 'Ainda não dá pra calcular a margem. Faltam carros iguais na lista ou dado no anúncio.'
+    if (fipeIndicaOportunidade && fipe !== null) {
+      nivel = 'boa'
+      preliminar = true
+      motivo = `${pct(fipe.diferenca)} abaixo da FIPE. Dá pra olhar com carinho, mas falta achar carros iguais pra fechar a conta.`
+    } else {
+      motivo = fipe === null
+        ? 'Ainda não dá pra calcular a margem. Faltam carros iguais na lista ou uma FIPE de confiança alta.'
+        : 'A FIPE ajuda na leitura, mas ainda faltam carros iguais na lista pra fechar a conta.'
+    }
   } else if (margemAtinge(margem, mercado, MARGEM_QUENTE) && semAlerta && favores.length >= FAVORES_PARA_QUENTE) {
     nivel = 'quente'
     motivo = `Margem estimada de ${est}, sem nenhum alerta e ${favores.length} pontos a favor (${favores.map((c) => NOMES_FAVOR[c.id]).join(', ')}).`
@@ -232,7 +287,10 @@ export function analisar(a: Anuncio, grupos: Map<string, Anuncio[]>, agora: numb
   } else {
     motivo = `Margem estimada de ${est}, abaixo do mínimo de ${reais(MARGEM_BOA.reais)} (e ${pct(MARGEM_BOA.pct)} da mediana) pra valer a revenda.`
   }
-  return { nivel, resumo: nivel ? `Margem estimada ${aprox(margem?.estimada ?? 0)}` : null, motivo, criterios, mercado, margem }
+  const resumo = preliminar && fipe !== null
+    ? 'Leitura pela FIPE, falta comparar iguais'
+    : nivel ? `Margem estimada ${aprox(margem?.estimada ?? 0)}` : null
+  return { nivel, preliminar, resumo, motivo, criterios, mercado, margem }
 }
 
 export function agrupar(lista: Anuncio[]): Map<string, Anuncio[]> {

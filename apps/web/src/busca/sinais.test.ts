@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { dataCurta, minutosDesde, sinaisDaPagina } from './sinais'
 import { agrupar } from './analise'
-import { fipeDe, fipeDeExemplo } from './fipe'
+import { fipeDe } from './fipe'
 import type { Anuncio } from '../types'
 
 // 10 de outubro de 2026, 15h00 no horário local
@@ -122,7 +122,7 @@ describe('o que não é sinal', () => {
 })
 
 describe('FIPE', () => {
-  it('sem o interruptor de exemplo, não existe FIPE', () => {
+  it('sem FIPE real do servidor não existe FIPE', () => {
     expect(fipeDe(carro('a'))).toBeNull()
   })
 
@@ -135,24 +135,18 @@ describe('FIPE', () => {
       },
     }))
     expect(f).toEqual({
-      valor: 40000, diferencaReais: 10000, diferencaPercentual: 25, exemplo: false,
+      valor: 40000, diferencaReais: 10000, diferencaPercentual: 25,
       codigo: '005384-8', mesReferencia: 'outubro de 2026', precoEstranho: false,
     })
   })
 
-  it('o exemplo vem marcado, tem a conta certa e é sempre o mesmo pro mesmo carro', () => {
-    const feitos = Array.from({ length: 30 }, (_, i) => fipeDeExemplo(carro(`id${i}`))).filter((f) => f !== null)
-    expect(feitos.length).toBeGreaterThan(10)
-    expect(feitos.length).toBeLessThan(30) // um pedaço fica sem FIPE, pra comparar
-    for (const f of feitos) {
-      expect(f.exemplo).toBe(true)
-      expect(f.diferencaReais).toBe(f.valor - 50000)
-      expect(Math.sign(f.diferencaPercentual)).toBe(Math.sign(f.diferencaReais))
-    }
-    expect(fipeDeExemplo(carro('id1'))).toEqual(fipeDeExemplo(carro('id1')))
-  })
-
-  it('carro sem preço não tem FIPE de exemplo', () => {
-    expect(fipeDeExemplo(carro('a', { preco: null }))).toBeNull()
+  it('carro sem preço não mostra FIPE', () => {
+    expect(fipeDe(carro('a', {
+      preco: null,
+      fipe: {
+        codigo: '005384-8', preco: 40000, diferenca_percentual: 0,
+        mes_referencia: 'outubro de 2026', confianca: 'alta', preco_estranho: false,
+      },
+    }))).toBeNull()
   })
 })

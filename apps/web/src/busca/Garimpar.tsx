@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ArrowLeft,
   ArrowSquareOut,
@@ -144,9 +144,9 @@ function estadoDoVeredito(analise: Analise | undefined): EstadoVeredito {
   return 'neutro'
 }
 
-function RotuloVeredito({ nivel, estado }: { nivel: Nivel | null; estado: EstadoVeredito }) {
+function RotuloVeredito({ nivel, estado, preliminar }: { nivel: Nivel | null; estado: EstadoVeredito; preliminar: boolean }) {
   if (nivel === 'quente') return <>{T.quente}</>
-  if (nivel === 'boa') return <>{T.boa}</>
+  if (nivel === 'boa') return <>{preliminar ? GT.boaPreliminar : T.boa}</>
   if (estado === 'sembase') return <>{GT.faltaBase}</>
   if (estado === 'carregando') return <>{GT.preparandoLeitura}</>
   return <>{GT.leituraNeutra}</>
@@ -177,7 +177,7 @@ function Veredito({ carro, analise, preco }: { carro: Anuncio; analise: Analise 
         />
         <div>
           <p className="ga-sobretitulo">{GT.veredito}</p>
-          <h2><RotuloVeredito nivel={analise?.nivel ?? null} estado={estado} /></h2>
+          <h2><RotuloVeredito nivel={analise?.nivel ?? null} estado={estado} preliminar={analise?.preliminar ?? false} /></h2>
         </div>
       </div>
       <p className="ga-veredito__motivo">
@@ -191,6 +191,7 @@ function Veredito({ carro, analise, preco }: { carro: Anuncio; analise: Analise 
           <ItemChecklist ok={carro.km !== null}>{GT.kmInformado} {carro.km !== null ? GT.sim : GT.nao}</ItemChecklist>
           <ItemChecklist ok={carro.ano !== null}>{GT.anoInformado} {carro.ano !== null ? GT.sim : GT.nao}</ItemChecklist>
           <ItemChecklist ok={carro.preco !== null}>{GT.precoInformado} {carro.preco !== null ? GT.sim : GT.nao}</ItemChecklist>
+          <ItemChecklist ok={carro.fipe?.confianca === 'alta'}>{GT.fipeEncontrada} {carro.fipe?.confianca === 'alta' ? GT.sim : GT.nao}</ItemChecklist>
         </ul>
       )}
       <p className="ga-veredito__nota">{T.comoLer}</p>
@@ -354,22 +355,21 @@ function Margem({ criterio }: { criterio: Criterio | undefined }) {
 }
 
 function ReferenciaFipe({ carro }: { carro: Anuncio }) {
-  const fipe = useMemo(() => fipeDe(carro), [carro])
+  const fipe = fipeDe(carro)
   if (!fipe) return null
 
   return (
-    <article className={`ga-painel ${fipe.exemplo ? 'ga-painel--exemplo' : ''}`}>
+    <article className="ga-painel">
       <div className="ga-painel__topo">
         <div>
           <p className="ga-sobretitulo">{GT.fipe}</p>
           <h3>{reais(fipe.valor)}</h3>
         </div>
-        {fipe.exemplo && <span className="ga-etiqueta-exemplo">{T.exemplo}</span>}
       </div>
-      {!fipe.exemplo && fipe.codigo && fipe.mesReferencia && (
+      {fipe.codigo && fipe.mesReferencia && (
         <p className="ga-conta">{T.fipeCodigo} {fipe.codigo}. {T.fipeMes} {fipe.mesReferencia}.</p>
       )}
-      <p className="ga-conta">{fipe.exemplo ? GT.fipeNaoEntra : T.fipeReferencia}</p>
+      <p className="ga-conta">{T.fipeReferencia}</p>
     </article>
   )
 }

@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { ArrowUpRight, ChevronRight, Clock3, Flame, MapPin, Pickaxe, Route, Star, ThumbsUp, TrendingDown, type LucideIcon } from 'lucide-react'
 import type { Anuncio } from '../types'
-import type { Analise } from './analise'
+import { FIPE_BOA_PRELIMINAR, FIPE_PRECO_SUSPEITO, type Analise } from './analise'
 import { fipeDe, type ReferenciaFipe } from './fipe'
 import { dataCurta, prefixoData, type Sinal, type TipoSinal } from './sinais'
 import { seloFipeAbaixo, seloFipeAcima, T } from './textos'
@@ -19,29 +19,30 @@ const COR_SINAL: Record<TipoSinal, string> = {
 
 function FipeDoCard({ f }: { f: ReferenciaFipe }) {
   const diferenca = f.diferencaPercentual
-  const oportunidade = diferenca >= 15 && diferenca <= 50 && !f.precoEstranho
-  const texto = f.precoEstranho
+  const proporcao = (f.valor - f.diferencaReais) / f.valor
+  const alerta = f.precoEstranho || proporcao <= 1 - FIPE_PRECO_SUSPEITO
+  const oportunidade = proporcao <= 1 - FIPE_BOA_PRELIMINAR && !alerta
+  const texto = alerta
     ? T.fipePrecoEstranho
     : diferenca < 0
       ? seloFipeAcima(Math.abs(diferenca))
       : diferenca === 0
         ? T.fipeNoValor
-        : oportunidade || f.exemplo
+        : oportunidade
           ? seloFipeAbaixo(diferenca)
           : null
   if (!texto) return null
   return (
     <li
-      title={f.exemplo ? T.exemplo : `FIPE ${preco(f.valor)}`}
+      title={`FIPE ${preco(f.valor)}`}
       className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs ${
         oportunidade ? 'bg-teal-400/10 text-teal-300'
-          : f.precoEstranho ? 'bg-amber-300/10 text-amber-200'
+          : alerta ? 'bg-amber-300/10 text-amber-200'
             : 'bg-white/[0.05] text-gray-400'
       }`}
     >
       <TrendingDown size={14} className="flex-none" aria-hidden="true" />
       <span className="font-semibold">{texto}</span>
-      {f.exemplo && <span className="sr-only">{T.exemplo}</span>}
     </li>
   )
 }
@@ -51,16 +52,15 @@ interface Props {
   sinais?: Sinal[] // calculados quando o carro chegou
   agora: number // hora de referência da busca, pra a data não mudar sozinha
   novo: boolean // a página já decidiu se pode mostrar o selo
-  demo: boolean // FIPE de exemplo ligada
   analise?: Analise // calculada quando o carro chegou
   onGarimpar: (a: Anuncio) => void // abre a tela do Garimpar. Tem que ser uma função estável por causa do memo
 }
 
-function Card({ a, sinais = SEM_SINAIS, agora, novo, demo, analise, onGarimpar }: Props) {
+function Card({ a, sinais = SEM_SINAIS, agora, novo, analise, onGarimpar }: Props) {
   const foto = a.imagens[0]
   const local = [a.cidade, a.estado].filter(Boolean).join(', ')
   const quando = dataCurta(a.anunciado_em, agora)
-  const fipe = a.fipe ? fipeDe(a) : demo ? fipeDe(a) : null
+  const fipe = fipeDe(a)
   const nivel = analise?.nivel ?? null
   const sinalRecente = sinais.find((s) => s.tipo === 'recente')
   const outrosSinais = sinais.filter((s) => s.tipo !== 'recente')
@@ -128,7 +128,7 @@ function Card({ a, sinais = SEM_SINAIS, agora, novo, demo, analise, onGarimpar }
           >
             {nivel === 'quente' ? <Flame size={18} className="flex-none" aria-hidden="true" /> : <ThumbsUp size={18} className="flex-none" aria-hidden="true" />}
             <span className="min-w-0 flex-1">
-              <span className="block font-bold">{nivel === 'quente' ? T.quente : T.boa}</span>
+              <span className="block font-bold">{nivel === 'quente' ? T.quente : analise.preliminar ? T.boaPreliminar : T.boa}</span>
               <span className="block text-xs opacity-90">{analise.resumo}</span>
             </span>
             <ChevronRight size={16} className="flex-none" aria-hidden="true" />

@@ -16,6 +16,15 @@ const mercado = (alvo: Anuncio): Anuncio[] =>
   [50000, 52000, 51000, 50000, 50000].map((p, i) => carro(`m${i}`, { preco: p })).concat(alvo)
 const analise = (alvo: Anuncio) => { const lista = mercado(alvo); return analisesDaPagina([alvo], agrupar(lista), AGORA)[alvo.external_id] }
 const veredito = (alvo: Anuncio, id: string) => analise(alvo).criterios.find((c) => c.id === id)?.veredito
+const comFipe = (id: string, preco: number, precoFipe: number, extra: Partial<Anuncio> = {}) => carro(id, {
+  preco,
+  fipe: {
+    codigo: '005384-8', preco: precoFipe, diferenca_percentual: Math.round((precoFipe - preco) / precoFipe * 100),
+    mes_referencia: 'outubro de 2026', confianca: 'alta', preco_estranho: false,
+  },
+  ...extra,
+})
+const semMercado = (alvo: Anuncio) => analisesDaPagina([alvo], agrupar([alvo]), AGORA)[alvo.external_id]
 
 describe('nível do carro', () => {
   it('Quente: margem alta, sem alerta e pelo menos 2 pontos a favor', () => {
@@ -24,6 +33,80 @@ describe('nível do carro', () => {
     expect(a.resumo).toMatch(/^Margem estimada R\$ 5\.\d00$/)
     expect(a.margem?.estimada).toBeCloseTo(50000 - 42000 - 2500)
     expect(a.motivo).toContain('2 pontos a favor')
+  })
+
+  describe('FIPE no veredito', () => {
+    it('FIPE e mercado abaixo mantêm a regra que pode dar Quente', () => {
+      const a = analise(comFipe('x', 42000, 50000, { km: 35000, anunciante_profissional: false }))
+      expect(a.nivel).toBe('quente')
+      expect(a.preliminar).toBe(false)
+    })
+
+    it('FIPE abaixo e mercado na linha ficam sem nível por divergência', () => {
+      const a = analise(comFipe('x', 50000, 60000))
+      expect(a.nivel).toBeNull()
+      expect(a.motivo).toBe('Abaixo da FIPE, mas na linha dos carros iguais da lista. Fica de olho.')
+    })
+
+    it('mercado abaixo e FIPE sem confirmar ficam sem nível por divergência', () => {
+      const a = analise(comFipe('x', 42000, 40000, { km: 35000, anunciante_profissional: false }))
+      expect(a.nivel).toBeNull()
+      expect(a.motivo).toBe('Os carros iguais indicam oportunidade, mas a FIPE não confirma. Fica de olho.')
+    })
+
+    it('só FIPE exatamente 10% abaixo dá Boa preliminar sem margem', () => {
+      const a = semMercado(comFipe('x', 45000, 50000))
+      expect(a.nivel).toBe('boa')
+      expect(a.preliminar).toBe(true)
+      expect(a.margem).toBeNull()
+      expect(a.resumo).toBe('Leitura pela FIPE, falta comparar iguais')
+    })
+
+    it('só FIPE logo abaixo de 10% não dá nível', () => {
+      const a = semMercado(comFipe('x', 45001, 50000))
+      expect(a.nivel).toBeNull()
+      expect(a.preliminar).toBe(false)
+    })
+
+    it('exatamente 30% abaixo da FIPE é alerta e bloqueia o nível', () => {
+      const a = semMercado(comFipe('x', 35000, 50000))
+      expect(a.nivel).toBeNull()
+      expect(a.criterios.find((c) => c.id === 'fipe')?.veredito).toBe('atencao')
+      expect(a.motivo).toBe('Preço muito abaixo da FIPE. Confere bem antes, pode ser leilão, problema de documento ou golpe.')
+    })
+
+    it('logo abaixo do corte de 30% ainda pode dar Boa preliminar', () => {
+      const a = semMercado(comFipe('x', 35001, 50000))
+      expect(a.nivel).toBe('boa')
+      expect(a.preliminar).toBe(true)
+    })
+
+    it('confiança baixa é ignorada', () => {
+      const alvo = carro('x', { preco: 40000 })
+      Object.assign(alvo, {
+        fipe: {
+          codigo: '005384-8', preco: 50000, diferenca_percentual: 20,
+          mes_referencia: 'outubro de 2026', confianca: 'baixa', preco_estranho: false,
+        },
+      })
+      const a = semMercado(alvo)
+      expect(a.nivel).toBeNull()
+      expect(a.criterios.find((c) => c.id === 'fipe')?.veredito).toBe('semdado')
+    })
+
+    it('sem FIPE e com mediana mantém o resultado anterior', () => {
+      const a = analise(carro('x', { preco: 44500 }))
+      expect(a.nivel).toBe('boa')
+      expect(a.preliminar).toBe(false)
+      expect(a.resumo).toMatch(/^Margem estimada/)
+    })
+
+    it('sem FIPE real e sem mediana continua sem base', () => {
+      const a = semMercado(carro('x'))
+      expect(a.nivel).toBeNull()
+      expect(a.margem).toBeNull()
+      expect(a.criterios.find((c) => c.id === 'fipe')?.resultado).toBe('FIPE não encontrada')
+    })
   })
 
   it('Boa: margem razoável mas sem os pontos a favor pra ser Quente', () => {

@@ -32,6 +32,7 @@ export const T = {
   verAnuncio: 'Ver anúncio original',
   quente: 'Quente',
   boa: 'Boa',
+  boaPreliminar: 'Boa preliminar',
   voltar: 'Voltar pra lista',
   analiseTitulo: 'Vale pra revenda?',
   porQueVale: 'Por que vale pra revenda',
@@ -40,18 +41,14 @@ export const T = {
   numeros: 'Os números',
   nadaAFavor: 'Nenhum ponto forte encontrado nos dados que a gente tem.',
   nadaContra: 'Nenhum alerta encontrado nos dados que a gente tem.',
-  aindaNaoEntra: 'Ainda não entram nessa análise a tabela FIPE, o histórico de preço, o tempo que o carro fica no ar e a descrição do anúncio. Quando entrarem, a conta aparece aqui.',
+  aindaNaoEntra: 'Ainda não entram nessa análise o histórico de preço, o tempo que o carro fica no ar e a descrição do anúncio.',
   comoLer: 'Nada aqui é nota. Cada linha mostra a conta e de onde ela veio, pra você conferir e discordar.',
   poucoKm: 'Pouco km pro ano',
-  exemplo: 'Exemplo, não é valor real',
-  demoLigado: 'Modo exemplo ligado. A FIPE que aparece aqui é inventada, só pra ver como o card ficaria.',
-  demoEsconder: 'Esconder FIPE de exemplo',
-  demoMostrar: 'Mostrar FIPE de exemplo',
   fipeNoValor: 'No valor da FIPE',
   fipePrecoEstranho: 'Preço muito abaixo da FIPE',
   fipeCodigo: 'Código FIPE',
   fipeMes: 'Mês de referência',
-  fipeReferencia: 'A FIPE é uma referência. Não garante o preço de revenda.',
+  fipeReferencia: 'A FIPE é uma referência nacional. O preço real de revenda pode ser outro.',
 } as const
 
 export const naOlx = (total: number) => `${total.toLocaleString('pt-BR')} na OLX`

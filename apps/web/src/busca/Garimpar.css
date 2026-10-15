@@ -341,7 +341,6 @@
 .ga-painel--largo { grid-column: 1 / -1; min-height: 250px; }
 .ga-painel--apagado { background: rgba(11, 19, 18, 0.58); border-style: dashed; }
 .ga-painel--apagado h3, .ga-painel--apagado .ga-conta { color: #71807d; }
-.ga-painel--exemplo { border-color: rgba(251, 191, 36, 0.22); }
 .ga-painel__topo { align-items: flex-start; display: flex; justify-content: space-between; gap: 14px; }
 .ga-painel h3 { font-size: clamp(19px, 2.2vw, 27px); font-weight: 600; letter-spacing: -0.025em; margin: 6px 0 0; }
 .ga-vazio {
@@ -421,15 +420,6 @@
 .ga-progresso__trilho { height: 7px; margin-top: 9px; overflow: hidden; }
 .ga-progresso__trilho span { background: var(--ga-agua-forte); border-radius: inherit; display: block; height: 100%; }
 .ga-progresso p { color: #7a8986; font-size: 11px; line-height: 1.5; margin: 14px 0 0; }
-.ga-etiqueta-exemplo {
-  background: rgba(251, 191, 36, 0.1);
-  border: 1px solid rgba(251, 191, 36, 0.24);
-  border-radius: 4px;
-  color: #fde68a;
-  font-size: 9px;
-  padding: 6px 8px;
-}
-
 .ga-alertas { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
 .ga-alertas li {
   align-items: flex-start;

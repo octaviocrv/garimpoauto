@@ -4,7 +4,6 @@ import { CardCarro } from './CardCarro'
 import { Diagnostico } from './Diagnostico'
 import { Garimpar } from './Garimpar'
 import { SearchHologram } from './SearchHologram'
-import { DEMO } from './fipe'
 import {
   ANUNCIANTES, CAMBIOS, COMBUSTIVEIS, ESTADOS, FILTROS_DO_RASCUNHO, ORDENS, RASCUNHO_VAZIO, montarPedidoOuVitrine,
   nomeDoEstado, type Rascunho,
@@ -44,7 +43,6 @@ export function PaginaBusca() {
   const [r, setR] = useState<Rascunho>(RASCUNHO_VAZIO)
   const [painel, setPainel] = useState(false)
   const [demorando, setDemorando] = useState(false)
-  const [fipeLigada, setFipeLigada] = useState(true)
   const [aberto, setAberto] = useState<Anuncio | null>(null) // o carro da tela do Garimpar
   const fecharGarimpar = useCallback(() => setAberto(null), [])
   const regioes = useRegioes(r.estado)
@@ -315,19 +313,11 @@ export function PaginaBusca() {
 
           {lista.length > 0 && (
             <>
-              {DEMO && (
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-orange-400/70 bg-orange-400/5 px-4 py-3 text-sm text-orange-200">
-                  <p>{T.demoLigado}</p>
-                  <button type="button" onClick={() => setFipeLigada((v) => !v)} className={`${botao} text-sm`}>
-                    {fipeLigada ? T.demoEsconder : T.demoMostrar}
-                  </button>
-                </div>
-              )}
               {busca.blocos.map((bloco, n) => (
                 <ul key={n} className={`vehicle-grid grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 ${n > 0 ? 'mt-5' : ''}`}>
                   {bloco.map((a) => (
                     <CardCarro key={a.external_id} a={a} sinais={busca.sinais[a.external_id]} agora={busca.agora}
-                      novo={sabeSeTemNovo && a.novo} demo={DEMO && fipeLigada}
+                      novo={sabeSeTemNovo && a.novo}
                       analise={busca.analises[a.external_id]} onGarimpar={setAberto} />
                   ))}
                 </ul>
