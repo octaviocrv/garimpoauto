@@ -205,7 +205,7 @@ def test_cambio_combustivel_e_anunciante_aceitam_acento_e_caixa():
     b = Busca(texto="civic", cambio=" Automático ", combustivel="FLEX", anunciante="Profissional")
     assert (b.cambio, b.combustivel, b.anunciante) == ("automatico", "flex", "profissional")
     url = olx.montar_url(b)
-    for pedaco in ("gb=2", "fu=3", "f=1"):
+    for pedaco in ("gb=2", "fu=3", "f=c"):  # f=1 a OLX lê como particular (conferido ao vivo)
         assert pedaco in url
     assert Busca(texto="x", cambio="semi automático").cambio == "semi-automatico"
     assert Busca(texto="x", cambio="  ").cambio is None

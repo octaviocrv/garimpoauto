@@ -206,6 +206,10 @@ COMBUSTIVEIS = ("gasolina", "alcool", "flex", "diesel", "hibrido", "eletrico")
 ANUNCIANTES = ("particular", "profissional")
 ORDENS = ("recentes", "menor_preco", "relevancia")
 ORDEM_PADRAO = "recentes"  # estável entre páginas, ao contrário da relevância
+ESTADOS = (
+    "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT", "PA",
+    "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO",
+)
 
 
 def _opcao(v: Any, validas: tuple[str, ...], nome: str) -> Any:
@@ -268,6 +272,8 @@ class Busca(BaseModel):
             return None
         if not (len(v) == 2 and v.isalpha()):
             raise ValueError(f"estado deve ser a sigla com 2 letras, recebi {v!r}")
+        if v.upper() not in ESTADOS:  # só as 27 siglas do Brasil
+            raise ValueError(f"estado {v!r} não existe")
         return v.upper()
 
     @field_validator("cambio", mode="before")

@@ -49,14 +49,27 @@ export const RASCUNHO_VAZIO: Rascunho = {
   cidade: '', regiao: '', zona: '', ordenar: 'recentes',
 }
 
-export const FILTROS_DO_RASCUNHO: (keyof Rascunho)[] = [
-  'marca', 'modelo', 'versao', 'anoMin', 'anoMax', 'precoMin', 'precoMax', 'kmMin', 'kmMax',
+const FILTROS_DO_PEDIDO = [
+  'marca', 'modelo', 'versao', 'ano_min', 'ano_max', 'preco_min', 'preco_max', 'km_min', 'km_max',
   'cambio', 'combustivel', 'anunciante', 'cidade', 'regiao', 'zona',
-]
+] as const
 
-const numero = (v: string): number | undefined => {
-  const digitos = v.replace(/\D/g, '')
-  return digitos ? Number(digitos) : undefined
+// Quantos filtros vão de verdade na busca. Campo com espaço ou sem número nenhum não conta.
+export const contarFiltros = (p: Pedido): number => FILTROS_DO_PEDIDO.filter((k) => p[k] !== undefined).length
+
+// Lê o número do jeito que a pessoa escreve. "R$ 50.000,00", "50 mil", "1,5 mil", "50k", "120.000 km" e "2.020"
+// viram 50000, 50000, 1500, 50000, 120000 e 2020. Vírgula ou ponto com 1 ou 2 dígitos no fim é decimal.
+// Sem número nenhum o filtro fica de fora.
+export function numero(v: string): number | undefined {
+  const s = v.toLowerCase()
+  const trecho = s.match(/\d+(?:[.,]\d+|\s\d{3}(?!\d))*/)?.[0] // o primeiro número, com separador de milhar
+  if (!trecho) return undefined
+  const decimal = trecho.match(/^(.+)[.,](\d{1,2})$/)
+  const digitos = (t: string) => t.replace(/\D/g, '')
+  let n = decimal ? Number(`${digitos(decimal[1])}.${decimal[2]}`) : Number(digitos(trecho))
+  if (/\d\s*(?:mil|k)(?![a-z])/.test(s)) n *= 1000
+  n = Math.round(n)
+  return Number.isSafeInteger(n) ? n : undefined
 }
 
 // Se a pessoa trocar mínimo e máximo, a tela arruma sozinha em vez de dar erro.

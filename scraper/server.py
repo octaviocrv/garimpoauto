@@ -28,13 +28,13 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturoTimeout
 from datetime import datetime, timedelta, timezone
-from typing import Any, Callable, Iterator, Optional
+from typing import Annotated, Any, Callable, Iterator, Optional
 
 from fastapi import Depends, FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import ValidationError
+from pydantic import BeforeValidator, ValidationError
 
 import config
 import localidades
@@ -57,6 +57,14 @@ MSG_DETALHE_FALHOU = "Não consegui abrir esse anúncio na OLX agora, tenta de n
 MSG_DETALHE_SAIU = "Esse anúncio saiu do ar na OLX."
 MSG_DETALHE_PEDIDO = "Não reconheci esse anúncio, volta pra lista e abre de novo?"
 ESPERA_PING = 15.0  # segundos sem novidade até mandar um sinal de vida no stream
+
+
+def _vazio_vira_none(v: Any) -> Any:
+    return None if isinstance(v, str) and not v.strip() else v
+
+
+# Número do pedido: vazio (ano_min=) é filtro não preenchido, igual aos campos de texto. Letra continua dando 422.
+Numero = Annotated[Optional[int], BeforeValidator(_vazio_vira_none)]
 
 
 def _anuncio_json(a: Anuncio) -> dict[str, Any]:
@@ -566,12 +574,12 @@ def criar_app(
         marca: Optional[str] = None,
         modelo: Optional[str] = None,
         versao: Optional[str] = None,
-        ano_min: Optional[int] = None,
-        ano_max: Optional[int] = None,
-        preco_min: Optional[int] = None,
-        preco_max: Optional[int] = None,
-        km_min: Optional[int] = None,
-        km_max: Optional[int] = None,
+        ano_min: Numero = None,
+        ano_max: Numero = None,
+        preco_min: Numero = None,
+        preco_max: Numero = None,
+        km_min: Numero = None,
+        km_max: Numero = None,
         cambio: Optional[str] = None,
         combustivel: Optional[str] = None,
         anunciante: Optional[str] = None,

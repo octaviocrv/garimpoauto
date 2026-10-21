@@ -57,7 +57,8 @@ TEMPO_MAXIMO = "tempo_maximo"
 # Códigos que a própria OLX usa nos filtros da listagem de carros.
 _CAMBIO = {"manual": 1, "automatico": 2, "semi-automatico": 3, "automatizado": 4}
 _COMBUSTIVEL = {"gasolina": 1, "alcool": 2, "flex": 3, "diesel": 5, "hibrido": 6, "eletrico": 7}
-_ANUNCIANTE = {"particular": 0, "profissional": 1}
+# Conferido ao vivo: f=c traz só profissional e qualquer outro valor (até f=1) traz só particular.
+_ANUNCIANTE = {"particular": "p", "profissional": "c"}
 # Ordenação: só os códigos comprovados na prática. sp=price, sp=date e sp=2 a 4 não funcionam.
 _ORDEM = {"recentes": ("sf", 1), "menor_preco": ("sp", 1)}
 
@@ -67,8 +68,9 @@ _DEGRAUS_KM = (
     0, 5000, 10000, 20000, 30000, 40000, 60000, 80000, 100000,
     120000, 140000, 160000, 180000, 200000, 250000, 300000, 400000, 500000,
 )
-# Filtros da Busca que a URL aplica sem arredondar. O resto (marca, modelo, cidade, km_max) é local.
-_FILTROS_NA_URL = ("estado", "ano_min", "ano_max", "preco_min", "preco_max")
+# Filtros da Busca que a URL aplica sem arredondar (conferido ao vivo, todos os anúncios batem).
+# O resto (marca, modelo, cidade, km) é local.
+_FILTROS_NA_URL = ("estado", "ano_min", "ano_max", "preco_min", "preco_max", "cambio", "combustivel", "anunciante")
 
 _PREFIXO_PUSH = "self.__next_f.push("
 _PREFIXOS_DATALAYER = "dataLayer.push("
@@ -508,12 +510,24 @@ def resolver_local(busca: Busca) -> tuple[Optional[str], set[str], list[str]]:
 _RESOLVER = object()  # montar_url resolve o local sozinho, a menos que quem chama já tenha decidido
 
 
-def montar_url(busca: Busca, pagina: int = 1, *, codigos: Optional[dict[str, str]] = None, local: Any = _RESOLVER) -> str:
+def _modelo_como_texto(busca: Busca, codigos: Optional[dict[str, str]]) -> Optional[str]:
+    """Sem texto e sem o código do modelo (veio sem marca ou a OLX não conhece), a OLX listaria a
+    categoria toda e o modelo só seria procurado nas poucas páginas lidas. Aí o modelo vai como texto (q).
+    Quem usa isto pede de novo sem o texto se a 1ª página vier zerada ('hrv' dá zero na OLX, 'hr-v' não)."""
+    if busca.texto or not busca.modelo or "vm" in (codigos or {}):
+        return None
+    return busca.modelo
+
+
+def montar_url(
+    busca: Busca, pagina: int = 1, *, codigos: Optional[dict[str, str]] = None, local: Any = _RESOLVER,
+    texto: Optional[str] = None,
+) -> str:
     """Monta a URL de listagem só com os filtros da Busca que a OLX aceita: estado, região, ano,
     preço, km, câmbio, combustível, tipo de anunciante, ordenação e (com `codigos`) marca, modelo
     e versão. Cidade fica para filtrar_local. O km vai como o degrau da OLX que cobre o pedido (a OLX só
-    aceita degraus) e o valor exato é aplicado depois. Texto vazio não manda q. Parâmetros da OLX: q, o, vb/vm/vv, ps/pe,
-    rs/re, ms/me, gb, fu, f, sp/sf."""
+    aceita degraus) e o valor exato é aplicado depois. Texto vazio não manda q. `texto` troca o texto da
+    busca no q (veja _modelo_como_texto). Parâmetros da OLX: q, o, vb/vm/vv, ps/pe, rs/re, ms/me, gb, fu, f, sp/sf."""
     caminho = URL_BASE
     if busca.estado:
         caminho += f"/estado-{busca.estado.lower()}"
@@ -524,7 +538,8 @@ def montar_url(busca: Busca, pagina: int = 1, *, codigos: Optional[dict[str, str
 
     km_max = _degrau_km(busca.km_max) if busca.km_max is not None else None
     km_min = (_degrau_km_min(busca.km_min) or None) if busca.km_min else None  # degrau 0 não filtra nada
-    params: list[tuple[str, Any]] = [("q", busca.texto)] if busca.texto else []  # sem texto, a OLX lista a categoria toda
+    q = busca.texto if texto is None else texto
+    params: list[tuple[str, Any]] = [("q", q)] if q else []  # sem texto, a OLX lista a categoria toda
     params += [(k, v) for k, v in (codigos or {}).items()]  # vb, vm, vv
     if pagina > 1:
         params.append(("o", pagina))
@@ -675,6 +690,7 @@ def buscar_paginas(
         ritmo = _Ritmo(limites.pausa_entre_paginas_segundos, dormir)
         codigos, resolvidos, nao_resolvidos = resolver_codigos(sessao, busca, ritmo, relogio)
         filtros["codigos"] = codigos
+        filtros["texto"] = _modelo_como_texto(busca, codigos)
         ignorar = (*_FILTROS_NA_URL, *resolvidos)
         na_origem = _filtros_na_origem(busca, resolvidos)
         if ritmo.fez_requisicao:
@@ -692,6 +708,10 @@ def buscar_paginas(
                 dormir=dormir,
                 relogio=relogio,
             )
+            if pagina == 1 and filtros["texto"] and itens == [] and not total:
+                filtros["texto"] = None  # o modelo como texto não achou nada: pede de novo sem ele
+                dormir(random.uniform(*limites.pausa_entre_paginas_segundos))
+                continue
             if itens is None:
                 yield PaginaBusca(
                     fonte=FONTE,
@@ -803,6 +823,7 @@ class CursorOlx:
         self._na_origem: list[str] = []
         self._nao_resolvidos: list[str] = []
         self._local: Optional[str] = None  # caminho de região, zona ou cidade na URL
+        self._texto: Optional[str] = None  # o modelo, quando vai no lugar do texto vazio (veja _modelo_como_texto)
         self._base_resolvidos: set[str] = set()  # marca, modelo e versão
         self._locais_resolvidos: set[str] = set()  # região, zona e cidade que foram para a URL
 
@@ -833,12 +854,14 @@ class CursorOlx:
             "vazia_em": self._vazia_em, "codigos": self._codigos, "ignorar": list(self._ignorar),
             "na_origem": list(self._na_origem), "nao_resolvidos": list(self._nao_resolvidos), "local": self._local,
             "base_resolvidos": sorted(self._base_resolvidos), "locais_resolvidos": sorted(self._locais_resolvidos),
+            "texto": self._texto,
         }
 
     def restaurar(self, estado: dict[str, Any]) -> None:
         """Volta ao ponto de um `exportar()`, mesmo em outro processo. A próxima página sai como se a
         busca nunca tivesse parado, sem repetir anúncio. Depois de restaurar, a pausa entre pedidos conta
-        a partir de agora."""
+        a partir de agora. O que a OLX já filtra é refeito com as regras de agora, então um estado guardado
+        por uma versão antiga não filtra nada duas vezes."""
         self.numero, self.terminou = estado["numero"], estado["terminou"]
         self._vistos = set(estado["vistos"])
         self._carros = {tuple(chave): id_ for chave, id_ in estado["carros"]}
@@ -848,6 +871,9 @@ class CursorOlx:
         self._na_origem, self._nao_resolvidos = list(estado["na_origem"]), list(estado["nao_resolvidos"])
         self._local = estado["local"]
         self._base_resolvidos, self._locais_resolvidos = set(estado["base_resolvidos"]), set(estado["locais_resolvidos"])
+        self._texto = estado.get("texto")  # estado antigo não tem: continua sem texto, como começou
+        if self._codigos is not None:
+            self._recompor()
         if self.numero > 0:
             self._ultimo_pedido = self._relogio()
 
@@ -903,15 +929,21 @@ class CursorOlx:
                 self._locais_resolvidos = {n for n in ("regiao", "zona", "cidade") if n in locais_ok}
                 self._base_resolvidos = resolvidos - self._locais_resolvidos
                 self._nao_resolvidos = list(self._nao_resolvidos)
+                self._texto = _modelo_como_texto(self.busca, codigos)
                 self._recompor()
             while True:
                 itens, total, erro = _baixar_com_cuidado(
-                    sessao, montar_url(self.busca, pagina, codigos=self._codigos, local=self._local),
+                    sessao, montar_url(self.busca, pagina, codigos=self._codigos, local=self._local, texto=self._texto),
                     inicio=self._relogio(), tempo_max=self.limites.tempo_max_segundos,
                     tentativas_bloqueio=self.limites.tentativas_bloqueio if repeticoes is None else repeticoes,
                     backoff_base=self.limites.backoff_base_segundos,
                     dormir=self._dormir, relogio=self._relogio, espera_fixa=espera_repeticao,
                 )
+                if pagina == 1 and self._texto and itens == [] and not total:
+                    # O modelo como texto não achou nada na OLX. Pede de novo sem ele e o modelo fica só no filtro daqui.
+                    self._texto = None
+                    self._dormir(random.uniform(*self.limites.pausa_entre_paginas_segundos))
+                    continue
                 if itens is None or not self._respondeu_o_brasil_todo(itens):
                     break
                 # A OLX não conhecia esse local e respondeu o Brasil todo sem avisar. Recua um nível e pede de novo.

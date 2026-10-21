@@ -44,29 +44,66 @@ def chave_busca(busca: Busca) -> str:
     return "|".join(partes)
 
 
+# Número com ponto ou vírgula fica inteiro ('1.5', e '1,5' vira '1.5'). O resto quebra em qualquer símbolo ('HR-V' vira 'hr' e 'v').
+_PEDACO = re.compile(r"\d+(?:[.,]\d+)+|[a-z0-9]+")
+
+
+def _pedacos(texto: Optional[str]) -> list[str]:
+    return [p.replace(",", ".") for p in _PEDACO.findall(normalizar_texto(texto))]
+
+
 def _contem(procurado: str, valor: Optional[str]) -> bool:
-    """Palavra inteira: 'up' não casa com 'upgrade'. 'volkswagen' casa com 'VW - VolksWagen'."""
-    alvo = normalizar_texto(valor)
-    return bool(alvo) and re.search(rf"(?<!\w){re.escape(procurado)}(?!\w)", alvo) is not None
+    """Palavra inteira, sem ligar para hífen ou espaço no meio: 'up' não casa com 'upgrade', 'volkswagen'
+    casa com 'VW - VolksWagen' e 'hrv', 'hr v' e 'hr-v' casam com 'HR-V'."""
+    junto = "".join(_pedacos(procurado))
+    if not junto:
+        return False
+    pedacos = _pedacos(valor)
+    for i in range(len(pedacos)):
+        emendado = ""
+        for p in pedacos[i:]:
+            emendado += p
+            if not junto.startswith(emendado):
+                break
+            if emendado == junto:
+                return True
+    return False
 
 
 def _tem_todas(procuradas: str, valor: Optional[str]) -> bool:
-    """Todas as palavras de `procuradas` aparecem no texto (cada uma inteira)."""
-    return bool(valor) and all(_contem(p, valor) for p in procuradas.split())
+    """Todas as palavras de `procuradas` aparecem no texto (cada uma inteira). 'ex l' também casa com 'EXL'."""
+    return _contem(procuradas, valor) or all(_contem(p, valor) for p in procuradas.split())
+
+
+def _compacto(texto: Optional[str]) -> str:
+    """Só letras e números: 'São João del-Rei' e 'sao joao del rei' ficam iguais."""
+    return re.sub(r"[^a-z0-9]", "", normalizar_texto(texto))
+
+
+def _opcao(valor: Optional[str]) -> str:
+    """'Semi-Automático' do anúncio vira 'semi-automatico', igual às opções da Busca."""
+    return "-".join(normalizar_texto(valor).split())
+
+
+def _tipo_anunciante(a: Anuncio) -> Optional[str]:
+    if a.anunciante_profissional is None:
+        return None
+    return "profissional" if a.anunciante_profissional else "particular"
 
 
 def filtrar_local_contando(
     anuncios: Iterable[Anuncio], busca: Busca, ignorar: Iterable[str] = ()
 ) -> tuple[list[Anuncio], dict[str, int]]:
     """Como filtrar_local, mas devolve também quantos anúncios cada filtro cortou. Só entram
-    os filtros ativos (marca, modelo, cidade, estado, ano, preco, km). Cada anúncio cortado
-    conta no primeiro filtro que o reprova, nesta ordem, então a soma dos cortes é exata."""
+    os filtros ativos (marca, modelo, versao, cidade, estado, ano, preco, km, cambio, combustivel,
+    anunciante). Cada anúncio cortado conta no primeiro filtro que o reprova, nesta ordem, então a
+    soma dos cortes é exata."""
     ignorar = set(ignorar)
     ativos = {f for f in FILTROS if getattr(busca, f) is not None and f not in ignorar}
     marca = normalizar_texto(busca.marca)
     modelo = normalizar_texto(busca.modelo)
     versao = normalizar_texto(busca.versao)
-    cidade = normalizar_texto(busca.cidade)
+    cidade = _compacto(busca.cidade)
 
     def faixa(a: Anuncio, atributo: str, minimo: Optional[str], maximo: str) -> bool:
         """True se o anúncio passa. Campo vazio não passa por filtro que o usa."""
@@ -84,11 +121,14 @@ def filtrar_local_contando(
         ("marca", "marca" in ativos, lambda a: _contem(marca, a.marca)),
         ("modelo", "modelo" in ativos, lambda a: _contem(modelo, a.modelo_original or a.modelo)),
         ("versao", "versao" in ativos, lambda a: _tem_todas(versao, " ".join(filter(None, [a.modelo_original, a.titulo])))),
-        ("cidade", "cidade" in ativos, lambda a: normalizar_texto(a.cidade) == cidade),
+        ("cidade", "cidade" in ativos, lambda a: bool(cidade) and _compacto(a.cidade) == cidade),
         ("estado", "estado" in ativos, lambda a: (a.estado or "").upper() == busca.estado),
         ("ano", bool(ativos & {"ano_min", "ano_max"}), lambda a: faixa(a, "ano", "ano_min", "ano_max")),
         ("preco", bool(ativos & {"preco_min", "preco_max"}), lambda a: faixa(a, "preco", "preco_min", "preco_max")),
         ("km", bool(ativos & {"km_min", "km_max"}), lambda a: faixa(a, "km", "km_min", "km_max")),
+        ("cambio", "cambio" in ativos, lambda a: _opcao(a.cambio) == busca.cambio),
+        ("combustivel", "combustivel" in ativos, lambda a: _opcao(a.combustivel) == busca.combustivel),
+        ("anunciante", "anunciante" in ativos, lambda a: _tipo_anunciante(a) == busca.anunciante),
     )
     testes = [(nome, fn) for nome, ligado, fn in testes if ligado]
     cortados = {nome: 0 for nome, _ in testes}
@@ -142,6 +182,8 @@ def texto_informacao(
     corte = " Alguns ficaram de fora dos filtros que você pôs." if cortados else ""
     if entregues == 0 and not tem_mais:
         return "Não achei nenhum carro com esses filtros. Que tal afrouxar algum?"
+    if entregues == 0:  # o filtro daqui cortou tudo até agora, mas a fonte ainda tem páginas
+        return "Ainda não achei carro com esses filtros. Toca em Ver mais pra procurar no resto."
     de = f" de {_milhar(total)}" if total else ""
     if tem_mais:
         return f"Mostrando {_milhar(entregues)}{de} carros. Toca em Ver mais pra ver o resto.{corte}"
@@ -240,6 +282,7 @@ def filtros_locais(busca: Busca, na_origem: Iterable[str]) -> list[str]:
     pedidos = [
         ("marca", busca.marca), ("modelo", busca.modelo), ("versao", busca.versao),
         ("cidade", busca.cidade), ("km", busca.km_min if busca.km_min is not None else busca.km_max),
+        ("cambio", busca.cambio), ("combustivel", busca.combustivel), ("anunciante", busca.anunciante),
     ]
     return [n for n, v in pedidos if v is not None and n not in feitos]
 

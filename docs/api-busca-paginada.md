@@ -80,6 +80,7 @@ quando a pessoa abre o Garimpar. Nenhuma busca pede detalhe de anúncio.
 - Filtros daqui tiraram carros: acrescenta "Alguns ficaram de fora dos filtros que você pôs."
 - Falha: "Não consegui buscar mais agora, tenta de novo daqui a pouco?" (ou "Não achei esse carro agora, tenta de novo?" se foi na página 1)
 - Sem nada: "Não achei nenhum carro com esses filtros. Que tal afrouxar algum?"
+- Nada passou nos filtros daqui até agora, mas a OLX ainda tem páginas: "Ainda não achei carro com esses filtros. Toca em Ver mais pra procurar no resto." Vem com `tem_mais: true`, e a tela mostra o "Ver mais" mesmo com a lista vazia.
 
 ## Tempo, pausa e cache
 - **Página 1:** sem pausa. Se a busca tem marca ou modelo, o servidor consulta as listas de códigos da OLX antes (uma vez por marca, guardada por 12 h), também sem pausa.
@@ -99,6 +100,32 @@ A tela abre mostrando uma vitrine, igual à OLX: `GET /buscar/pagina?texto=&esta
 - **Filtro sem texto:** com filtro e sem texto, a busca usa o filtro (`texto=&ano_min=2018` pede só o ano). A vitrine pura é só sem texto e sem filtro.
 - **Na tela:** a vitrine carrega uma vez ao abrir, só a página 1. O "Ver mais" continua manual. Buscar com o campo vazio e sem filtro volta para ela. Uma busca nova no meio da carga cancela a vitrine, como qualquer outra busca em andamento.
 - **O que não tem:** a vitrine não separa usados, seminovos e novos, porque o anúncio não traz campo de condição.
+
+## Filtros
+
+Todos são conferidos de ponta a ponta em `scraper/tests/test_filtros.py`. O pedido entra pela API, a fonte OLX monta a URL e uma OLX simulada, com os mesmos códigos da OLX real, responde só os carros que casam. O resultado é comparado com um gabarito escrito sem o código do Garimpo. Com `OLX_LIVE=1` roda também um teste curto contra a OLX de verdade.
+
+| Filtro | Como vai para a OLX | O que fica para depois da coleta |
+|---|---|---|
+| `estado` | Caminho `estado-xx`. Vazio usa o estado padrão do servidor, `todos` é o Brasil todo | Nada |
+| `regiao`, `zona`, `cidade` | Caminho, veja "Região e cidade" | Cidade sem página na OLX |
+| `marca`, `modelo`, `versao` | `vb`, `vm` e `vv`, com os códigos da própria OLX | O que a OLX não conhece (vem o aviso `filtro_aproximado`) |
+| `ano_min`, `ano_max` | `rs`, `re` | Nada |
+| `preco_min`, `preco_max` | `ps`, `pe` | Nada |
+| `km_min`, `km_max` | `ms`, `me`, no degrau da OLX que cobre o pedido | O valor exato |
+| `cambio` | `gb`: 1 manual, 2 automático, 3 semi-automático, 4 automatizado | Nada |
+| `combustivel` | `fu`: 1 gasolina, 2 álcool, 3 flex, 5 diesel, 6 híbrido, 7 elétrico | Nada |
+| `anunciante` | `f`: `p` particular, `c` profissional | Nada |
+| `ordenar` | `sf=1` recentes (o padrão), `sp=1` menor preço. Relevância não manda nada | Nada |
+
+- **Anunciante:** a OLX só entende `f=c` (profissional). Qualquer outro valor, inclusive `f=1`, traz particular. Conferido na OLX real em 21 de outubro de 2026. Antes disso o Garimpo mandava `f=1` e entregava particular para quem pedia profissional.
+- **Km:** a OLX só aceita os degraus dela (0, 5.000, 10.000, 20.000, 30.000 e 40.000, depois de 20 em 20 mil até 200.000, e então 250.000, 300.000, 400.000 e 500.000) e ignora qualquer outro valor sem avisar. O servidor manda o degrau que cobre o pedido (`km_max=55000` vai como `me=60000`, `km_min=55000` vai como `ms=40000`) e corta o resto aqui, contando em `cortados_por_filtro.km`. Acima de 500.000 não manda `me`, e `km_min=0` não manda `ms`.
+- **Câmbio, combustível e anunciante em outra fonte:** se a fonte não filtrar na origem, o filtro vale depois da coleta, e anúncio sem essa informação fica de fora.
+- **Modelo sem marca:** quando a busca não tem texto, o modelo vai como texto (`q=civic`), para a OLX procurar em todas as páginas e não só nas lidas. Se a página 1 vier zerada (a OLX dá zero para `q=hrv` e acha `q=hr-v`), o servidor pede de novo sem o texto e filtra aqui. O texto que a pessoa digitou nunca é trocado.
+- **Casamento depois da coleta:** palavra inteira, sem ligar para hífen, espaço ou acento. `hrv`, `hr v` e `hr-v` acham "HR-V", `tcross` acha "T-Cross", `1,5` acha "1.5", e `up` não acha "Upgrade". Na versão as palavras valem em qualquer ordem. A cidade compara só letras e números ("sao joao del rei" acha "São João del-Rei").
+- **Campo vazio:** texto ou número vazio (`ano_min=`, `km_max=%20`) vale como não preenchido, cai no mesmo cache da busca sem ele e não dá erro.
+- **Opção escrita de outro jeito:** `Automático`, ` semi automatico ` e `PROFISSIONAL` valem igual e caem no mesmo cache.
+- **Pedido inválido:** 422 com `erro` pronto para a tela, e nenhum pedido à OLX. Vale para letra em número (`50 mil`, `1.5`, `abc`), número negativo, faixa invertida (`ano_min` maior que `ano_max`), opção fora da lista (`cambio=turbo`), sigla que não é estado (`XX`), `pagina=0` e região sem estado.
 
 ## Região e cidade (filtradas na própria OLX)
 

@@ -5,8 +5,8 @@ import { Diagnostico } from './Diagnostico'
 import { Garimpar } from './Garimpar'
 import { SearchHologram } from './SearchHologram'
 import {
-  ANUNCIANTES, CAMBIOS, COMBUSTIVEIS, ESTADOS, FILTROS_DO_RASCUNHO, ORDENS, RASCUNHO_VAZIO,
-  montarPedidoOuVitrine, nomeDoEstado, type Rascunho,
+  ANUNCIANTES, CAMBIOS, COMBUSTIVEIS, ESTADOS, ORDENS, RASCUNHO_VAZIO,
+  contarFiltros, montarPedidoOuVitrine, nomeDoEstado, type Rascunho,
 } from './pedido'
 import { useRegioes, useZonas } from './regioes'
 import { T, buscadoAs, novosDesde } from './textos'
@@ -68,9 +68,18 @@ export function PaginaBusca() {
   }, [buscando, busca.pedido])
 
   const mudar = (k: keyof Rascunho, v: string) => setR((x) => ({ ...x, [k]: v }))
+  // O painel fica fora do form, então o Enter dos campos dele busca por aqui.
+  const buscarComEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter' || e.nativeEvent.isComposing) return
+    e.preventDefault()
+    buscar(montarPedidoOuVitrine(r))
+  }
   const texto = (k: keyof Rascunho, nome: string, numerico = false) => (
     <Campo nome={nome}>
-      <input inputMode={numerico ? 'numeric' : undefined} className={campo} value={r[k]} onChange={(e) => mudar(k, e.target.value)} />
+      <input
+        inputMode={numerico ? 'numeric' : undefined} enterKeyHint="search" className={campo} value={r[k]}
+        onChange={(e) => mudar(k, e.target.value)} onKeyDown={buscarComEnter}
+      />
     </Campo>
   )
   const escolha = (k: keyof Rascunho, nome: string, opcoes: readonly (readonly [string, string])[]) => (
@@ -88,7 +97,13 @@ export function PaginaBusca() {
     e.preventDefault()
     buscar(montarPedidoOuVitrine(r)) // campo vazio e sem filtro volta pra vitrine
   }
-  const filtrosAtivos = FILTROS_DO_RASCUNHO.filter((k) => r[k] !== '').length
+  // Limpar já busca de novo, senão a lista continuaria filtrada com o painel vazio.
+  const limparFiltros = () => {
+    const limpo = { ...RASCUNHO_VAZIO, texto: r.texto, estado: r.estado }
+    setR(limpo)
+    buscar(montarPedidoOuVitrine(limpo))
+  }
+  const filtrosAtivos = contarFiltros(montarPedidoOuVitrine(r))
 
   const lista = busca.anuncios
   const primeira = busca.primeira
@@ -101,6 +116,19 @@ export function PaginaBusca() {
   const sabeSeTemNovo = busca.primeira?.primeira_busca === false
   const novos = sabeSeTemNovo ? resposta?.novos ?? 0 : 0
   const nadaAchado = busca.fase === 'pronto' && lista.length === 0
+  // Os filtros daqui podem tirar todos os carros de uma página com a OLX ainda tendo mais. Por isso o Ver mais
+  // aparece também com a lista vazia.
+  const avisoMaisFalhou = busca.falhouMais && <p className="mt-6 text-center text-sm text-yellow-100/90">{T.maisFalhou}</p>
+  const botaoVerMais = (classe: string) => resposta?.tem_mais && (
+    <button
+      type="button"
+      onClick={verMais}
+      disabled={busca.carregandoMais}
+      className={`search-console__submit min-h-12 rounded-xl px-8 disabled:opacity-60 ${classe}`}
+    >
+      {busca.carregandoMais ? T.buscandoMais : busca.falhouMais ? T.tentarDeNovo : T.verMais}
+    </button>
+  )
 
   return (
     <div className="search-page min-h-svh font-sans text-white">
@@ -191,7 +219,7 @@ export function PaginaBusca() {
               </div>
               <button
                 type="button"
-                onClick={() => setR((x) => ({ ...RASCUNHO_VAZIO, texto: x.texto, estado: x.estado }))}
+                onClick={limparFiltros}
                 className="min-h-9 rounded-lg px-3 text-xs font-semibold text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
               >
                 {T.limparFiltros}
@@ -308,15 +336,19 @@ export function PaginaBusca() {
           {nadaAchado && (
             <div className="py-16 text-center text-gray-400">
               <p>{resposta?.informacao ?? T.nenhumComFiltro}</p>
-              <button type="button" onClick={() => busca.pedido && buscar(busca.pedido, true)} className={`${botao} mx-auto mt-4 text-sm`}>
-                <RefreshCw size={14} aria-hidden="true" /> {T.buscarDeNovo}
-              </button>
+              {avisoMaisFalhou}
+              <div className="mt-4 flex flex-col items-center gap-3">
+                {botaoVerMais('')}
+                <button type="button" onClick={() => busca.pedido && buscar(busca.pedido, true)} className={`${botao} text-sm`}>
+                  <RefreshCw size={14} aria-hidden="true" /> {T.buscarDeNovo}
+                </button>
+              </div>
             </div>
           )}
 
           {lista.length > 0 && (
             <>
-              {busca.blocos.map((bloco, n) => (
+              {busca.blocos.filter((bloco) => bloco.length > 0).map((bloco, n) => (
                 <ul key={n} className={`vehicle-grid grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 ${n > 0 ? 'mt-5' : ''}`}>
                   {bloco.map((a) => (
                     <CardCarro key={a.external_id} a={a} sinais={busca.sinais[a.external_id]} agora={busca.agora}
@@ -325,17 +357,8 @@ export function PaginaBusca() {
                   ))}
                 </ul>
               ))}
-              {busca.falhouMais && <p className="mt-6 text-center text-sm text-yellow-100/90">{T.maisFalhou}</p>}
-              {resposta?.tem_mais && (
-                <button
-                  type="button"
-                  onClick={verMais}
-                  disabled={busca.carregandoMais}
-                  className="search-console__submit mx-auto mt-8 min-h-12 rounded-xl px-8 disabled:opacity-60"
-                >
-                  {busca.carregandoMais ? T.buscandoMais : busca.falhouMais ? T.tentarDeNovo : T.verMais}
-                </button>
-              )}
+              {avisoMaisFalhou}
+              {botaoVerMais('mx-auto mt-8')}
             </>
           )}
         </div>
