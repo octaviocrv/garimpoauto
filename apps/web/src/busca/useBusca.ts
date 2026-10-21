@@ -2,9 +2,9 @@
 // de cancelar e de começar outra no meio. Só a busca mais nova pode mexer no estado.
 import { useCallback, useEffect, useReducer, useRef } from 'react'
 import { buscarPagina, ErroBusca } from '../api'
-import type { Anuncio, Aviso, ReferenciaFipe, RespostaPagina } from '../types'
+import type { Anuncio, Aviso, DetalheAnuncio, RespostaPagina } from '../types'
 import type { Pedido } from './pedido'
-import { agrupar, analisar, analisesDaPagina, type Analise } from './analise'
+import { analisar, analisesDaPagina, type Analise } from './analise'
 import { sinaisDaPagina, type Sinal } from './sinais'
 import { T } from './textos'
 
@@ -22,7 +22,7 @@ export interface EstadoBusca {
   erro: string | null // frase pronta quando a busca nem começou
   // Nada abaixo muda para um carro que já está na tela. Só cresce quando chega página nova.
   sinais: Record<string, Sinal[]> // calculados quando o carro chegou, nunca refeitos
-  analises: Record<string, Analise> // idem: o nível Quente ou Boa e a tela do Garimpar vêm daqui
+  analises: Record<string, Analise> // idem, menos quando o Garimpar lê a página do anúncio: aí a análise ganha a referência da OLX
   avisos: Aviso[] // de todas as páginas, sem repetir, pra o aviso não sumir quando chega a página 2
   agora: number // a hora de referência das datas e dos sinais, fixada na página 1
 }
@@ -36,7 +36,7 @@ export type Acao =
   | { tipo: 'iniciar'; pedido: Pedido }
   | { tipo: 'chegou'; resposta: RespostaPagina; agora?: number } // agora: só os testes passam, na tela é a hora real
   | { tipo: 'verMais' }
-  | { tipo: 'fipe'; anuncioId: string; fipe: ReferenciaFipe | null }
+  | { tipo: 'detalhe'; anuncioId: string; detalhe: DetalheAnuncio }
   | { tipo: 'caiu'; erro: string }
   | { tipo: 'parar' }
 
@@ -51,9 +51,9 @@ export function reduzir(e: EstadoBusca, a: Acao): EstadoBusca {
       return { ...INICIAL, fase: 'buscando', pedido: a.pedido }
     case 'verMais':
       return { ...e, carregandoMais: true, falhouMais: false }
-    case 'fipe': {
+    case 'detalhe': {
       const atualizar = (anuncio: Anuncio): Anuncio => anuncio.external_id === a.anuncioId
-        ? { ...anuncio, fipe: a.fipe }
+        ? { ...anuncio, referencia_preco: a.detalhe.referencia_preco ?? null }
         : anuncio
       const anuncios = e.anuncios.map(atualizar)
       const atualizado = anuncios.find((anuncio) => anuncio.external_id === a.anuncioId)
@@ -64,7 +64,7 @@ export function reduzir(e: EstadoBusca, a: Acao): EstadoBusca {
         blocos: e.blocos.map((bloco) => bloco.map(atualizar)),
         analises: {
           ...e.analises,
-          [a.anuncioId]: analisar(atualizado, agrupar(anuncios), e.agora),
+          [a.anuncioId]: analisar(atualizado, a.detalhe, e.agora),
         },
       }
     }
@@ -77,13 +77,12 @@ export function reduzir(e: EstadoBusca, a: Acao): EstadoBusca {
       }
       const agora = primeira ? a.agora ?? Date.now() : e.agora
       const anuncios = primeira ? r.anuncios : [...e.anuncios, ...r.anuncios]
-      const grupos = agrupar(anuncios)
       return {
         ...e, fase: 'pronto', carregandoMais: false, falhouMais: false, erro: null, resposta: r,
         primeira: primeira ? r : e.primeira, anuncios, agora,
         blocos: primeira ? [r.anuncios] : [...e.blocos, r.anuncios],
-        sinais: { ...(primeira ? {} : e.sinais), ...sinaisDaPagina(r.anuncios, grupos, agora) },
-        analises: { ...(primeira ? {} : e.analises), ...analisesDaPagina(r.anuncios, grupos, agora) },
+        sinais: { ...(primeira ? {} : e.sinais), ...sinaisDaPagina(r.anuncios, agora) },
+        analises: { ...(primeira ? {} : e.analises), ...analisesDaPagina(r.anuncios, agora) },
         avisos: mesclarAvisos(primeira ? [] : e.avisos, r.avisos),
       }
     }
@@ -131,11 +130,11 @@ export function useBusca(dev: boolean) {
     despachar({ tipo: 'parar' })
   }, [])
 
-  const atualizarFipe = useCallback((anuncioId: string, fipe: ReferenciaFipe | null) => {
-    despachar({ tipo: 'fipe', anuncioId, fipe })
+  const atualizarDetalhe = useCallback((anuncioId: string, detalhe: DetalheAnuncio) => {
+    despachar({ tipo: 'detalhe', anuncioId, detalhe })
   }, [])
 
   useEffect(() => () => atual.current?.abort(), [])
 
-  return { estado, buscar, verMais, parar, atualizarFipe }
+  return { estado, buscar, verMais, parar, atualizarDetalhe }
 }

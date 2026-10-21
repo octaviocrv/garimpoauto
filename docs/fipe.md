@@ -29,7 +29,8 @@ Só ao abrir o **Garimpar** de um anúncio. O quadro chega junto com a página d
 e fica guardada em memória por 20 minutos como o resto do detalhe.
 
 A lista e a vitrine não leem página de anúncio, então não trazem FIPE. Depois que um Garimpar abre e a
-FIPE chega, ela passa a valer também no card daquele anúncio e na análise.
+referência chega, ela passa a valer também no card daquele anúncio (`Anuncio.referencia_preco`) e no
+veredito.
 
 ## Na tela
 
@@ -37,8 +38,35 @@ FIPE chega, ela passa a valer também no card daquele anúncio e na análise.
   preço do anúncio, o preço médio OLX e o preço FIPE.
 - A régua tem 3 trechos iguais (menor até corte baixo, corte baixo até corte alto, corte alto até maior),
   como a da OLX. O trecho onde o preço do anúncio cai fica em destaque e o pino anda dentro dele.
-- A FIPE da OLX alimenta a análise que já existia (`a.fipe`, com `confianca: 'alta'`). As regras da
-  análise e do veredito não mudaram.
+
+## No veredito
+
+O veredito do Garimpar (`apps/web/src/busca/analise.ts`) usa só o que a OLX entrega. O Garimpo não
+compara mais o preço com os carros carregados na lista, não calcula mediana e não estima margem.
+
+Critérios que vêm do quadro Referência de preço:
+
+| Critério | A favor | Atenção |
+|---|---|---|
+| Preço comparado à FIPE | 10% ou mais abaixo | acima da FIPE, ou 30% ou mais abaixo (preço suspeito) |
+| Preço comparado à média da OLX | 10% ou mais abaixo | acima da média, ou 30% ou mais abaixo |
+| Régua da OLX | no 1º trecho (entre os mais baratos) | no 3º trecho (entre os mais caros) |
+
+Critérios que vêm do resto da página do anúncio e da lista: km por ano, frescor, vendedor, fotos,
+palavras de risco no título e na descrição, o que o anunciante marcou em Outras características
+(IPVA pago, único dono, quitado, revisões, garantia, manual e chave reserva contam a favor; leilão,
+multas e financiado pedem atenção), carro completo nos opcionais e anúncio repetido.
+
+Nível:
+
+- **Quente** quando o preço está abaixo de todas as referências que a OLX mostrou, pelo menos uma
+  delas 10% ou mais, no 1º trecho da régua e sem nenhum critério de atenção.
+- **Boa** quando o preço está abaixo de todas as referências que a OLX mostrou e não há alerta forte.
+- Sem nível quando falta a referência, quando o preço está na linha ou acima, quando as referências
+  divergem ou quando há alerta forte (preço suspeito, leilão, palavra de risco ou anúncio repetido).
+
+Antes da página do anúncio abrir, o veredito fica em "Lendo a referência da OLX". O card da lista só
+ganha nível depois que o Garimpar daquele anúncio é aberto.
 
 ## Quando falta
 
@@ -46,7 +74,8 @@ Os campos são internos da OLX e podem faltar ou mudar sem aviso.
 
 - Sem FIPE e sem média, `referencia_preco` vem `null` e o bloco não aparece.
 - Com parte dos números, a tela mostra o que tem. Sem os cortes, a régua some e as caixas ficam.
-- Sem FIPE, a análise segue como "FIPE não encontrada", igual a antes.
+- Sem FIPE ou sem média, o critério correspondente fica sem dado e o veredito usa o que sobrou.
+  Sem nenhuma das duas, o veredito fica "Sem referência da OLX".
 - A OLX não informa o código FIPE nem o mês da tabela FIPE. O mês mostrado é o da conta de mercado
   da OLX.
 

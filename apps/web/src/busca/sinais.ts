@@ -1,12 +1,11 @@
 // Sinais de que um carro vale abrir primeiro. Regras da casa:
 // 1) só nasce de dado que o servidor devolveu, e dado faltando significa nenhum sinal, nunca chute
-// 2) o preço só é comparado com a lista já carregada
+// 2) preço não vira sinal aqui. A comparação de preço é a referência da OLX, lida no Garimpar
 // 3) "Destaque" da OLX é anúncio pago e não entra aqui
-// 4) a FIPE de exemplo (fipe.ts) nunca entra aqui
 import type { Anuncio } from '../types'
 import { T } from './textos'
 
-export type TipoSinal = 'preco' | 'km' | 'recente'
+export type TipoSinal = 'km' | 'recente'
 export interface Sinal {
   tipo: TipoSinal
   texto: string // o motivo, em poucas palavras
@@ -17,9 +16,6 @@ export const KM_POR_ANO_BAIXO = 8000 // abaixo disso o carro rodou pouco (a méd
 export const KM_MINIMO_CONFIAVEL = 1000 // km menor que isso em carro de 2 anos ou mais costuma ser campo preenchido errado
 export const IDADE_MINIMA_ANOS = 2 // em carro mais novo "km por ano" não diz nada
 export const RECENTE_MINUTOS = 180
-export const AMOSTRA_MINIMA = 5 // carros iguais na lista pra comparar preço
-export const DESCONTO_MINIMO = 0.15
-export const DESCONTO_MAXIMO = 0.5 // mais que isso quase sempre é preço errado ou entrada, não vira sinal
 
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 const DIA = 86400000
@@ -52,38 +48,6 @@ export function dataCurta(iso: string | null, agora: number): string | null {
 
 export const prefixoData = (a: Anuncio) => (a.renovado_em ? 'Renovado' : 'Anunciado')
 
-export const chave = (a: Anuncio): string | null =>
-  a.modelo && a.ano !== null ? `${a.marca ?? ''}|${a.modelo}|${a.ano}`.toLowerCase() : null
-
-export function mediana(v: number[]): number {
-  const o = [...v].sort((x, y) => x - y)
-  const m = Math.floor(o.length / 2)
-  return o.length % 2 ? o[m] : (o[m - 1] + o[m]) / 2
-}
-
-function precosDosGrupos(grupos: Map<string, Anuncio[]>): Map<string, number[]> {
-  const precos = new Map<string, number[]>()
-  for (const [k, anuncios] of grupos) {
-    const ps: number[] = []
-    for (const a of anuncios) if (a.preco !== null && a.preco > 0) ps.push(a.preco)
-    if (ps.length > 0) precos.set(k, ps)
-  }
-  return precos
-}
-
-function sinalDePreco(a: Anuncio, grupos: Map<string, number[]>): Sinal | null {
-  const k = chave(a)
-  const precos = k ? grupos.get(k) : undefined
-  if (!precos || a.preco === null || a.preco <= 0 || precos.length < AMOSTRA_MINIMA) return null
-  const razao = a.preco / mediana(precos)
-  if (razao > 1 - DESCONTO_MINIMO || razao < 1 - DESCONTO_MAXIMO) return null
-  return {
-    tipo: 'preco',
-    texto: `Preço ${Math.round((1 - razao) * 100)}% abaixo da lista`,
-    detalhe: `Comparado com ${precos.length} ${a.modelo} ${a.ano} já carregados`,
-  }
-}
-
 function sinalDeKm(a: Anuncio, agora: number): Sinal | null {
   if (a.km === null || a.ano === null || a.km < KM_MINIMO_CONFIAVEL) return null
   const idade = new Date(agora).getFullYear() - a.ano
@@ -100,14 +64,12 @@ function sinalRecente(a: Anuncio, agora: number): Sinal | null {
   return { tipo: 'recente', texto: `${prefixoData(a)} ${dataCurta(a.anunciado_em, agora)}` }
 }
 
-// Os sinais dos carros que acabaram de chegar (`novos`), comparando preço com tudo que já está
-// carregado (`lista`, que inclui os novos). Quem chama guarda o resultado e não recalcula: assim o
-// card não muda sozinho quando chega outra página.
-export function sinaisDaPagina(novos: Anuncio[], grupos: Map<string, Anuncio[]>, agora: number): Record<string, Sinal[]> {
-  const precosPorGrupo = precosDosGrupos(grupos)
+// Os sinais dos carros que acabaram de chegar. Quem chama guarda o resultado e não recalcula:
+// assim o card não muda sozinho quando chega outra página.
+export function sinaisDaPagina(novos: Anuncio[], agora: number): Record<string, Sinal[]> {
   const saida: Record<string, Sinal[]> = {}
   for (const a of novos) {
-    saida[a.external_id] = [sinalDePreco(a, precosPorGrupo), sinalDeKm(a, agora), sinalRecente(a, agora)]
+    saida[a.external_id] = [sinalDeKm(a, agora), sinalRecente(a, agora)]
       .filter((s): s is Sinal => s !== null)
   }
   return saida

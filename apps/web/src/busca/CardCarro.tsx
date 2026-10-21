@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { ArrowUpRight, ChevronRight, Clock3, Flame, MapPin, Pickaxe, Route, Star, ThumbsUp, TrendingDown, type LucideIcon } from 'lucide-react'
 import type { Anuncio } from '../types'
-import { FIPE_BOA_PRELIMINAR, FIPE_PRECO_SUSPEITO, type Analise } from './analise'
+import { ABAIXO_BOM, PRECO_SUSPEITO, type Analise } from './analise'
 import { fipeDe, type ReferenciaFipe } from './fipe'
 import { dataCurta, prefixoData, type Sinal, type TipoSinal } from './sinais'
 import { seloFipeAbaixo, seloFipeAcima, T } from './textos'
@@ -9,10 +9,8 @@ import { seloFipeAbaixo, seloFipeAcima, T } from './textos'
 const preco = (v: number) => `R$ ${v.toLocaleString('pt-BR')}`
 const SEM_SINAIS: Sinal[] = []
 
-const ICONE: Record<TipoSinal, LucideIcon> = { preco: TrendingDown, km: Route, recente: Clock3 }
-// Ouro Garimpo é só do preço (o brand-kit reserva o ouro pra bom negócio). O resto é teal.
+const ICONE: Record<TipoSinal, LucideIcon> = { km: Route, recente: Clock3 }
 const COR_SINAL: Record<TipoSinal, string> = {
-  preco: 'bg-amber-300/10 text-amber-300',
   km: 'bg-teal-400/10 text-teal-300',
   recente: 'bg-teal-400/10 text-teal-300',
 }
@@ -20,8 +18,8 @@ const COR_SINAL: Record<TipoSinal, string> = {
 function FipeDoCard({ f }: { f: ReferenciaFipe }) {
   const diferenca = f.diferencaPercentual
   const proporcao = (f.valor - f.diferencaReais) / f.valor
-  const alerta = proporcao <= 1 - FIPE_PRECO_SUSPEITO
-  const oportunidade = proporcao <= 1 - FIPE_BOA_PRELIMINAR && !alerta
+  const alerta = proporcao <= 1 - PRECO_SUSPEITO
+  const oportunidade = proporcao <= 1 - ABAIXO_BOM && !alerta
   const texto = alerta
     ? T.fipePrecoEstranho
     : diferenca < 0
@@ -128,7 +126,7 @@ function Card({ a, sinais = SEM_SINAIS, agora, novo, analise, onGarimpar }: Prop
           >
             {nivel === 'quente' ? <Flame size={18} className="flex-none" aria-hidden="true" /> : <ThumbsUp size={18} className="flex-none" aria-hidden="true" />}
             <span className="min-w-0 flex-1">
-              <span className="block font-bold">{nivel === 'quente' ? T.quente : analise.preliminar ? T.boaPreliminar : T.boa}</span>
+              <span className="block font-bold">{nivel === 'quente' ? T.quente : T.boa}</span>
               <span className="block text-xs opacity-90">{analise.resumo}</span>
             </span>
             <ChevronRight size={16} className="flex-none" aria-hidden="true" />

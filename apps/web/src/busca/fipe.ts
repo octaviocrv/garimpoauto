@@ -1,5 +1,5 @@
-// A FIPE vem da página do anúncio na OLX, lida quando a pessoa abre o Garimpar.
-import type { Anuncio, ReferenciaFipe as FipeDoAnuncio } from '../types'
+// A FIPE vem do quadro Referência de preço da página do anúncio na OLX, lida quando a pessoa abre o Garimpar.
+import type { Anuncio } from '../types'
 
 export interface ReferenciaFipe {
   valor: number // valor de referência em reais
@@ -8,22 +8,11 @@ export interface ReferenciaFipe {
 }
 
 export function fipeDe(a: Anuncio): ReferenciaFipe | null {
-  if (a.fipe?.confianca === 'alta' && a.preco !== null) {
-    return {
-      valor: a.fipe.preco,
-      diferencaReais: a.fipe.preco - a.preco,
-      diferencaPercentual: a.fipe.diferenca_percentual,
-    }
-  }
-  return null
-}
-
-// O preço FIPE da OLX no formato que a análise e o card já leem.
-export function fipeDaOlx(preco: number | null, fipe: number | null | undefined): FipeDoAnuncio | null {
-  if (!fipe || fipe <= 0) return null
+  const fipe = a.referencia_preco?.fipe
+  if (!fipe || fipe <= 0 || a.preco === null || a.preco <= 0) return null
   return {
-    preco: fipe,
-    diferenca_percentual: preco !== null && preco > 0 ? Math.round(((fipe - preco) / fipe) * 100) : 0,
-    confianca: 'alta',
+    valor: fipe,
+    diferencaReais: fipe - a.preco,
+    diferencaPercentual: Math.round(((fipe - a.preco) / fipe) * 100),
   }
 }

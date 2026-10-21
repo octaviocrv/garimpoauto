@@ -239,65 +239,6 @@
 .ga-veredito h2 { font-size: clamp(20px, 2.4vw, 30px); font-weight: 700; letter-spacing: -0.025em; line-height: 1.05; margin: 4px 0 0; }
 .ga-veredito__motivo { align-self: center; color: #bdc9c6; font-size: 14px; line-height: 1.65; margin: 0; }
 .ga-veredito__nota { color: #73827f; font-size: 11px; grid-column: 1 / -1; line-height: 1.55; margin: 0; }
-.ga-buscar-iguais {
-  align-items: center;
-  background: rgba(94, 234, 212, 0.1);
-  border: 1px solid rgba(94, 234, 212, 0.3);
-  border-radius: 7px;
-  color: #ccfbf1;
-  cursor: pointer;
-  display: inline-flex;
-  gap: 12px;
-  grid-column: 1 / -1;
-  justify-self: start;
-  min-height: 48px;
-  padding: 8px 14px;
-  text-align: left;
-  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
-}
-.ga-buscar-iguais:hover {
-  background: rgba(94, 234, 212, 0.16);
-  border-color: rgba(94, 234, 212, 0.5);
-  transform: translateY(-1px);
-}
-.ga-buscar-iguais span { display: grid; gap: 2px; }
-.ga-buscar-iguais strong { font-size: 14px; }
-.ga-buscar-iguais small { color: #91aaa5; font-size: 11px; font-weight: 500; }
-
-.ga-checklist {
-  display: grid;
-  gap: 8px;
-  grid-column: 1 / -1;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.ga-checklist li {
-  align-items: center;
-  background: rgba(0, 0, 0, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 4px;
-  color: #aab6b3;
-  display: flex;
-  font-size: 12px;
-  gap: 8px;
-  min-height: 44px;
-  padding: 9px 11px;
-}
-
-.ga-checklist li > span {
-  align-items: center;
-  border: 1px solid #52615e;
-  border-radius: 50%;
-  display: inline-flex;
-  flex: 0 0 20px;
-  height: 20px;
-  justify-content: center;
-}
-
-.ga-checklist li > span.is-ok { background: rgba(45, 212, 191, 0.12); border-color: var(--ga-agua-forte); color: var(--ga-agua); }
 
 .ga-secao { margin-top: 48px; }
 .ga-titulo-secao { align-items: center; display: flex; gap: 12px; margin-bottom: 18px; }
@@ -378,7 +319,7 @@
 }
 
 .ga-regua-km { margin: 48px 12px 0; }
-.ga-regua-km__trilho, .ga-faixa-preco__trilho, .ga-progresso__trilho {
+.ga-regua-km__trilho {
   background: #24322f;
   border-radius: 999px;
   height: 8px;
@@ -413,37 +354,7 @@
 .ga-regua-km__legendas b { color: #a9b6b3; font-size: 11px; margin-top: 2px; }
 .ga-regua-km__legendas .is-carro { color: #acdcd2; padding-top: 35px; }
 .ga-regua-km__legendas .is-carro b { color: var(--ga-agua); }
-.ga-faixa-preco { margin-top: 34px; }
-.ga-faixa-preco__valores, .ga-faixa-preco__nomes {
-  color: #aab7b4;
-  display: flex;
-  font-size: 10px;
-  justify-content: space-between;
-}
 
-.ga-faixa-preco__trilho { background: linear-gradient(90deg, #163934, #49736b, #263936); height: 7px; margin-top: 10px; }
-.ga-faixa-preco__mediana { background: #d0d9d7; height: 15px; left: 50%; position: absolute; top: -4px; width: 1px; }
-.ga-faixa-preco__carro {
-  background: var(--ga-agua);
-  border: 3px solid #0a1816;
-  border-radius: 50%;
-  box-shadow: 0 0 0 2px var(--ga-agua), 0 0 15px rgba(94, 234, 212, 0.7);
-  height: 14px;
-  position: absolute;
-  top: -4px;
-  transform: translateX(-50%);
-  width: 14px;
-}
-
-.ga-faixa-preco__nomes { color: #687773; margin-top: 8px; }
-.ga-faixa-preco__destaque { color: #8e9c99; font-size: 11px; margin: 17px 0 0; text-align: center; }
-.ga-faixa-preco__destaque b { color: var(--ga-agua); }
-.ga-progresso { margin-top: 31px; }
-.ga-progresso__texto { color: #82908d; display: flex; font-size: 11px; justify-content: space-between; }
-.ga-progresso__texto b { color: var(--ga-agua); }
-.ga-progresso__trilho { height: 7px; margin-top: 9px; overflow: hidden; }
-.ga-progresso__trilho span { background: var(--ga-agua-forte); border-radius: inherit; display: block; height: 100%; }
-.ga-progresso p { color: #7a8986; font-size: 11px; line-height: 1.5; margin: 14px 0 0; }
 .ga-alertas { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
 .ga-alertas li {
   align-items: flex-start;
@@ -627,8 +538,7 @@
   .ga-hero__sombra { background: linear-gradient(0deg, rgba(7, 18, 16, 0.92), transparent 55%); }
   .ga-hero__texto { margin-top: -20px; padding: 28px 24px 30px; }
   .ga-veredito { grid-template-columns: 1fr; }
-  .ga-veredito__nota, .ga-checklist { grid-column: auto; }
-  .ga-checklist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ga-veredito__nota { grid-column: auto; }
   .ga-grade-sinais, .ga-grade-pecas { grid-template-columns: 1fr 1fr; }
 }
 
@@ -644,7 +554,7 @@
   .ga-preco { font-size: 39px; margin-top: 18px; }
   .ga-chips { margin-top: 18px; }
   .ga-veredito { border-radius: 4px 8px 8px 4px; padding: 19px; }
-  .ga-checklist, .ga-grade-sinais, .ga-grade-medidas, .ga-grade-pecas, .ga-ficha__grade { grid-template-columns: 1fr; }
+  .ga-grade-sinais, .ga-grade-medidas, .ga-grade-pecas, .ga-ficha__grade { grid-template-columns: 1fr; }
   .ga-ficha__bloco { padding: 16px; }
   .ga-ficha__lista { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; }
   .ga-painel--largo { grid-column: auto; }

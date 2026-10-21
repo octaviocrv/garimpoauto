@@ -6,12 +6,12 @@ import { Garimpar } from './Garimpar'
 import { SearchHologram } from './SearchHologram'
 import {
   ANUNCIANTES, CAMBIOS, COMBUSTIVEIS, ESTADOS, FILTROS_DO_RASCUNHO, ORDENS, RASCUNHO_VAZIO,
-  buscaDeCarrosIguais, montarPedidoOuVitrine, nomeDoEstado, type Rascunho,
+  montarPedidoOuVitrine, nomeDoEstado, type Rascunho,
 } from './pedido'
 import { useRegioes, useZonas } from './regioes'
 import { T, buscadoAs, novosDesde } from './textos'
 import { useBusca } from './useBusca'
-import type { Anuncio } from '../types'
+import type { Anuncio, DetalheAnuncio } from '../types'
 
 const DEV = new URLSearchParams(window.location.search).get('dev') === '1'
 
@@ -39,23 +39,15 @@ function Campo({ nome, children }: { nome: string; children: React.ReactNode }) 
 }
 
 export function PaginaBusca() {
-  const { estado: busca, buscar, verMais, parar, atualizarFipe } = useBusca(DEV)
+  const { estado: busca, buscar, verMais, parar, atualizarDetalhe } = useBusca(DEV)
   const [r, setR] = useState<Rascunho>(RASCUNHO_VAZIO)
   const [painel, setPainel] = useState(false)
   const [demorando, setDemorando] = useState(false)
   const [aberto, setAberto] = useState<Anuncio | null>(null) // o carro da tela do Garimpar
   const fecharGarimpar = useCallback(() => setAberto(null), [])
-  const aplicarFipe = useCallback((anuncio: Anuncio) => {
-    atualizarFipe(anuncio.external_id, anuncio.fipe ?? null)
-  }, [atualizarFipe])
-  const buscarIguais = useCallback((anuncio: Anuncio) => {
-    const preparada = buscaDeCarrosIguais(anuncio, busca.pedido)
-    if (!preparada) return
-    setR(preparada.rascunho)
-    setPainel(false)
-    setAberto(null)
-    buscar(preparada.pedido)
-  }, [busca.pedido, buscar])
+  const aplicarDetalhe = useCallback((anuncio: Anuncio, detalhe: DetalheAnuncio) => {
+    atualizarDetalhe(anuncio.external_id, detalhe)
+  }, [atualizarDetalhe])
   const regioes = useRegioes(r.estado)
   const zonas = useZonas(r.estado, r.regiao)
 
@@ -354,8 +346,7 @@ export function PaginaBusca() {
           a={aberto}
           analise={busca.analises[aberto.external_id]}
           onFechar={fecharGarimpar}
-          onFipe={aplicarFipe}
-          onBuscarIguais={buscarIguais}
+          onDetalhe={aplicarDetalhe}
         />
       )}
     </div>

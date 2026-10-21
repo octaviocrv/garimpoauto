@@ -3,15 +3,15 @@ import {
   ArrowLeft,
   ArrowSquareOut,
   Camera,
-  Check,
+  ChartBar,
   CheckCircle,
   Clock,
-  CurrencyCircleDollar,
   Gauge,
   ImageBroken,
+  ListChecks,
   MapPin,
-  MagnifyingGlass,
   Question,
+  SealCheck,
   ShieldWarning,
   Sparkle,
   Storefront,
@@ -21,9 +21,8 @@ import {
   type Icon,
 } from '@phosphor-icons/react'
 import type { Anuncio, DetalheAnuncio } from '../types'
-import type { Analise, Criterio, Mercado, Nivel } from './analise'
-import { AMOSTRA_MINIMA, IDADE_MINIMA_ANOS, KM_POR_ANO_BAIXO } from './sinais'
-import { fipeDaOlx } from './fipe'
+import type { Analise, Criterio, Nivel } from './analise'
+import { KM_POR_ANO_BAIXO } from './sinais'
 import { T } from './textos'
 import { GARIMPAR_TEXTOS as GT } from './garimparTextos'
 import { IconeRedondo } from './IconeRedondo'
@@ -62,12 +61,6 @@ function NumeroGrande({ valor, formato }: { valor: number; formato: (valor: numb
 
 function criterioDe(lista: Criterio[], id: Criterio['id']) {
   return lista.find((criterio) => criterio.id === id)
-}
-
-function totalDeIguais(preco: Criterio | undefined, mercado: Mercado | null | undefined) {
-  if (mercado) return mercado.n
-  const encontrado = preco?.fato.match(/Há (\d+)/)
-  return encontrado ? Number(encontrado[1]) : null
 }
 
 function Chip({ children, icon: Icone }: { children: React.ReactNode; icon?: Icon }) {
@@ -133,52 +126,25 @@ function Hero({ carro, recencia }: { carro: Anuncio; recencia: Criterio | undefi
 type EstadoVeredito = 'destaque' | 'neutro' | 'sembase' | 'carregando'
 
 function estadoDoVeredito(analise: Analise | undefined): EstadoVeredito {
-  if (!analise) return 'carregando'
+  if (!analise?.lido) return 'carregando'
   if (analise.nivel) return 'destaque'
-  if (!analise.mercado || !analise.margem) return 'sembase'
+  if (!analise.referencia) return 'sembase'
   return 'neutro'
 }
 
-function RotuloVeredito({
-  nivel, estado, preliminar, temFipe,
-}: {
-  nivel: Nivel | null
-  estado: EstadoVeredito
-  preliminar: boolean
-  temFipe: boolean
-}) {
+function RotuloVeredito({ nivel, estado }: { nivel: Nivel | null; estado: EstadoVeredito }) {
   if (nivel === 'quente') return <>{T.quente}</>
-  if (nivel === 'boa') return <>{preliminar ? GT.boaPreliminar : T.boa}</>
-  if (estado === 'sembase') return <>{temFipe ? GT.fipeSemMercado : GT.faltaBase}</>
+  if (nivel === 'boa') return <>{T.boa}</>
+  if (estado === 'sembase') return <>{GT.semReferencia}</>
   if (estado === 'carregando') return <>{GT.preparandoLeitura}</>
   return <>{GT.leituraNeutra}</>
 }
 
-function ItemChecklist({ ok, children }: { ok: boolean; children: React.ReactNode }) {
-  return (
-    <li>
-      <span className={ok ? 'is-ok' : ''}>
-        {ok ? <Check size={13} aria-hidden="true" /> : <span aria-hidden="true">•</span>}
-      </span>
-      {children}
-    </li>
-  )
-}
-
-function Veredito({
-  carro, analise, preco, onBuscarIguais,
-}: {
-  carro: Anuncio
-  analise: Analise | undefined
-  preco: Criterio | undefined
-  onBuscarIguais: () => void
-}) {
+function Veredito({ analise }: { analise: Analise | undefined }) {
   const estado = estadoDoVeredito(analise)
-  const iguais = totalDeIguais(preco, analise?.mercado)
-  const baseCompleta = iguais !== null && iguais >= AMOSTRA_MINIMA
 
   return (
-    <section className={`ga-veredito ga-veredito--${estado} ga-entra`}>
+    <section className={`ga-veredito ga-veredito--${estado} ga-entra`} aria-busy={estado === 'carregando'}>
       <div className="ga-veredito__cabecalho">
         <IconeRedondo
           icon={estado === 'destaque' ? Sparkle : estado === 'neutro' ? CheckCircle : Question}
@@ -186,39 +152,12 @@ function Veredito({
         />
         <div>
           <p className="ga-sobretitulo">{GT.veredito}</p>
-          <h2>
-            <RotuloVeredito
-              nivel={analise?.nivel ?? null}
-              estado={estado}
-              preliminar={analise?.preliminar ?? false}
-              temFipe={carro.fipe?.confianca === 'alta'}
-            />
-          </h2>
+          <h2><RotuloVeredito nivel={analise?.nivel ?? null} estado={estado} /></h2>
         </div>
       </div>
       <p className="ga-veredito__motivo">
         {analise?.motivo ?? GT.leituraCarregando}
       </p>
-      {(estado === 'sembase' || estado === 'carregando') && (
-        <ul className="ga-checklist" aria-label={GT.baseDaLeitura}>
-          <ItemChecklist ok={baseCompleta}>
-            {GT.carrosIguais} {iguais === null ? GT.naoDisponivel : `${iguais} de ${AMOSTRA_MINIMA}`}
-          </ItemChecklist>
-          <ItemChecklist ok={carro.km !== null}>{GT.kmInformado} {carro.km !== null ? GT.sim : GT.nao}</ItemChecklist>
-          <ItemChecklist ok={carro.ano !== null}>{GT.anoInformado} {carro.ano !== null ? GT.sim : GT.nao}</ItemChecklist>
-          <ItemChecklist ok={carro.preco !== null}>{GT.precoInformado} {carro.preco !== null ? GT.sim : GT.nao}</ItemChecklist>
-          <ItemChecklist ok={carro.fipe?.confianca === 'alta'}>{GT.fipeEncontrada} {carro.fipe?.confianca === 'alta' ? GT.sim : GT.nao}</ItemChecklist>
-        </ul>
-      )}
-      {carro.modelo && carro.ano !== null && (
-        <button type="button" className="ga-buscar-iguais" onClick={onBuscarIguais}>
-          <MagnifyingGlass size={18} weight="bold" aria-hidden="true" />
-          <span>
-            <strong>{GT.buscarCarrosIguais}</strong>
-            <small>{GT.buscarCarrosIguaisAjuda}</small>
-          </span>
-        </button>
-      )}
       <p className="ga-veredito__nota">{T.comoLer}</p>
     </section>
   )
@@ -227,9 +166,12 @@ function Veredito({
 function CartaoSinal({ criterio }: { criterio: Criterio }) {
   const icones: Partial<Record<Criterio['id'], Icon>> = {
     recencia: Clock,
-    preco: Tag,
+    fipe: Tag,
+    media: ChartBar,
+    regua: ChartBar,
     km: Gauge,
-    margem: CurrencyCircleDollar,
+    garantias: SealCheck,
+    opcionais: ListChecks,
   }
   const Icone = icones[criterio.id] ?? CheckCircle
 
@@ -246,7 +188,7 @@ function CartaoSinal({ criterio }: { criterio: Criterio }) {
   )
 }
 
-function SinaisAFavor({ criterios }: { criterios: Criterio[] }) {
+function SinaisAFavor({ criterios, lido }: { criterios: Criterio[]; lido: boolean }) {
   const sinais = criterios.filter((criterio) =>
     criterio.veredito === 'favor' && !['vendedor', 'fotos'].includes(criterio.id))
 
@@ -264,16 +206,17 @@ function SinaisAFavor({ criterios }: { criterios: Criterio[] }) {
           {sinais.map((criterio) => <CartaoSinal key={criterio.id} criterio={criterio} />)}
         </div>
       ) : (
-        <p className="ga-linha-calma"><Question size={18} weight="duotone" aria-hidden="true" /> {GT.semSinalReal}</p>
+        <p className="ga-linha-calma"><Question size={18} weight="duotone" aria-hidden="true" /> {lido ? GT.semSinalReal : GT.sinaisCarregando}</p>
       )}
     </section>
   )
 }
 
-function ReguaKm({ carro, criterio }: { carro: Anuncio; criterio: Criterio | undefined }) {
+// Carro com menos de 1 ano conta como 1 ano de uso, pra a régua aparecer também nos mais novos.
+function ReguaKm({ km, ano, criterio }: { km: number | null; ano: number | null; criterio: Criterio | undefined }) {
   if (!criterio) return null
-  const idade = carro.ano === null ? null : new Date().getFullYear() - carro.ano
-  const porAno = carro.km !== null && idade !== null && idade >= IDADE_MINIMA_ANOS ? carro.km / idade : null
+  const idade = ano === null ? null : Math.max(1, new Date().getFullYear() - ano)
+  const porAno = km !== null && idade !== null ? km / idade : null
   const maximo = Math.max(18000, porAno ? porAno * 1.15 : 0)
   const posicao = (valor: number) => `${limitar(valor / maximo * 100, 3, 97)}%`
 
@@ -303,77 +246,6 @@ function ReguaKm({ carro, criterio }: { carro: Anuncio; criterio: Criterio | und
       ) : (
         <p className="ga-vazio">{GT.reguaSemBase}</p>
       )}
-      <p className="ga-conta">{criterio.fato}</p>
-    </article>
-  )
-}
-
-function FaixaPreco({ carro, criterio, mercado }: { carro: Anuncio; criterio: Criterio | undefined; mercado: Mercado | null | undefined }) {
-  if (!criterio) return null
-  const iguais = totalDeIguais(criterio, mercado)
-  const temFaixa = mercado && carro.preco !== null
-  const amplitude = mercado ? mercado.maximo - mercado.minimo : 0
-  const posicao = temFaixa && amplitude > 0
-    ? limitar((carro.preco! - mercado.minimo) / amplitude * 100, 2, 98)
-    : 50
-  const progresso = limitar(((iguais ?? 0) / AMOSTRA_MINIMA) * 100, 0, 100)
-
-  return (
-    <article className="ga-painel">
-      <div className="ga-painel__topo">
-        <div>
-          <p className="ga-sobretitulo">{criterio.titulo}</p>
-          <h3>{criterio.resultado}</h3>
-        </div>
-        <IconeRedondo icon={Tag} tom={criterio.veredito === 'atencao' ? 'amarelo' : 'agua'} />
-      </div>
-      {temFaixa ? (
-        <div className="ga-faixa-preco" aria-label={GT.faixaPreco}>
-          <div className="ga-faixa-preco__valores">
-            <span>{reais(mercado.minimo)}</span>
-            <span>{reais(mercado.mediana)}</span>
-            <span>{reais(mercado.maximo)}</span>
-          </div>
-          <div className="ga-faixa-preco__trilho">
-            <span className="ga-faixa-preco__mediana" />
-            <span className="ga-faixa-preco__carro" style={{ left: `${posicao}%` }} />
-          </div>
-          <div className="ga-faixa-preco__nomes">
-            <span>{GT.minimo}</span><span>{GT.mediana}</span><span>{GT.maximo}</span>
-          </div>
-          <p className="ga-faixa-preco__destaque">
-            {GT.precoDesteCarro} <b>{carro.preco === null ? GT.precoAusente : reais(carro.preco)}</b>
-          </p>
-        </div>
-      ) : (
-        <div className="ga-progresso">
-          <div className="ga-progresso__texto">
-            <span>{GT.baseDeComparacao}</span>
-            <b>{iguais === null ? GT.semContagem : `${iguais} de ${AMOSTRA_MINIMA}`}</b>
-          </div>
-          <div className="ga-progresso__trilho"><span style={{ width: `${progresso}%` }} /></div>
-          <p>{GT.dicaVerMais}</p>
-        </div>
-      )}
-      <p className="ga-conta">{criterio.fato}</p>
-    </article>
-  )
-}
-
-function Margem({ criterio }: { criterio: Criterio | undefined }) {
-  if (!criterio) return null
-  const semBase = criterio.veredito === 'semdado'
-
-  return (
-    <article className={`ga-painel ${semBase ? 'ga-painel--apagado' : ''}`}>
-      <div className="ga-painel__topo">
-        <div>
-          <p className="ga-sobretitulo">{criterio.titulo}</p>
-          <h3>{criterio.resultado}</h3>
-        </div>
-        <IconeRedondo icon={CurrencyCircleDollar} tom={criterio.veredito === 'atencao' ? 'amarelo' : semBase ? 'cinza' : 'agua'} />
-      </div>
-      {semBase && <p className="ga-vazio">{GT.margemSemBase}</p>}
       <p className="ga-conta">{criterio.fato}</p>
     </article>
   )
@@ -449,26 +321,22 @@ function Apoios({ criterios, carro }: { criterios: Criterio[]; carro: Anuncio })
 }
 
 export function Garimpar({
-  a, analise, onFechar, onFipe, onBuscarIguais,
+  a, analise, onFechar, onDetalhe,
 }: {
   a: Anuncio
   analise: Analise | undefined
   onFechar: () => void
-  onFipe: (anuncio: Anuncio) => void
-  onBuscarIguais: (anuncio: Anuncio) => void
+  onDetalhe: (anuncio: Anuncio, detalhe: DetalheAnuncio) => void // refaz a análise com a referência da OLX
 }) {
   const fechar = useRef<HTMLButtonElement>(null)
   const original = useRef(a)
-  const [carro, setCarro] = useState(a)
+  const [detalhe, setDetalhe] = useState<DetalheAnuncio | null>(null)
 
-  // A FIPE vem do quadro Referência de preço da página do anúncio, lida pela FichaAnuncio.
-  const chegouDetalhe = useCallback((detalhe: DetalheAnuncio) => {
-    const fipe = fipeDaOlx(original.current.preco, detalhe.referencia_preco?.fipe)
-    if (!fipe) return
-    const atualizado = { ...original.current, fipe }
-    setCarro(atualizado)
-    onFipe(atualizado)
-  }, [onFipe])
+  // O veredito vem do quadro Referência de preço e do resto da página do anúncio, lida pela FichaAnuncio.
+  const chegouDetalhe = useCallback((lido: DetalheAnuncio) => {
+    setDetalhe(lido)
+    onDetalhe(original.current, lido)
+  }, [onDetalhe])
 
   useEffect(() => {
     fechar.current?.focus()
@@ -485,8 +353,6 @@ export function Garimpar({
   }, [onFechar])
 
   const criterios = analise?.criterios ?? []
-  const preco = criterioDe(criterios, 'preco')
-  const margem = criterioDe(criterios, 'margem')
   const km = criterioDe(criterios, 'km')
   const recencia = criterioDe(criterios, 'recencia')
 
@@ -507,14 +373,9 @@ export function Garimpar({
       </header>
 
       <main className="ga-conteudo">
-        <Hero carro={carro} recencia={recencia} />
-        <Veredito
-          carro={carro}
-          analise={analise}
-          preco={preco}
-          onBuscarIguais={() => onBuscarIguais(carro)}
-        />
-        <SinaisAFavor criterios={criterios} />
+        <Hero carro={a} recencia={recencia} />
+        <Veredito analise={analise} />
+        <SinaisAFavor criterios={criterios} lido={analise?.lido ?? false} />
 
         <section className="ga-secao ga-entra">
           <div className="ga-titulo-secao">
@@ -525,15 +386,13 @@ export function Garimpar({
             </div>
           </div>
           <div className="ga-grade-medidas">
-            <ReguaKm carro={carro} criterio={km} />
-            <FaixaPreco carro={carro} criterio={preco} mercado={analise?.mercado} />
-            <Margem criterio={margem} />
+            <ReguaKm km={a.km ?? detalhe?.detalhes.km ?? null} ano={a.ano ?? detalhe?.detalhes.ano ?? null} criterio={km} />
           </div>
         </section>
 
         <FichaAnuncio anuncio={original.current} onDetalhe={chegouDetalhe} />
         <Cuidados criterios={criterios} />
-        <Apoios criterios={criterios} carro={carro} />
+        <Apoios criterios={criterios} carro={a} />
         <p className="ga-fora">{T.aindaNaoEntra}</p>
       </main>
 

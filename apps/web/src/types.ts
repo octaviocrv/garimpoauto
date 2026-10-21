@@ -22,13 +22,6 @@ export interface Busca {
   cidade?: string | null
 }
 
-// A FIPE que a OLX mostra na página do anúncio. Chega quando a pessoa abre o Garimpar.
-export interface ReferenciaFipe {
-  preco: number
-  diferenca_percentual: number // positivo: anúncio abaixo da FIPE
-  confianca: 'alta' // a análise só usa FIPE de confiança alta, e a da OLX é da versão do anúncio
-}
-
 export interface Anuncio {
   source: string
   external_id: string
@@ -58,7 +51,7 @@ export interface Anuncio {
   novo: boolean // só vale com o banco ligado, depois da primeira busca
   incompleto: boolean
   campos_faltando: string[]
-  fipe?: ReferenciaFipe | null
+  referencia_preco?: ReferenciaPreco | null // chega quando a pessoa abre o Garimpar
 }
 
 export type MotivoParada = 'acabaram_paginas' | 'teto_paginas' | 'teto_tempo' | 'falha_fonte'

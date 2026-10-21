@@ -1,18 +1,18 @@
 // A análise do Garimpar: olha um carro como quem vai revender e devolve critérios que dá pra conferir.
-// Regras da casa, as mesmas dos sinais (sinais.ts):
-// 1) só nasce de dado que o servidor devolveu, e dado faltando vira "sem dado", nunca chute nem zero
-// 2) o preço só é comparado com a lista já carregada
+// Regras da casa:
+// 1) o preço só é comparado com a referência que a OLX mostra na página do anúncio (FIPE, preço
+//    médio OLX e a régua dos carros parecidos). O Garimpo não monta comparação própria.
+// 2) só nasce de dado que a OLX devolveu, e dado faltando vira "sem dado", nunca chute nem zero
 // 3) cada critério diz de onde veio a conta (`fato`), pra pessoa conferir e discordar
-// 4) a FIPE real é uma segunda referência. A mediana dos iguais continua sendo a única base da margem.
+// 4) antes de abrir o Garimpar só existem os critérios da lista. O nível só sai com a página lida.
 // Não existe nota. O nível (Quente ou Boa) sai de regras simples, escritas aqui embaixo.
-import type { Anuncio } from '../types'
-import {
-  AMOSTRA_MINIMA, IDADE_MINIMA_ANOS, KM_MINIMO_CONFIAVEL, KM_POR_ANO_BAIXO, RECENTE_MINUTOS,
-  chave, dataCurta, mediana, minutosDesde, prefixoData,
-} from './sinais'
+import type { Anuncio, DetalheAnuncio, ReferenciaPreco } from '../types'
+import { IDADE_MINIMA_ANOS, KM_MINIMO_CONFIAVEL, KM_POR_ANO_BAIXO, RECENTE_MINUTOS, dataCurta, minutosDesde, prefixoData } from './sinais'
 
 export type Veredito = 'favor' | 'atencao' | 'neutro' | 'semdado'
-export type IdCriterio = 'preco' | 'fipe' | 'margem' | 'km' | 'recencia' | 'vendedor' | 'fotos' | 'risco' | 'repetido'
+export type IdCriterio =
+  | 'fipe' | 'media' | 'regua' | 'km' | 'recencia' | 'vendedor' | 'fotos' | 'risco'
+  | 'garantias' | 'pendencias' | 'opcionais' | 'repetido'
 export type Nivel = 'quente' | 'boa'
 
 export interface Criterio {
@@ -23,202 +23,101 @@ export interface Criterio {
   fato: string // de onde veio a conta
 }
 
-export interface Mercado {
-  n: number // carros iguais (marca, modelo e ano) já carregados
-  mediana: number
-  minimo: number
-  maximo: number
-  kmMediana: number | null
-}
-
-export interface Margem {
-  bruta: number // mediana menos preço
-  custo: number // estimativa nossa de reparo e transferência
-  estimada: number // bruta menos custo
-}
-
 export interface Analise {
   nivel: Nivel | null
-  preliminar: boolean
   resumo: string | null // a frase curta do card, só quando tem nível
   motivo: string // por que tem ou não tem nível
   criterios: Criterio[]
-  mercado: Mercado | null
-  margem: Margem | null
+  lido: boolean // a página do anúncio já foi lida (é dela que vem a referência da OLX)
+  referencia: boolean // a OLX mostrou FIPE ou preço médio pra comparar
 }
 
-export const CUSTO_REVENDA = 0.05 // reparo e transferência, em % da mediana. Estimativa nossa, não é dado
-export const MARGEM_BOA = { pct: 0.05, reais: 2000 }
-export const MARGEM_QUENTE = { pct: 0.1, reais: 3000 }
-export const FAVORES_PARA_QUENTE = 2 // pontos a favor além do preço e da margem
-export const PRECO_BOM = 0.1 // a partir de 10% abaixo da mediana conta a favor
+export const ABAIXO_BOM = 0.1 // a partir de 10% abaixo da FIPE ou da média OLX conta a favor
 export const PRECO_SUSPEITO = 0.3 // 30% abaixo ou mais é golpe, leilão ou erro até prova em contrário
-export const FIPE_BOA_PRELIMINAR = 0.1
-export const FIPE_PRECO_SUSPEITO = 0.3
-export const KM_ABAIXO_DOS_IGUAIS = 0.7
-export const KM_ACIMA_DOS_IGUAIS = 1.3
+export const FOLGA_NEUTRA = 0.02 // até 2% pra cima ou pra baixo é "na linha"
 export const NOTA_LOJA_BAIXA = 3.5
 export const FOTOS_MINIMAS = 3
 export const FOTOS_BOAS = 6
 
 const reais = (v: number) => `R$ ${Math.round(v).toLocaleString('pt-BR')}`
-const aprox = (v: number) => reais(Math.round(v / 100) * 100)
 const pct = (v: number) => `${Math.round(v * 100)}%`
 const mil = (v: number) => (v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })
 const num = (v: number) => v.toLocaleString('pt-BR')
 
-const semAcento = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+const semAcento = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/-/g, ' ')
 const NEGADO = /\b(sem|nao|nunca|livre de|zero)\s+(de\s+)?(leilao|sinistr\w*|batid\w*|colisao)\b/g
 const RISCO = /\b(leilao|sinistr\w*|salvado|batido|batida|colisao|recuperad[oa]|sucata|repasse|a quitar|quitar|remarcad\w*|sem documento\w*|so entrada|apenas entrada|ipva atrasado)\b/
 
-// Palavra de risco no texto que a gente tem (título e modelo). "Sem leilão" e "nunca bateu" não contam.
+// Palavra de risco no texto do anúncio. "Sem leilão" e "nunca bateu" não contam.
 export function palavraDeRisco(texto: string): string | null {
   const limpo = semAcento(texto).replace(NEGADO, ' ')
   return limpo.match(RISCO)?.[0] ?? null
 }
 
-function mercadoDe(a: Anuncio, grupos: Map<string, Anuncio[]>): { mercado: Mercado | null; iguais: number } {
-  const k = chave(a)
-  const iguais = k ? (grupos.get(k) ?? []).filter((x) => x.preco !== null && x.preco > 0) : []
-  if (iguais.length < AMOSTRA_MINIMA) return { mercado: null, iguais: iguais.length }
-  const precos = iguais.map((x) => x.preco as number)
-  const kms = iguais.map((x) => x.km).filter((v): v is number => v !== null && v >= KM_MINIMO_CONFIAVEL)
-  return {
-    iguais: iguais.length,
-    mercado: {
-      n: iguais.length, mediana: mediana(precos), minimo: Math.min(...precos), maximo: Math.max(...precos),
-      kmMediana: kms.length >= AMOSTRA_MINIMA ? mediana(kms) : null,
-    },
-  }
-}
-
 const criterio = (id: IdCriterio, titulo: string, veredito: Veredito, resultado: string, fato: string): Criterio =>
   ({ id, titulo, veredito, resultado, fato })
 
-function carrosQueFaltam(iguais: number, maiuscula = false): string {
-  const faltam = Math.max(0, AMOSTRA_MINIMA - iguais)
-  const verbo = faltam === 1 ? 'falta' : 'faltam'
-  const inicio = maiuscula ? `${verbo[0].toUpperCase()}${verbo.slice(1)}` : verbo
-  return `${inicio} ${faltam} ${faltam === 1 ? 'carro igual' : 'carros iguais'}`
+// Quanto o preço está abaixo da referência. Positivo: abaixo. Negativo: acima.
+function diferenca(preco: number | null, referencia: number | null | undefined): number | null {
+  if (preco === null || preco <= 0 || !referencia || referencia <= 0) return null
+  return 1 - preco / referencia
 }
 
-function criterioPreco(a: Anuncio, m: Mercado | null, iguais: number): Criterio {
-  const t = 'Preço comparado aos carros iguais'
-  if (a.preco === null || a.preco <= 0) return criterio('preco', t, 'semdado', 'Preço não informado', 'Sem preço não tem como comparar.')
-  if (!m) {
-    const fato = chave(a)
-      ? `Há ${iguais} ${a.modelo} ${a.ano} com preço na lista. São necessários ${AMOSTRA_MINIMA} para calcular a mediana.`
-      : 'O anúncio veio sem modelo ou sem ano, então não dá pra achar carros iguais.'
-    return criterio('preco', t, 'semdado', 'Ainda faltam carros iguais', fato)
+function criterioReferencia(
+  id: 'fipe' | 'media', titulo: string, nome: string, d: number | null, valor: number | null | undefined, base: string,
+): Criterio {
+  if (d === null || !valor) {
+    return criterio(id, titulo, 'semdado', `A OLX não mostrou ${nome}`, 'Nem todo anúncio traz esse número na página.')
   }
-  const d = 1 - a.preco / m.mediana
-  const fato = `A mediana de ${m.n} ${a.modelo} ${a.ano} carregados é ${reais(m.mediana)}, indo de ${reais(m.minimo)} a ${reais(m.maximo)}.`
+  const fato = `A OLX mostra ${nome} de ${reais(valor)}. ${base}`
   if (d >= PRECO_SUSPEITO) {
-    return criterio('preco', t, 'atencao', `Preço ${pct(d)} abaixo, baixo demais`, `${fato} Tão abaixo do mercado costuma ser golpe, leilão ou erro de digitação. Confere antes de falar com o vendedor.`)
+    return criterio(id, titulo, 'atencao', `${pct(d)} abaixo, baixo demais`, `${fato} Tão abaixo costuma ser golpe, leilão ou erro de digitação. Confere antes de falar com o vendedor.`)
   }
-  if (d >= PRECO_BOM) return criterio('preco', t, 'favor', `Preço ${pct(d)} abaixo do mercado`, fato)
-  if (d > 0.02) return criterio('preco', t, 'neutro', `${pct(d)} abaixo do mercado`, fato)
-  if (d >= -0.02) return criterio('preco', t, 'neutro', 'No preço do mercado', fato)
-  return criterio('preco', t, 'atencao', `Preço ${pct(-d)} acima do mercado`, fato)
+  if (d >= ABAIXO_BOM) return criterio(id, titulo, 'favor', `${pct(d)} abaixo ${nome === 'a FIPE' ? 'da FIPE' : 'da média OLX'}`, `${fato} Comprar bem abaixo deixa espaço pra negociar e revender.`)
+  if (d > FOLGA_NEUTRA) return criterio(id, titulo, 'neutro', `${pct(d)} abaixo ${nome === 'a FIPE' ? 'da FIPE' : 'da média OLX'}`, `${fato} Pouca folga pra revenda.`)
+  if (d >= -FOLGA_NEUTRA) return criterio(id, titulo, 'neutro', nome === 'a FIPE' ? 'Na linha da FIPE' : 'Na linha da média OLX', `${fato} Sem folga, só vale se negociar.`)
+  return criterio(id, titulo, 'atencao', `${pct(-d)} acima ${nome === 'a FIPE' ? 'da FIPE' : 'da média OLX'}`, `${fato} Comprando acima fica difícil revender com lucro.`)
 }
 
-function calcularMargem(a: Anuncio, m: Mercado | null): Margem | null {
-  if (!m || a.preco === null || a.preco <= 0) return null
-  const custo = m.mediana * CUSTO_REVENDA
-  return { bruta: m.mediana - a.preco, custo, estimada: m.mediana - a.preco - custo }
+// Em que terço da régua da OLX o preço cai. 0 é o dos mais baratos.
+function tercoDaRegua(r: ReferenciaPreco | null, preco: number | null): number | null {
+  const p = r?.preco_anuncio ?? preco
+  if (!r || p === null || r.corte_baixo === null || r.corte_alto === null || r.corte_alto < r.corte_baixo) return null
+  return p <= r.corte_baixo ? 0 : p <= r.corte_alto ? 1 : 2
 }
 
-interface ComparacaoFipe {
-  diferenca: number
-  boa: boolean
-  suspeita: boolean
+function criterioRegua(r: ReferenciaPreco | null, terco: number | null): Criterio {
+  const t = 'Onde o preço fica na régua da OLX'
+  if (!r || terco === null) return criterio('regua', t, 'semdado', 'A OLX não mostrou a régua', 'Nem todo anúncio traz a régua de preço na página.')
+  const quantos = r.carros !== null ? `${num(r.carros)} carros parecidos` : 'os carros parecidos'
+  const fato = `A OLX compara com ${quantos}. O primeiro terço vai até ${reais(r.corte_baixo as number)} e o último começa em ${reais(r.corte_alto as number)}.`
+  if (terco === 0) return criterio('regua', t, 'favor', 'Entre os mais baratos', `${fato} Comprar no começo da régua facilita a revenda.`)
+  if (terco === 1) return criterio('regua', t, 'neutro', 'No meio da régua', fato)
+  return criterio('regua', t, 'atencao', 'Entre os mais caros', `${fato} No fim da régua sobra pouco pra revender.`)
 }
 
-function compararFipe(a: Anuncio): ComparacaoFipe | null {
-  if (a.fipe?.confianca !== 'alta' || a.fipe.preco <= 0 || a.preco === null || a.preco <= 0) return null
-  const proporcao = a.preco / a.fipe.preco
-  return {
-    diferenca: 1 - proporcao,
-    boa: proporcao <= 1 - FIPE_BOA_PRELIMINAR,
-    suspeita: proporcao <= 1 - FIPE_PRECO_SUSPEITO,
-  }
-}
-
-function criterioFipe(comparacao: ComparacaoFipe | null): Criterio {
-  const t = 'Preço comparado à FIPE'
-  const referencia = 'A FIPE é uma referência nacional. O preço real de revenda pode ser outro.'
-  if (comparacao === null) return criterio('fipe', t, 'semdado', 'FIPE não encontrada', 'Sem uma FIPE de confiança alta pra este anúncio.')
-  if (comparacao.suspeita) {
-    return criterio('fipe', t, 'atencao', 'Preço muito abaixo da FIPE', `O anúncio está ${pct(comparacao.diferenca)} abaixo da FIPE. ${referencia}`)
-  }
-  if (comparacao.boa) {
-    return criterio('fipe', t, 'favor', `${pct(comparacao.diferenca)} abaixo da FIPE`, referencia)
-  }
-  if (comparacao.diferenca > 0.02) return criterio('fipe', t, 'neutro', `${pct(comparacao.diferenca)} abaixo da FIPE`, referencia)
-  if (comparacao.diferenca >= -0.02) return criterio('fipe', t, 'neutro', 'Na linha da FIPE', referencia)
-  return criterio('fipe', t, 'atencao', `${pct(-comparacao.diferenca)} acima da FIPE`, referencia)
-}
-
-const margemAtinge = (g: Margem, m: Mercado, minimo: { pct: number; reais: number }) =>
-  g.estimada >= minimo.reais && g.estimada / m.mediana >= minimo.pct
-
-function criterioMargem(a: Anuncio, m: Mercado | null, g: Margem | null, iguais: number, temFipe: boolean): Criterio {
-  const t = 'Margem estimada de revenda'
-  if (a.preco === null) {
-    return criterio('margem', t, 'semdado', 'Falta o preço do anúncio', 'Sem o preço pedido pelo vendedor não dá para calcular quanto pode sobrar na revenda.')
-  }
-  if (!m || !g) {
-    const explicacaoFipe = temFipe
-      ? 'A FIPE ajuda a conferir o preço, mas não mostra quanto pode sobrar na revenda.'
-      : 'A FIPE ainda não foi encontrada para ajudar a conferir o preço.'
-    return criterio(
-      'margem', t, 'semdado',
-      `${carrosQueFaltam(iguais, true)} para calcular`,
-      `${explicacaoFipe} A margem usa os preços dos carros iguais desta lista.`,
-    )
-  }
-  const conta = `${reais(m.mediana)} de mercado, menos ${reais(a.preco)} de preço, menos ${reais(g.custo)} de custo (${pct(CUSTO_REVENDA)} pra reparo e transferência, estimativa nossa).`
-  if (a.preco / m.mediana <= 1 - PRECO_SUSPEITO) {
-    return criterio('margem', t, 'atencao', `Margem de ${aprox(g.estimada)} não é confiável`, `${conta} O preço está baixo demais pra acreditar nessa margem.`)
-  }
-  if (margemAtinge(g, m, MARGEM_BOA)) return criterio('margem', t, 'favor', `Sobram cerca de ${aprox(g.estimada)}`, conta)
-  if (g.estimada > 0) return criterio('margem', t, 'atencao', `Margem apertada, cerca de ${aprox(g.estimada)}`, conta)
-  return criterio('margem', t, 'atencao', 'Não sobra margem', conta)
-}
-
-function criterioKm(a: Anuncio, m: Mercado | null, agora: number): Criterio {
+function criterioKm(km: number | null, ano: number | null, agora: number): Criterio {
   const t = 'Quilometragem'
-  if (a.km === null || a.ano === null) return criterio('km', t, 'semdado', 'Km ou ano não informado', 'Sem os dois não dá pra medir o uso do carro.')
-  const idade = new Date(agora).getFullYear() - a.ano
-  const km = `${num(a.km)} km`
-  if (idade >= IDADE_MINIMA_ANOS && a.km < KM_MINIMO_CONFIAVEL) {
-    return criterio('km', t, 'atencao', 'Km parece errado', `${km} num carro de ${idade} anos costuma ser campo mal preenchido. Pergunta o km real.`)
+  if (km === null || ano === null) return criterio('km', t, 'semdado', 'Km ou ano não informado', 'Sem os dois não dá pra medir o uso do carro.')
+  const idade = new Date(agora).getFullYear() - ano
+  const texto = `${num(km)} km`
+  if (idade >= IDADE_MINIMA_ANOS && km < KM_MINIMO_CONFIAVEL) {
+    return criterio('km', t, 'atencao', 'Km parece errado', `${texto} num carro de ${idade} anos costuma ser campo mal preenchido. Pergunta o km real.`)
   }
-  const partes: string[] = []
-  let porAno: number | null = null
-  if (idade >= IDADE_MINIMA_ANOS) {
-    porAno = a.km / idade
-    partes.push(`${km} em ${idade} anos dá ${mil(porAno)} mil km por ano, e a média fica perto de 12 mil.`)
-  } else {
-    partes.push(`${km}. Em carro de menos de ${IDADE_MINIMA_ANOS} anos o km por ano não diz nada.`)
+  if (idade < IDADE_MINIMA_ANOS) {
+    const porAnoNovo = km / Math.max(1, idade)
+    return criterio('km', t, 'neutro', `${mil(porAnoNovo)} mil km por ano`, `${texto} num carro ${ano}, contado como 1 ano de uso. Em carro de menos de ${IDADE_MINIMA_ANOS} anos o km por ano pesa menos, por isso não conta a favor nem contra.`)
   }
-  let contraIguais: 'menos' | 'mais' | null = null
-  if (m?.kmMediana) {
-    partes.push(`A mediana de km dos iguais é ${num(Math.round(m.kmMediana))}.`)
-    if (a.km <= m.kmMediana * KM_ABAIXO_DOS_IGUAIS) contraIguais = 'menos'
-    else if (a.km >= m.kmMediana * KM_ACIMA_DOS_IGUAIS) contraIguais = 'mais'
-  }
-  const fato = partes.join(' ')
-  if (porAno !== null && porAno <= KM_POR_ANO_BAIXO) return criterio('km', t, 'favor', 'Pouco km pro ano', fato)
-  if (contraIguais === 'menos') return criterio('km', t, 'favor', 'Menos km que os iguais', fato)
-  if (contraIguais === 'mais') return criterio('km', t, 'atencao', 'Rodou mais que a maioria dos iguais', fato)
-  return criterio('km', t, 'neutro', porAno !== null ? `${mil(porAno)} mil km por ano` : km, fato)
+  const porAno = km / idade
+  const fato = `${texto} em ${idade} anos dá ${mil(porAno)} mil km por ano, e a média fica perto de 12 mil.`
+  if (porAno <= KM_POR_ANO_BAIXO) return criterio('km', t, 'favor', 'Pouco km pro ano', `${fato} Carro pouco rodado revende melhor.`)
+  return criterio('km', t, 'neutro', `${mil(porAno)} mil km por ano`, fato)
 }
 
 function criterioRecencia(a: Anuncio, agora: number): Criterio {
   const t = 'Frescor do anúncio'
   const min = minutosDesde(a.anunciado_em, agora)
-  if (min === null) return criterio('recencia', t, 'semdado', 'Sem data do anúncio', 'A fonte não mandou a data.')
+  if (min === null) return criterio('recencia', t, 'semdado', 'Sem data do anúncio', 'A OLX não mandou a data.')
   const quando = `${prefixoData(a)} ${dataCurta(a.anunciado_em, agora)}`
   if (min < RECENTE_MINUTOS) return criterio('recencia', t, 'favor', quando, 'Anúncio de poucas horas. Quem chega primeiro costuma negociar melhor.')
   return criterio('recencia', t, 'neutro', quando, `Só conta a favor nas primeiras ${RECENTE_MINUTOS / 60} horas.`)
@@ -226,7 +125,7 @@ function criterioRecencia(a: Anuncio, agora: number): Criterio {
 
 function criterioVendedor(a: Anuncio): Criterio {
   const t = 'Vendedor'
-  if (a.anunciante_profissional === null) return criterio('vendedor', t, 'semdado', 'Tipo de vendedor não informado', 'A fonte não disse se é loja ou particular.')
+  if (a.anunciante_profissional === null) return criterio('vendedor', t, 'semdado', 'Tipo de vendedor não informado', 'A OLX não disse se é loja ou particular.')
   if (!a.anunciante_profissional) return criterio('vendedor', t, 'favor', 'Particular', 'Sem margem de loja embutida no preço, e o dono costuma negociar mais.')
   const nota = a.nota_anunciante
   if (nota !== null && nota < NOTA_LOJA_BAIXA) {
@@ -244,95 +143,138 @@ function criterioFotos(a: Anuncio): Criterio {
   return criterio('fotos', t, 'neutro', `${n} fotos`, 'Quantidade normal.')
 }
 
-function criterioRisco(a: Anuncio): Criterio {
+function criterioRisco(a: Anuncio, d: DetalheAnuncio | null): Criterio {
   const t = 'Palavras de risco'
-  const achada = palavraDeRisco(`${a.titulo ?? ''} ${a.modelo_original ?? ''}`)
-  if (achada) return criterio('risco', t, 'atencao', `O título fala em ${achada}`, 'Leilão, sinistro, repasse e parecidos pedem cuidado redobrado na revenda.')
-  return criterio('risco', t, 'neutro', 'Título sem palavra de risco', 'Só o título é lido. A descrição do anúncio ainda não entra na análise.')
+  const noTitulo = palavraDeRisco(`${a.titulo ?? ''} ${a.modelo_original ?? ''}`)
+  const naDescricao = d?.descricao ? palavraDeRisco(d.descricao) : null
+  const aviso = 'Leilão, sinistro, repasse e parecidos pedem cuidado redobrado na revenda.'
+  if (noTitulo) return criterio('risco', t, 'atencao', `O título fala em ${noTitulo}`, aviso)
+  if (naDescricao) return criterio('risco', t, 'atencao', `A descrição fala em ${naDescricao}`, aviso)
+  if (!d) return criterio('risco', t, 'neutro', 'Título sem palavra de risco', 'A descrição entra quando a página do anúncio abre.')
+  return criterio('risco', t, 'neutro', 'Nenhuma palavra de risco', d.descricao ? 'Lemos o título e a descrição do anúncio.' : 'Lemos o título. O anúncio veio sem descrição.')
 }
 
-const NOMES_FAVOR: Partial<Record<IdCriterio, string>> = { km: 'km', recencia: 'anúncio novo', vendedor: 'particular', fotos: 'fotos' }
+// O que o anunciante marcou em Outras características na OLX.
+const BOAS = ['ipva pago', 'unico dono', 'quitado', 'revis', 'garantia', 'manual', 'chave reserva']
+const RUINS = ['leilao', 'multa', 'financiado']
+const negada = (s: string) => /^(sem|nao|nunca)\b/.test(s)
 
-export function analisar(a: Anuncio, grupos: Map<string, Anuncio[]>, agora: number): Analise {
-  const { mercado, iguais } = mercadoDe(a, grupos)
-  const margem = calcularMargem(a, mercado)
-  const fipe = compararFipe(a)
-  const criterios = [
-    criterioPreco(a, mercado, iguais), criterioFipe(fipe),
-    criterioMargem(a, mercado, margem, iguais, fipe !== null), criterioKm(a, mercado, agora),
-    criterioRecencia(a, agora), criterioVendedor(a), criterioFotos(a), criterioRisco(a),
-  ]
+function marcadas(outras: string[], chaves: string[]): string[] {
+  return outras.filter((o) => {
+    const s = semAcento(o)
+    return !negada(s) && chaves.some((k) => s.includes(k))
+  })
+}
+
+// "Único dono" vira "único dono" no meio da frase, mas "IPVA pago" fica como está.
+const minuscula = (s: string) => (/^\p{Lu}\p{Ll}/u.test(s) ? s[0].toLowerCase() + s.slice(1) : s)
+
+const juntar = (itens: string[]) => {
+  const lista = itens.map((i, n) => (n === 0 ? i : minuscula(i)))
+  return lista.length > 1 ? `${lista.slice(0, -1).join(', ')} e ${lista[lista.length - 1]}` : lista[0]
+}
+
+function criterioGarantias(outras: string[]): Criterio | null {
+  const boas = marcadas(outras, BOAS)
+  if (!boas.length) return null
+  return criterio('garantias', 'O que o anúncio garante', 'favor', juntar(boas), 'Marcado pelo anunciante na OLX. Papel em dia e histórico conhecido fazem o carro sair mais rápido na revenda.')
+}
+
+function criterioPendencias(outras: string[]): Criterio | null {
+  const ruins = marcadas(outras, RUINS)
+  if (!ruins.length) return null
+  return criterio('pendencias', 'Pendências do anúncio', 'atencao', juntar(ruins), 'Marcado pelo anunciante na OLX. Leilão derruba o preço de revenda, e multa ou financiamento precisam ser resolvidos antes da transferência.')
+}
+
+// Ar, direção, vidro e trava elétrica. É o "completo" que o comprador da revenda procura.
+function criterioOpcionais(d: DetalheAnuncio): Criterio | null {
+  const ops = d.opcionais.map(semAcento)
+  const tem = (k: string) => ops.some((o) => o.includes(k))
+  const direcao = d.detalhes.direcao ? semAcento(d.detalhes.direcao) : ''
+  const direcaoBoa = tem('direcao') || (direcao !== '' && !direcao.includes('mecanic'))
+  if (!(tem('ar condicionado') && tem('vidro') && tem('trava') && direcaoBoa)) return null
+  return criterio('opcionais', 'Opcionais', 'favor', 'Carro completo', 'Ar condicionado, direção, vidro e trava elétrica marcados no anúncio. Carro completo vende mais fácil.')
+}
+
+export function analisar(a: Anuncio, detalhe: DetalheAnuncio | null, agora: number): Analise {
+  const r = detalhe?.referencia_preco ?? null
+  const preco = a.preco ?? r?.preco_anuncio ?? null
+  const dFipe = diferenca(preco, r?.fipe)
+  const dMedia = diferenca(preco, r?.media_olx)
+  const terco = tercoDaRegua(r, preco)
+  const lido = detalhe !== null
+  const criterios: Criterio[] = []
+  if (lido) {
+    criterios.push(
+      criterioReferencia('fipe', 'Preço comparado à FIPE', 'a FIPE', dFipe, r?.fipe, 'A FIPE é uma referência nacional e o preço real de revenda pode ser outro.'),
+      criterioReferencia('media', 'Preço comparado à média da OLX', 'o preço médio', dMedia, r?.media_olx, 'É a média dos carros parecidos anunciados na OLX.'),
+      criterioRegua(r, terco),
+    )
+  }
+  criterios.push(
+    criterioKm(a.km ?? detalhe?.detalhes.km ?? null, a.ano ?? detalhe?.detalhes.ano ?? null, agora),
+    criterioRecencia(a, agora), criterioVendedor(a), criterioFotos(a), criterioRisco(a, detalhe),
+  )
+  if (detalhe) {
+    for (const c of [criterioGarantias(detalhe.outras), criterioOpcionais(detalhe), criterioPendencias(detalhe.outras)]) {
+      if (c) criterios.push(c)
+    }
+  }
   if (a.repetido_de) {
     criterios.push(criterio('repetido', 'Anúncio repetido', 'atencao', 'Já aparece em outro anúncio', 'Mesmo carro, preço, km e cidade de outro anúncio da lista.'))
   }
+
+  const refs = [
+    { nome: 'da FIPE', d: dFipe },
+    { nome: 'da média OLX', d: dMedia },
+  ].filter((x): x is { nome: string; d: number } => x.d !== null)
+  const referencia = refs.length > 0
   const por = (id: IdCriterio) => criterios.find((c) => c.id === id)
-  const grave = (['risco', 'repetido'] as const).some((id) => por(id)?.veredito === 'atencao')
-    || (mercado !== null && a.preco !== null && a.preco / mercado.mediana <= 1 - PRECO_SUSPEITO)
-    || fipe?.suspeita === true
+  const suspeito = refs.some((x) => x.d >= PRECO_SUSPEITO)
+  const leilao = detalhe ? marcadas(detalhe.outras, ['leilao']).length > 0 : false
+  const grave = suspeito || leilao || (['risco', 'repetido'] as const).some((id) => por(id)?.veredito === 'atencao')
   const semAlerta = criterios.every((c) => c.veredito !== 'atencao')
-  const favores = criterios.filter((c) => c.veredito === 'favor' && NOMES_FAVOR[c.id])
-  const fipeIndicaOportunidade = fipe?.boa === true && !fipe.suspeita
-  const mercadoIndicaOportunidade = mercado !== null && margem !== null && margemAtinge(margem, mercado, MARGEM_BOA)
-  const referenciasDivergem = fipe !== null && mercado !== null
-    && fipeIndicaOportunidade !== mercadoIndicaOportunidade
+  const abaixo = refs.filter((x) => x.d > FOLGA_NEUTRA)
+  const acima = refs.filter((x) => x.d < -FOLGA_NEUTRA)
+  const textoAbaixo = juntar(abaixo.map((x) => `${pct(x.d)} abaixo ${x.nome}`))
 
   let nivel: Nivel | null = null
-  let preliminar = false
   let motivo: string
-  const est = margem ? aprox(margem.estimada) : ''
-  if (fipe?.suspeita) {
-    motivo = 'Preço muito abaixo da FIPE. Confere bem antes, pode ser leilão, problema de documento ou golpe.'
+  if (!lido) {
+    motivo = 'O veredito sai da referência de preço da OLX. Assim que a página do anúncio abrir, ele aparece aqui.'
+  } else if (preco === null) {
+    motivo = 'O anúncio não informou o preço, então não tem como comparar com a referência da OLX.'
+  } else if (!referencia) {
+    motivo = 'A OLX não mostrou FIPE nem preço médio pra este anúncio, então o Garimpo não arrisca um veredito.'
+  } else if (suspeito) {
+    motivo = 'Preço muito abaixo da referência da OLX. Confere bem antes, pode ser leilão, problema de documento ou golpe.'
   } else if (grave) {
-    motivo = 'Tem um alerta forte (risco, anúncio repetido ou preço baixo demais), então o Garimpo não destaca.'
-  } else if (referenciasDivergem) {
-    motivo = fipeIndicaOportunidade
-      ? 'Abaixo da FIPE, mas na linha dos carros iguais da lista. Fica de olho.'
-      : 'Os carros iguais indicam oportunidade, mas a FIPE não confirma. Fica de olho.'
-  } else if (!mercado || !margem) {
-    if (fipeIndicaOportunidade && fipe !== null) {
-      nivel = 'boa'
-      preliminar = true
-      motivo = `${pct(fipe.diferenca)} abaixo da FIPE. O preço merece atenção. Ainda ${carrosQueFaltam(iguais)} para confirmar o mercado da região e calcular a margem.`
-    } else if (fipe !== null && fipe.diferenca < -0.02) {
-      motivo = `Este anúncio está ${pct(-fipe.diferenca)} acima da FIPE. Ainda ${carrosQueFaltam(iguais)} para saber se esse preço é normal na região.`
-    } else if (fipe !== null && fipe.diferenca > 0.02) {
-      motivo = `Este anúncio está ${pct(fipe.diferenca)} abaixo da FIPE. Para virar Boa preliminar pela FIPE, precisa ficar pelo menos ${pct(FIPE_BOA_PRELIMINAR)} abaixo. ${carrosQueFaltam(iguais, true)} para comparar com o mercado da região.`
-    } else if (fipe !== null) {
-      motivo = `Este anúncio está na linha da FIPE. Ainda ${carrosQueFaltam(iguais)} para comparar com o mercado da região e calcular a margem.`
+    motivo = 'Tem um alerta forte (palavra de risco, leilão ou anúncio repetido), então o Garimpo não destaca.'
+  } else if (abaixo.length === refs.length) {
+    const forte = abaixo.some((x) => x.d >= ABAIXO_BOM)
+    if (forte && terco === 0 && semAlerta) {
+      nivel = 'quente'
+      motivo = `${textoAbaixo}, entre os mais baratos da régua da OLX e sem nenhum alerta. Sobra espaço pra negociar e revender.`
     } else {
-      motivo = `A FIPE ainda não foi encontrada. Também ${carrosQueFaltam(iguais)} para comparar o preço e calcular a margem de revenda.`
+      nivel = 'boa'
+      motivo = `${textoAbaixo} e nenhum alerta forte. Pra ser Quente precisa ficar ${pct(ABAIXO_BOM)} abaixo, no começo da régua da OLX e sem nenhum alerta.`
     }
-  } else if (margemAtinge(margem, mercado, MARGEM_QUENTE) && semAlerta && favores.length >= FAVORES_PARA_QUENTE) {
-    nivel = 'quente'
-    motivo = `Margem estimada de ${est}, sem nenhum alerta e ${favores.length} pontos a favor (${favores.map((c) => NOMES_FAVOR[c.id]).join(', ')}).`
-  } else if (margemAtinge(margem, mercado, MARGEM_BOA)) {
-    nivel = 'boa'
-    motivo = `Margem estimada de ${est} e nenhum alerta forte. Pra ser Quente precisa de ${reais(MARGEM_QUENTE.reais)} de margem, nenhum alerta e ${FAVORES_PARA_QUENTE} pontos a favor.`
+  } else if (abaixo.length > 0) {
+    motivo = `${textoAbaixo}, mas a outra referência da OLX não confirma. Fica de olho e negocia.`
+  } else if (acima.length > 0) {
+    motivo = 'Preço acima da referência da OLX. Sem folga pra revender, só vale se o vendedor baixar.'
   } else {
-    motivo = `Margem estimada de ${est}, abaixo do mínimo de ${reais(MARGEM_BOA.reais)} (e ${pct(MARGEM_BOA.pct)} da mediana) pra valer a revenda.`
+    motivo = 'Preço na linha da referência da OLX. Pouca folga pra revenda, só vale se negociar.'
   }
-  const resumo = preliminar && fipe !== null
-    ? 'Leitura pela FIPE, falta comparar iguais'
-    : nivel ? `Margem estimada ${aprox(margem?.estimada ?? 0)}` : null
-  return { nivel, preliminar, resumo, motivo, criterios, mercado, margem }
+  const melhor = abaixo.reduce<{ nome: string; d: number } | null>((m, x) => (!m || x.d > m.d ? x : m), null)
+  const resumo = nivel && melhor ? `${pct(melhor.d)} abaixo ${melhor.nome}` : null
+  return { nivel, resumo, motivo, criterios, lido, referencia }
 }
 
-export function agrupar(lista: Anuncio[]): Map<string, Anuncio[]> {
-  const grupos = new Map<string, Anuncio[]>()
-  for (const a of lista) {
-    const k = chave(a)
-    if (!k) continue
-    const g = grupos.get(k)
-    if (g) g.push(a)
-    else grupos.set(k, [a])
-  }
-  return grupos
-}
-
-// Como `sinaisDaPagina`: calcula pros carros que acabaram de chegar, comparando com tudo que já está
-// carregado. Quem chama guarda o resultado e não recalcula, pra o nível não mudar sozinho.
-export function analisesDaPagina(novos: Anuncio[], grupos: Map<string, Anuncio[]>, agora: number): Record<string, Analise> {
+// Calcula pros carros que acabaram de chegar, só com o que a lista traz. O nível vem depois,
+// quando a pessoa abre o Garimpar e a página do anúncio é lida.
+export function analisesDaPagina(novos: Anuncio[], agora: number): Record<string, Analise> {
   const saida: Record<string, Analise> = {}
-  for (const a of novos) saida[a.external_id] = analisar(a, grupos, agora)
+  for (const a of novos) saida[a.external_id] = analisar(a, null, agora)
   return saida
 }

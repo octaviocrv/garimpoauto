@@ -72,10 +72,6 @@ quando a pessoa abre o Garimpar. Nenhuma busca pede detalhe de anúncio.
 - O resultado fica guardado em memória por 20 minutos (`CACHE_TTL_SEGUNDOS`). Falha não é guardada,
   então "Tentar de novo" lê de novo. Pedidos simultâneos do mesmo anúncio fazem uma leitura só.
 
-No Garimpar, **Buscar carros iguais** abre uma busca por marca, modelo e ano do anúncio. Estado,
-região, zona e cidade são preservados. Versão, preço, km, câmbio, combustível e tipo de anunciante
-saem do pedido para não enfraquecer a amostra usada pela mediana.
-
 ### Frases de `informacao`
 - Tem mais: "Mostrando 50 de 1.413 carros. Toca em Ver mais pra ver o resto."
 - Acabou: "Achei 80 carros. Esses são todos."
