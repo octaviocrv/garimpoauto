@@ -46,11 +46,7 @@ export function PaginaBusca() {
   const [aberto, setAberto] = useState<Anuncio | null>(null) // o carro da tela do Garimpar
   const fecharGarimpar = useCallback(() => setAberto(null), [])
   const aplicarFipe = useCallback((anuncio: Anuncio) => {
-    atualizarFipe(anuncio.external_id, {
-      fipe: anuncio.fipe ?? null,
-      fipe_bloqueio: anuncio.fipe_bloqueio ?? null,
-      fipe_ausencia: anuncio.fipe_ausencia ?? null,
-    })
+    atualizarFipe(anuncio.external_id, anuncio.fipe ?? null)
   }, [atualizarFipe])
   const buscarIguais = useCallback((anuncio: Anuncio) => {
     const preparada = buscaDeCarrosIguais(anuncio, busca.pedido)
@@ -354,6 +350,7 @@ export function PaginaBusca() {
       </main>
       {aberto && (
         <Garimpar
+          key={`${aberto.source}|${aberto.external_id}`}
           a={aberto}
           analise={busca.analises[aberto.external_id]}
           onFechar={fecharGarimpar}

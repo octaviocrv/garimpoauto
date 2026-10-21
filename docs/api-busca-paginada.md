@@ -9,7 +9,7 @@ A tela ainda usa `/buscar/stream`. Este documento descreve o jeito novo, igual a
 | `GET /buscar/pagina` | Uma página por vez, para o "Ver mais". Novo |
 | `GET /buscar/stream` | Várias páginas de uma vez por SSE (até 8). Continua igual |
 | `GET /buscar` | O mesmo do stream em um JSON só. Continua igual |
-| `POST /fipe/anuncio` | Resolve a FIPE de um carro ao abrir o Garimpar |
+| `GET /anuncio/detalhe` | Lê a página daquele anúncio na OLX ao abrir o Garimpar (ficha, opcionais, localização e descrição) |
 
 Os três usam os mesmos parâmetros de busca (`texto`, que pode vir vazio, veja "Busca sem texto", `marca`, `modelo`, `versao`, `ano_min`, `ano_max`, `preco_min`, `preco_max`, `km_min`, `km_max`, `cambio`, `combustivel`, `anunciante`, `ordenar`, `estado`, `regiao`, `cidade`, `dev`, `atualizar`) e **a mesma sessão de busca no servidor**. Página lida por um deles serve para os outros, e o servidor nunca baixa de novo da OLX uma página que já tem.
 
@@ -47,9 +47,30 @@ A tela pode juntar as páginas numa lista só, anexando `anuncios` de cada respo
 
 Cada carro em `anuncios` traz também `novo` (`true` ou `false`). `/buscar` e o `fim` do stream trazem `novos` e `primeira_busca`, e cada evento `pagina` do stream traz `novos`.
 
-A vitrine só traz FIPE já guardada. Busca com texto ou modelo resolve as combinações distintas da
-página. O endpoint `POST /fipe/anuncio` recebe os campos do anúncio e devolve `fipe`,
-`fipe_bloqueio` e `fipe_ausencia`, sem baixar novamente a página da OLX.
+A busca não traz FIPE. Ela chega só no Garimpar, junto com a página do anúncio (veja abaixo).
+
+### Página do anúncio no Garimpar
+
+`GET /anuncio/detalhe?fonte=olx&id=<external_id>&url=<url do anúncio>` lê **só aquele anúncio**, e só
+quando a pessoa abre o Garimpar. Nenhuma busca pede detalhe de anúncio.
+
+- O `url` precisa ser https da OLX e terminar no mesmo `id`. Query e âncora são descartadas. Qualquer
+  outro endereço volta 422 sem pedido à OLX.
+- A página traz o JSON `initial-data`. O servidor confere que o `listId` dele é o `id` pedido.
+- Resposta: `source`, `external_id`, `url`, `detalhes` (categoria, modelo, marca, tipo, ano, km, potencia,
+  combustivel, cambio, direcao, cor, portas, final_placa, kit_gnv), `opcionais`, `outras` (aceita trocas,
+  IPVA pago, único dono e o que mais vier marcado como Sim), `localizacao` (bairro, cidade, estado, cep),
+  `descricao`, `referencia_preco`, `coletado_em` e `do_cache`. Campo que o anúncio não tem vem `null` ou lista vazia.
+- `referencia_preco` é o quadro "Referência de preço" da OLX (`abuyFipePrice` e `abuyPriceRef` do
+  `initial-data`): `preco_anuncio`, `fipe`, `media_olx`, `menor`, `corte_baixo`, `corte_alto`, `maior`,
+  `carros` e `mes_referencia` (`"2026-09"`). Vem `null` quando a OLX não mostra FIPE nem média. Detalhes em
+  [fipe.md](fipe.md).
+- Telefone e e-mail escritos na descrição viram "(contato no anúncio original)". Nome e contato do
+  anunciante nunca são lidos.
+- Bloqueio ou falha de rede repetem uma vez, com a mesma espera do "Ver mais". Se ainda falhar, volta
+  503 com `erro` pronto para a tela. Anúncio removido (404 ou 410) volta 404 sem repetir.
+- O resultado fica guardado em memória por 20 minutos (`CACHE_TTL_SEGUNDOS`). Falha não é guardada,
+  então "Tentar de novo" lê de novo. Pedidos simultâneos do mesmo anúncio fazem uma leitura só.
 
 No Garimpar, **Buscar carros iguais** abre uma busca por marca, modelo e ano do anúncio. Estado,
 região, zona e cidade são preservados. Versão, preço, km, câmbio, combustível e tipo de anunciante

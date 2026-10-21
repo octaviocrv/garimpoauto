@@ -1,0 +1,400 @@
+{
+ "ad": {
+  "adId": 1820296609,
+  "listId": 1546298897,
+  "subject": "Chevrolet Onix Hatch LT 1.0 12V Flex Mec. 4P 2024",
+  "body": "CHEVROLET ONIX LT2 2023 - IMPECÁVEL!<br><br>Uma oportunidade para quem procura um seminovo diferenciado! Apenas 19.000 km rodados, único dono, laudo cautelar aprovado e sem retoques de pintura e com todas as revisões realizadas na concessionária. Um carro de procedência, extremamente novo!<br><br>Versão LT2 - Cambio manual<br>Apenas 19 mil km<br>Único dono<br>Sem retoques de pintura<br>Todas as revisões na concessionária<br>Partida por botão Start/Stop<br>Central multimídia com CarPlay e Câmera traseira <br>Volante multifuncional<br>Rodas de liga leve<br>Setas laterais<br>Ar-condicionado<br>Direção elétrica<br>Vidros e travas elétricas<br>Excelente estado de conservação<br><br>Um carro acima da média! Baixíssima quilometragem, histórico de manutenção e conservação impecável.<br><br>Valor: R$ 68.900<br><br>Marcelo Veículos - Fazendo parte da sua história! <br><br>Avenida João Pinheiro, 436 - Centro - Poços de Caldas/MG.<br>Contato/WhatsApp (31) 99999-0000",
+  "priceValue": "R$ 68.900",
+  "professionalAd": true,
+  "categoryName": "Carros, vans e utilitários",
+  "friendlyUrl": "https://mg.olx.com.br/regiao-de-pocos-de-caldas-e-varginha/autos-e-pecas/carros-vans-e-utilitarios/chevrolet-onix-hatch-lt-1-0-12v-flex-mec-4p-2024-1546298897",
+  "location": {
+   "address": null,
+   "neighbourhood": "Centro",
+   "neighbourhoodId": 40138,
+   "municipality": "Poços de Caldas",
+   "municipalityId": 8228,
+   "zipcode": "37701740",
+   "mapLati": 0,
+   "mapLong": 0,
+   "uf": "MG",
+   "ddd": "35",
+   "zoneId": 811,
+   "zone": "pocos-de-caldas-e-pouso-alegre",
+   "region": "Poços de Caldas, Varginha e região, MG"
+  },
+  "properties": [
+   {
+    "name": "category",
+    "label": "Categoria",
+    "value": "Carros, vans e utilitários",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "vehicle_model",
+    "label": "Modelo",
+    "value": "Onix Hatch LT 1.0 12V Flex Mec. 4P",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "vehicle_brand",
+    "label": "Marca",
+    "value": "Chevrolet",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "cartype",
+    "label": "Tipo de veículo",
+    "value": "Hatch",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "regdate",
+    "label": "Ano",
+    "value": "2024",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "mileage",
+    "label": "Quilometragem",
+    "value": "19798",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "motorpower",
+    "label": "Potência do motor",
+    "value": "1.0",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "fuel",
+    "label": "Combustível",
+    "value": "Flex",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "gearbox",
+    "label": "Câmbio",
+    "value": "Manual",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "car_steering",
+    "label": "Direção",
+    "value": "Elétrica",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "carcolor",
+    "label": "Cor",
+    "value": "Prata",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "doors",
+    "label": "Portas",
+    "value": "4 portas",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "owner",
+    "label": "Único dono",
+    "value": "Sim",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "exchange",
+    "label": "Aceita trocas",
+    "value": "Sim",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "car_features",
+    "label": "Opcionais",
+    "value": "Air bag, Ar condicionado, Alarme, Câmera de ré, Computador de bordo, Conexão USB, Interface bluetooth, Rodas de liga leve, Sensor de ré, Som, Trava elétrica, Vidro elétrico, Volante multifuncional",
+    "values": [
+     {
+      "rawValue": 5,
+      "label": "Air bag"
+     },
+     {
+      "rawValue": 1,
+      "label": "Ar condicionado"
+     },
+     {
+      "rawValue": 6,
+      "label": "Alarme"
+     },
+     {
+      "rawValue": 9,
+      "label": "Câmera de ré"
+     },
+     {
+      "rawValue": 12,
+      "label": "Computador de bordo"
+     },
+     {
+      "rawValue": 13,
+      "label": "Conexão USB"
+     },
+     {
+      "rawValue": 15,
+      "label": "Interface bluetooth"
+     },
+     {
+      "rawValue": 18,
+      "label": "Rodas de liga leve"
+     },
+     {
+      "rawValue": 8,
+      "label": "Sensor de ré"
+     },
+     {
+      "rawValue": 7,
+      "label": "Som"
+     },
+     {
+      "rawValue": 4,
+      "label": "Trava elétrica"
+     },
+     {
+      "rawValue": 3,
+      "label": "Vidro elétrico"
+     },
+     {
+      "rawValue": 14,
+      "label": "Volante multifuncional"
+     }
+    ],
+    "url": null
+   },
+   {
+    "name": "gnv_kit",
+    "label": "Kit GNV",
+    "value": "Não",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "owner_manual",
+    "label": "Com manual",
+    "value": "Sim",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "extra_key",
+    "label": "Chave reserva",
+    "value": "Sim",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "dealership_review",
+    "label": "Revisões feitas em concessionária",
+    "value": "Sim",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "warranty",
+    "label": "Com garantia",
+    "value": "Sim",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "has_gnv_kit",
+    "label": "Possui Kit GNV",
+    "value": "Não",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "has_auction",
+    "label": "De leilão",
+    "value": "Não",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "has_paid_ipva",
+    "label": "IPVA pago",
+    "value": "Sim",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "has_with_fine",
+    "label": "Com multas",
+    "value": "Não",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "has_hydraulic_steering",
+    "label": "Direção hidráulica",
+    "value": "Não",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "is_settled",
+    "label": "Quitado",
+    "value": "Sim",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "is_funded",
+    "label": "Financiado",
+    "value": "Não",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "indexed_financial_status",
+    "label": "Status financeiro",
+    "value": "Quitado",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "documentation_and_regularization",
+    "label": "Documentação e regularização",
+    "value": "IPVA Pago",
+    "values": [
+     {
+      "rawValue": 1,
+      "label": "IPVA Pago"
+     }
+    ],
+    "url": null
+   },
+   {
+    "name": "conservation_and_warranty",
+    "label": "Conservação e garantia",
+    "value": "Único dono, Com manual, Chave reserva, Com garantia",
+    "values": [
+     {
+      "rawValue": 1,
+      "label": "Único dono"
+     },
+     {
+      "rawValue": 2,
+      "label": "Com manual"
+     },
+     {
+      "rawValue": 3,
+      "label": "Chave reserva"
+     },
+     {
+      "rawValue": 5,
+      "label": "Com garantia"
+     }
+    ],
+    "url": null
+   },
+   {
+    "name": "indexed_car_steering",
+    "label": "Tipo de direção",
+    "value": "Elétrica",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "on_autos_fair",
+    "label": "No Festival de Carros/Feirão de Autos",
+    "value": "Não",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "condition_report_date",
+    "label": "Data do relatório da vistoria",
+    "value": "2026-10-21T18:28:08.713Z",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "condition_report_detail",
+    "label": "Detalhes do relatório",
+    "value": "A vistoriadora integrada retornou que não existe laudo para esse veículo.",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "condition_report_inspector",
+    "label": "Vistoriadora do relatório",
+    "value": "Dekra",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "condition_report_status",
+    "label": "Status do relatório",
+    "value": "UNAVAILABLE",
+    "values": null,
+    "url": null
+   },
+   {
+    "name": "condition_report_visible",
+    "label": "Exibe relatório de vistoria",
+    "value": "true",
+    "values": null,
+    "url": null
+   }
+  ],
+  "additionalInformation": [
+   {
+    "label": "Único dono"
+   },
+   {
+    "label": "Com manual"
+   },
+   {
+    "label": "Com chave reserva"
+   },
+   {
+    "label": "Revisões feitas em concessionária"
+   },
+   {
+    "label": "Com garantia de fábrica"
+   },
+   {
+    "label": "IPVA pago"
+   },
+   {
+    "label": "Veículo quitado"
+   }
+  ],
+  "locationProperties": [
+   {
+    "label": "CEP",
+    "value": "37701740"
+   },
+   {
+    "label": "Município",
+    "value": "Poços de Caldas"
+   },
+   {
+    "label": "Bairro",
+    "value": "Centro"
+   }
+  ]
+ }
+}

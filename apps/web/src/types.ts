@@ -22,19 +22,11 @@ export interface Busca {
   cidade?: string | null
 }
 
+// A FIPE que a OLX mostra na página do anúncio. Chega quando a pessoa abre o Garimpar.
 export interface ReferenciaFipe {
-  codigo: string
   preco: number
-  diferenca_percentual: number
-  mes_referencia: string
-  confianca: 'alta'
-  preco_estranho: boolean
-}
-
-export interface ResultadoFipe {
-  fipe: ReferenciaFipe | null
-  fipe_bloqueio: 'anuncio_promocional' | 'km_incoerente' | null
-  fipe_ausencia: Anuncio['fipe_ausencia']
+  diferenca_percentual: number // positivo: anúncio abaixo da FIPE
+  confianca: 'alta' // a análise só usa FIPE de confiança alta, e a da OLX é da versão do anúncio
 }
 
 export interface Anuncio {
@@ -67,8 +59,6 @@ export interface Anuncio {
   incompleto: boolean
   campos_faltando: string[]
   fipe?: ReferenciaFipe | null
-  fipe_bloqueio?: 'anuncio_promocional' | 'km_incoerente' | null
-  fipe_ausencia?: 'sem_candidato' | 'confianca_media' | 'confianca_baixa' | 'sem_orcamento' | 'tempo_esgotado' | 'banco_fora' | 'fonte_indisponivel' | 'erro_inesperado' | null
 }
 
 export type MotivoParada = 'acabaram_paginas' | 'teto_paginas' | 'teto_tempo' | 'falha_fonte'
@@ -134,4 +124,56 @@ export interface RespostaZonas {
   estado: string
   regiao: string
   zonas: Lugar[]
+}
+
+// Página do anúncio, lida só quando a pessoa abre o Garimpar (GET /anuncio/detalhe).
+export interface FichaDetalhes {
+  categoria: string | null
+  modelo: string | null
+  marca: string | null
+  tipo: string | null
+  ano: number | null
+  km: number | null
+  potencia: string | null
+  combustivel: string | null
+  cambio: string | null
+  direcao: string | null
+  cor: string | null
+  portas: string | null
+  final_placa: string | null
+  kit_gnv: string | null
+}
+
+export interface LocalAnuncio {
+  bairro: string | null
+  cidade: string | null
+  estado: string | null
+  cep: string | null
+}
+
+// O quadro "Referência de preço" da OLX, em reais. Qualquer número pode faltar.
+export interface ReferenciaPreco {
+  preco_anuncio: number | null
+  fipe: number | null
+  media_olx: number | null
+  menor: number | null
+  corte_baixo: number | null // fim do 1º terço da régua
+  corte_alto: number | null // fim do 2º terço da régua
+  maior: number | null
+  carros: number | null
+  mes_referencia: string | null // "2026-09"
+}
+
+export interface DetalheAnuncio {
+  source: string
+  external_id: string
+  url: string
+  detalhes: FichaDetalhes
+  opcionais: string[]
+  outras: string[]
+  localizacao: LocalAnuncio
+  descricao: string | null
+  referencia_preco?: ReferenciaPreco | null
+  coletado_em: string
+  do_cache?: boolean
 }

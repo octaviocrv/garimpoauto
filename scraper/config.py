@@ -95,14 +95,6 @@ ESPERA_REPETICAO_VER_MAIS_SEGUNDOS = _do_ambiente("GARIMPO_ESPERA_REPETICAO_VER_
 DATABASE_URL = _do_ambiente("GARIMPO_DATABASE_URL", None, str)
 # Com o banco fora do ar, de quanto em quanto tempo o servidor confere se ele voltou (sem travar a busca).
 BANCO_CONFERE_SEGUNDOS = _do_ambiente("GARIMPO_BANCO_CONFERE_SEGUNDOS", 30.0, float)
-# FIPE. Sem token fica uma margem de 50 chamadas abaixo do limite público. Com token, a margem é 100.
-FIPE_TOKEN = _do_ambiente("GARIMPO_FIPE_TOKEN", None, str)
-FIPE_LIMITE_DIA = _do_ambiente("GARIMPO_FIPE_LIMITE_DIA", 900 if FIPE_TOKEN else 450, int)
-FIPE_TIMEOUT_REQUISICAO_SEGUNDOS = _do_ambiente("GARIMPO_FIPE_TIMEOUT_REQUISICAO_SEGUNDOS", 10.0, float)
-FIPE_TEMPO_PAGINA_SEGUNDOS = _do_ambiente("GARIMPO_FIPE_TEMPO_PAGINA_SEGUNDOS", 4.0, float)
-FIPE_PAUSA_SEGUNDOS = _do_ambiente("GARIMPO_FIPE_PAUSA_SEGUNDOS", 0.2, float)
-FIPE_REPETICOES = _do_ambiente("GARIMPO_FIPE_REPETICOES", 1, int)
-FIPE_BACKOFF_SEGUNDOS = _do_ambiente("GARIMPO_FIPE_BACKOFF_SEGUNDOS", 1.0, float)
 # Origens liberadas no CORS, separadas por vírgula. Por padrão só o Vite local.
 CORS_ORIGENS = [
     o.strip()

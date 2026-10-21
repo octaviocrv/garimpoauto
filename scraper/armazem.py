@@ -23,7 +23,7 @@ from urllib.parse import unquote, urlparse
 
 import pymysql
 
-from schemas import Anuncio, PaginaBusca, ReferenciaFipe
+from schemas import Anuncio, PaginaBusca
 
 log = logging.getLogger("garimpo.banco")
 if not logging.getLogger().handlers and not log.handlers:  # fora do uvicorn, ainda assim aparece
@@ -54,6 +54,8 @@ def hash_da_chave(chave: str) -> str:
 # ---------------------------------------------------------------------------
 
 _DATAS = ("publicado_em", "renovado_em")
+# Páginas guardadas antes da FIPE sair do servidor ainda trazem esses campos. Eles são ignorados.
+_CAMPOS_ANTIGOS = ("fipe", "fipe_bloqueio", "fipe_ausencia")
 
 
 def pagina_para_json(p: PaginaBusca) -> str:
@@ -73,8 +75,8 @@ def pagina_de_json(texto: str) -> PaginaBusca:
         for campo in _DATAS:
             if a[campo] is not None:
                 a[campo] = datetime.fromisoformat(a[campo])
-        if a.get("fipe") is not None:
-            a["fipe"] = ReferenciaFipe(**a["fipe"])
+        for campo in _CAMPOS_ANTIGOS:
+            a.pop(campo, None)
         anuncios.append(Anuncio(**a))
     return PaginaBusca(anuncios=anuncios, **d)
 
@@ -227,293 +229,6 @@ class Armazem:
             finally:
                 cur.execute("SELECT RELEASE_LOCK('garimpo_migracao')")
         self._migrado = True
-
-    # -- catálogo e orçamento FIPE -----------------------------------------
-
-    def fipe_reservar_requisicao(self, limite: int) -> bool:
-        """Reserva uma chamada no orçamento de hoje. A decisão e o incremento são atômicos."""
-        hoje, agora = self.agora().date(), self.agora()
-
-        def f(cur: Any) -> bool:
-            cur.execute(
-                "INSERT IGNORE INTO fipe_requisicao_dia (dia, requisicoes, atualizada_em) VALUES (%s, 0, %s)",
-                (hoje, agora),
-            )
-            cur.execute("SELECT requisicoes FROM fipe_requisicao_dia WHERE dia = %s FOR UPDATE", (hoje,))
-            usadas = cur.fetchone()["requisicoes"]
-            if usadas >= limite:
-                return False
-            cur.execute(
-                "UPDATE fipe_requisicao_dia SET requisicoes = requisicoes + 1, atualizada_em = %s WHERE dia = %s",
-                (agora, hoje),
-            )
-            return True
-
-        return self._usar(f)
-
-    def fipe_requisicoes_hoje(self) -> int:
-        hoje = self.agora().date()
-
-        def f(cur: Any) -> int:
-            cur.execute("SELECT requisicoes FROM fipe_requisicao_dia WHERE dia = %s", (hoje,))
-            linha = cur.fetchone()
-            return linha["requisicoes"] if linha else 0
-
-        return self._usar(f)
-
-    def fipe_salvar_referencias(self, referencias: list[dict[str, Any]]) -> None:
-        agora = self.agora()
-
-        def f(cur: Any) -> None:
-            cur.executemany(
-                "INSERT INTO fipe_referencia (codigo, mes, ordem, consultada_em) VALUES (%s, %s, %s, %s) "
-                "ON DUPLICATE KEY UPDATE mes = VALUES(mes), ordem = VALUES(ordem), consultada_em = VALUES(consultada_em)",
-                [(r["codigo"], r["mes"], ordem, agora) for ordem, r in enumerate(referencias)],
-            )
-
-        self._usar(f)
-
-    def fipe_referencia_atual(self, somente_de_hoje: bool = False) -> Optional[dict[str, Any]]:
-        inicio = datetime.combine(self.agora().date(), datetime.min.time())
-
-        def f(cur: Any) -> Optional[dict[str, Any]]:
-            sql = "SELECT codigo, mes, consultada_em FROM fipe_referencia"
-            parametros: tuple[Any, ...] = ()
-            if somente_de_hoje:
-                sql += " WHERE consultada_em >= %s"
-                parametros = (inicio,)
-            cur.execute(sql + " ORDER BY ordem LIMIT 1", parametros)
-            return cur.fetchone()
-
-        return self._usar(f)
-
-    def fipe_cache_concluido(self, referencia: str, tipo: str, chave: str) -> bool:
-        def f(cur: Any) -> bool:
-            cur.execute(
-                "SELECT 1 FROM fipe_cache_estado WHERE referencia_codigo = %s AND tipo = %s AND chave = %s",
-                (referencia, tipo, chave),
-            )
-            return cur.fetchone() is not None
-
-        return self._usar(f)
-
-    def _fipe_marcar_cache(self, cur: Any, referencia: str, tipo: str, chave: str, estado: Optional[str] = None) -> None:
-        cur.execute(
-            "INSERT INTO fipe_cache_estado (referencia_codigo, tipo, chave, estado, concluido_em) "
-            "VALUES (%s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE estado = VALUES(estado), "
-            "concluido_em = VALUES(concluido_em)",
-            (referencia, tipo, chave, estado, self.agora()),
-        )
-
-    def fipe_salvar_marcas(self, referencia: str, marcas: list[dict[str, str]]) -> None:
-        agora = self.agora()
-
-        def f(cur: Any) -> None:
-            cur.execute("DELETE FROM fipe_marca WHERE referencia_codigo = %s", (referencia,))
-            cur.executemany(
-                "INSERT INTO fipe_marca (referencia_codigo, codigo, nome, carregada_em) VALUES (%s, %s, %s, %s)",
-                [(referencia, m["codigo"], m["nome"], agora) for m in marcas],
-            )
-            self._fipe_marcar_cache(cur, referencia, "marcas", "")
-
-        self._usar(f)
-
-    def fipe_marcas(self, referencia: str) -> list[dict[str, Any]]:
-        def f(cur: Any) -> list[dict[str, Any]]:
-            cur.execute(
-                "SELECT codigo, nome FROM fipe_marca WHERE referencia_codigo = %s ORDER BY nome", (referencia,)
-            )
-            return list(cur.fetchall())
-
-        return self._usar(f)
-
-    def fipe_salvar_modelos(self, referencia: str, marca: str, modelos: list[dict[str, str]]) -> None:
-        agora = self.agora()
-
-        def f(cur: Any) -> None:
-            cur.execute(
-                "DELETE FROM fipe_modelo WHERE referencia_codigo = %s AND marca_codigo = %s",
-                (referencia, marca),
-            )
-            cur.executemany(
-                "INSERT INTO fipe_modelo (referencia_codigo, marca_codigo, codigo, nome, carregado_em) "
-                "VALUES (%s, %s, %s, %s, %s)",
-                [(referencia, marca, m["codigo"], m["nome"], agora) for m in modelos],
-            )
-            self._fipe_marcar_cache(cur, referencia, "modelos", marca)
-
-        self._usar(f)
-
-    def fipe_modelos(self, referencia: str, marca: str) -> list[dict[str, Any]]:
-        def f(cur: Any) -> list[dict[str, Any]]:
-            cur.execute(
-                "SELECT codigo, nome FROM fipe_modelo WHERE referencia_codigo = %s AND marca_codigo = %s ORDER BY nome",
-                (referencia, marca),
-            )
-            return list(cur.fetchall())
-
-        return self._usar(f)
-
-    def fipe_salvar_anos(self, referencia: str, marca: str, modelo: str, anos: list[dict[str, Any]]) -> None:
-        agora = self.agora()
-
-        def f(cur: Any) -> None:
-            cur.execute(
-                "DELETE FROM fipe_ano WHERE referencia_codigo = %s AND marca_codigo = %s AND modelo_codigo = %s",
-                (referencia, marca, modelo),
-            )
-            cur.executemany(
-                "INSERT INTO fipe_ano (referencia_codigo, marca_codigo, modelo_codigo, codigo, nome, "
-                "ano_modelo, combustivel_codigo, combustivel, carregado_em) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                [
-                    (
-                        referencia, marca, modelo, a["codigo"], a["nome"], a["ano_modelo"],
-                        a["combustivel_codigo"], a["combustivel"], agora,
-                    )
-                    for a in anos
-                ],
-            )
-            self._fipe_marcar_cache(cur, referencia, "anos", f"{marca}|{modelo}")
-
-        self._usar(f)
-
-    def fipe_anos(self, referencia: str, marca: str, modelo: str) -> list[dict[str, Any]]:
-        def f(cur: Any) -> list[dict[str, Any]]:
-            cur.execute(
-                "SELECT codigo, nome, ano_modelo, combustivel_codigo, combustivel FROM fipe_ano "
-                "WHERE referencia_codigo = %s AND marca_codigo = %s AND modelo_codigo = %s ORDER BY ano_modelo DESC, nome",
-                (referencia, marca, modelo),
-            )
-            return list(cur.fetchall())
-
-        return self._usar(f)
-
-    def fipe_salvar_preco(self, referencia: str, marca: str, modelo: str, ano: str, preco: dict[str, Any]) -> None:
-        def f(cur: Any) -> None:
-            cur.execute(
-                "INSERT INTO fipe_preco (referencia_codigo, marca_codigo, modelo_codigo, ano_codigo, codigo_fipe, "
-                "preco, mes_referencia, marca, modelo, ano_modelo, combustivel, consultado_em) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
-                "ON DUPLICATE KEY UPDATE codigo_fipe = VALUES(codigo_fipe), preco = VALUES(preco), "
-                "mes_referencia = VALUES(mes_referencia), consultado_em = VALUES(consultado_em)",
-                (
-                    referencia, marca, modelo, ano, preco["codigo_fipe"], preco["preco"],
-                    preco["mes_referencia"], preco["marca"], preco["modelo"], preco["ano_modelo"],
-                    preco["combustivel"], self.agora(),
-                ),
-            )
-
-        self._usar(f)
-
-    def fipe_preco(self, referencia: str, marca: str, modelo: str, ano: str) -> Optional[dict[str, Any]]:
-        def f(cur: Any) -> Optional[dict[str, Any]]:
-            cur.execute(
-                "SELECT codigo_fipe, preco, mes_referencia, marca, modelo, ano_modelo, combustivel "
-                "FROM fipe_preco WHERE referencia_codigo = %s AND marca_codigo = %s "
-                "AND modelo_codigo = %s AND ano_codigo = %s",
-                (referencia, marca, modelo, ano),
-            )
-            return cur.fetchone()
-
-        return self._usar(f)
-
-    def fipe_casamento(self, fonte: str, anuncio_id: str, entrada_hash: str) -> Optional[dict[str, Any]]:
-        def f(cur: Any) -> Optional[dict[str, Any]]:
-            cur.execute(
-                "SELECT referencia_codigo, codigo_fipe, preco, mes_referencia, confianca, motivo, "
-                "bloqueio, preco_estranho FROM fipe_casamento "
-                "WHERE fonte = %s AND anuncio_id = %s AND entrada_hash = %s",
-                (fonte, anuncio_id, entrada_hash),
-            )
-            return cur.fetchone()
-
-        return self._usar(f)
-
-    def fipe_salvar_casamento(
-        self, fonte: str, anuncio_id: str, entrada_hash: str, resultado: dict[str, Any],
-    ) -> None:
-        def f(cur: Any) -> None:
-            cur.execute(
-                "INSERT INTO fipe_casamento (fonte, anuncio_id, entrada_hash, referencia_codigo, codigo_fipe, "
-                "preco, mes_referencia, confianca, motivo, bloqueio, preco_estranho, casado_em) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
-                "ON DUPLICATE KEY UPDATE entrada_hash = VALUES(entrada_hash), "
-                "referencia_codigo = VALUES(referencia_codigo), codigo_fipe = VALUES(codigo_fipe), "
-                "preco = VALUES(preco), mes_referencia = VALUES(mes_referencia), "
-                "confianca = VALUES(confianca), motivo = VALUES(motivo), bloqueio = VALUES(bloqueio), "
-                "preco_estranho = VALUES(preco_estranho), casado_em = VALUES(casado_em)",
-                (
-                    fonte, anuncio_id, entrada_hash, resultado.get("referencia_codigo"),
-                    resultado.get("codigo_fipe"), resultado.get("preco"), resultado.get("mes_referencia"),
-                    resultado["confianca"], resultado["motivo"], resultado.get("bloqueio"),
-                    resultado.get("preco_estranho", False), self.agora(),
-                ),
-            )
-
-        self._usar(f)
-
-    def fipe_resumo_casamentos(self) -> dict[str, int]:
-        def f(cur: Any) -> dict[str, int]:
-            cur.execute("SELECT confianca, COUNT(*) AS total FROM fipe_casamento GROUP BY confianca")
-            return {str(r["confianca"]): int(r["total"]) for r in cur.fetchall()}
-
-        return self._usar(f)
-
-    def fipe_salvar_ausencias(self, ocorrencias: list[dict[str, str]]) -> None:
-        if not ocorrencias:
-            return
-        agora = self.agora()
-
-        def f(cur: Any) -> None:
-            cur.executemany(
-                "INSERT INTO fipe_ausencia (fonte, anuncio_id, entrada_hash, motivo, detalhe, "
-                "ocorrencias, primeira_em, ultima_em) VALUES (%s, %s, %s, %s, %s, 1, %s, %s) "
-                "ON DUPLICATE KEY UPDATE detalhe = VALUES(detalhe), ocorrencias = ocorrencias + 1, "
-                "ultima_em = VALUES(ultima_em)",
-                [
-                    (
-                        o["fonte"], o["anuncio_id"], o["entrada_hash"], o["motivo"],
-                        o.get("detalhe"), agora, agora,
-                    )
-                    for o in ocorrencias
-                ],
-            )
-
-        self._usar(f)
-
-    def fipe_resumo_ausencias(self) -> dict[str, int]:
-        def f(cur: Any) -> dict[str, int]:
-            cur.execute("SELECT motivo, SUM(ocorrencias) AS total FROM fipe_ausencia GROUP BY motivo")
-            return {str(r["motivo"]): int(r["total"]) for r in cur.fetchall()}
-
-        return self._usar(f)
-
-    def fipe_salvar_estado(self, referencia: str, tipo: str, chave: str, estado: dict[str, Any]) -> None:
-        texto = json.dumps(estado, ensure_ascii=False)
-
-        def f(cur: Any) -> None:
-            self._fipe_marcar_cache(cur, referencia, tipo, chave, texto)
-
-        self._usar(f)
-
-    def fipe_anuncios_para_aquecer(self, limite_paginas: int = 200) -> list[Anuncio]:
-        """Anúncios das páginas ainda guardadas, sem repetir. O script decide a prioridade."""
-        def f(cur: Any) -> list[Anuncio]:
-            cur.execute(
-                "SELECT conteudo FROM busca_pagina ORDER BY coletada_em DESC, sessao_id, numero LIMIT %s",
-                (limite_paginas,),
-            )
-            vistos: set[tuple[str, str]] = set()
-            anuncios: list[Anuncio] = []
-            for linha in cur.fetchall():
-                for anuncio in pagina_de_json(linha["conteudo"]).anuncios:
-                    chave = (anuncio.source, anuncio.external_id)
-                    if chave not in vistos:
-                        vistos.add(chave)
-                        anuncios.append(anuncio)
-            return anuncios
-
-        return self._usar(f)
 
     # -- sessões de busca ----------------------------------------------------
 

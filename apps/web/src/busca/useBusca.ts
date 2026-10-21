@@ -2,7 +2,7 @@
 // de cancelar e de começar outra no meio. Só a busca mais nova pode mexer no estado.
 import { useCallback, useEffect, useReducer, useRef } from 'react'
 import { buscarPagina, ErroBusca } from '../api'
-import type { Anuncio, Aviso, RespostaPagina, ResultadoFipe } from '../types'
+import type { Anuncio, Aviso, ReferenciaFipe, RespostaPagina } from '../types'
 import type { Pedido } from './pedido'
 import { agrupar, analisar, analisesDaPagina, type Analise } from './analise'
 import { sinaisDaPagina, type Sinal } from './sinais'
@@ -36,7 +36,7 @@ export type Acao =
   | { tipo: 'iniciar'; pedido: Pedido }
   | { tipo: 'chegou'; resposta: RespostaPagina; agora?: number } // agora: só os testes passam, na tela é a hora real
   | { tipo: 'verMais' }
-  | { tipo: 'fipe'; anuncioId: string; resultado: ResultadoFipe }
+  | { tipo: 'fipe'; anuncioId: string; fipe: ReferenciaFipe | null }
   | { tipo: 'caiu'; erro: string }
   | { tipo: 'parar' }
 
@@ -53,7 +53,7 @@ export function reduzir(e: EstadoBusca, a: Acao): EstadoBusca {
       return { ...e, carregandoMais: true, falhouMais: false }
     case 'fipe': {
       const atualizar = (anuncio: Anuncio): Anuncio => anuncio.external_id === a.anuncioId
-        ? { ...anuncio, ...a.resultado }
+        ? { ...anuncio, fipe: a.fipe }
         : anuncio
       const anuncios = e.anuncios.map(atualizar)
       const atualizado = anuncios.find((anuncio) => anuncio.external_id === a.anuncioId)
@@ -131,8 +131,8 @@ export function useBusca(dev: boolean) {
     despachar({ tipo: 'parar' })
   }, [])
 
-  const atualizarFipe = useCallback((anuncioId: string, resultado: ResultadoFipe) => {
-    despachar({ tipo: 'fipe', anuncioId, resultado })
+  const atualizarFipe = useCallback((anuncioId: string, fipe: ReferenciaFipe | null) => {
+    despachar({ tipo: 'fipe', anuncioId, fipe })
   }, [])
 
   useEffect(() => () => atual.current?.abort(), [])

@@ -20,7 +20,7 @@ const COR_SINAL: Record<TipoSinal, string> = {
 function FipeDoCard({ f }: { f: ReferenciaFipe }) {
   const diferenca = f.diferencaPercentual
   const proporcao = (f.valor - f.diferencaReais) / f.valor
-  const alerta = f.precoEstranho || proporcao <= 1 - FIPE_PRECO_SUSPEITO
+  const alerta = proporcao <= 1 - FIPE_PRECO_SUSPEITO
   const oportunidade = proporcao <= 1 - FIPE_BOA_PRELIMINAR && !alerta
   const texto = alerta
     ? T.fipePrecoEstranho

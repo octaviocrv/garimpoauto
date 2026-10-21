@@ -21,6 +21,7 @@ vi.mock('../api', async (importOriginal) => {
     buscarRegioes: vi.fn(() => Promise.resolve([])),
     buscarZonas: vi.fn(() => Promise.resolve([])),
     resolverFipe: vi.fn(),
+    buscarDetalhe: vi.fn(() => new Promise(() => {})),
   }
 })
 
@@ -139,9 +140,15 @@ describe('vitrine ao abrir', () => {
     const root = createRoot(container)
     await act(async () => root.render(<PaginaBusca />))
     await vi.waitFor(() => expect(container.textContent).toContain(T.garimpar))
+    expect(api.buscarDetalhe).not.toHaveBeenCalled()
     const botao = container.querySelector<HTMLButtonElement>('.vehicle-card__primary')
     await act(async () => botao?.click())
     await vi.waitFor(() => expect(api.resolverFipe).toHaveBeenCalledTimes(1))
+    expect(api.buscarDetalhe).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(api.buscarDetalhe).mock.calls[0][0]).toMatchObject({
+      source: carroComFipe.source, external_id: carroComFipe.external_id, url: carroComFipe.url,
+    })
+    expect(container.querySelector('.ga-ficha [aria-busy="true"]')).not.toBeNull()
     await vi.waitFor(() => expect(container.textContent).toContain('R$ 28.500'))
     expect(container.textContent).toContain('FIPE encontrada, faltam carros iguais')
     expect(container.textContent).toContain('Este anúncio está 5% acima da FIPE')

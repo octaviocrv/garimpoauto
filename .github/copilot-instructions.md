@@ -8,6 +8,7 @@ Antes de trabalhar, leia `_memoria/empresa.md`, `_memoria/preferencias.md`, `_me
 
 - Trabalhe somente na cópia principal do repositório. Não crie nem use worktrees para o Garimpo Auto.
 - Nunca faça push sem pedido explícito.
+- Não rode, escreva nem altere testes, nem rode build ou verificações por conta própria. Quem testa e homologa é o Octavio. Implemente, analise e diga o que ele deve testar.
 - Cada entrega gera um único commit depois que todos os testes passam. Não faça commits intermediários.
 - O MariaDB/MySQL das portas 3306 e 3307 e os bancos acessados por `mydados` são da empresa. Nunca conecte, consulte, altere, pare ou reinicie esses recursos.
 - Use somente o container `garimpo_auto_banco`, banco `garimpo_auto`, em `127.0.0.1:3390`. Testes de banco usam somente `garimpo_auto_teste`.

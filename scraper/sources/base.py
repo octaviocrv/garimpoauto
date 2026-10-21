@@ -3,6 +3,10 @@
 Toda fonte recebe a mesma entrada (Busca, mais os limites) e devolve o mesmo resultado
 (ResultadoBusca). É um módulo ou objeto com o nome da fonte e uma função buscar, sem
 classe base, fábrica ou registro.
+
+Opcional: `detalhar(external_id, url, limites, *, repeticoes, espera_repeticao)` lê a página de um
+anúncio e devolve um DetalheAnuncio (veja sources/olx.py). O servidor só oferece o detalhe para a
+fonte que tem essa função.
 """
 
 from __future__ import annotations

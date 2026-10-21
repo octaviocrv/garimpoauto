@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ArrowLeft,
   ArrowSquareOut,
@@ -20,13 +20,14 @@ import {
   Warning,
   type Icon,
 } from '@phosphor-icons/react'
-import type { Anuncio } from '../types'
-import { resolverFipe } from '../api'
+import type { Anuncio, DetalheAnuncio } from '../types'
 import type { Analise, Criterio, Mercado, Nivel } from './analise'
 import { AMOSTRA_MINIMA, IDADE_MINIMA_ANOS, KM_POR_ANO_BAIXO } from './sinais'
-import { fipeDe } from './fipe'
+import { fipeDaOlx } from './fipe'
 import { T } from './textos'
 import { GARIMPAR_TEXTOS as GT } from './garimparTextos'
+import { IconeRedondo } from './IconeRedondo'
+import { FichaAnuncio } from './FichaAnuncio'
 import './Garimpar.css'
 
 const reais = (valor: number) => `R$ ${Math.round(valor).toLocaleString('pt-BR')}`
@@ -57,14 +58,6 @@ function useNumeroAnimado(valor: number, duracao = 700) {
 function NumeroGrande({ valor, formato }: { valor: number; formato: (valor: number) => string }) {
   const animado = useNumeroAnimado(valor)
   return <>{formato(animado)}</>
-}
-
-function IconeRedondo({ icon: Icone, tom = 'agua' }: { icon: Icon; tom?: 'agua' | 'amarelo' | 'cinza' }) {
-  return (
-    <span className={`ga-icone ga-icone--${tom}`}>
-      <Icone size={19} weight="duotone" aria-hidden="true" />
-    </span>
-  )
 }
 
 function criterioDe(lista: Criterio[], id: Criterio['id']) {
@@ -386,26 +379,6 @@ function Margem({ criterio }: { criterio: Criterio | undefined }) {
   )
 }
 
-function ReferenciaFipe({ carro }: { carro: Anuncio }) {
-  const fipe = fipeDe(carro)
-  if (!fipe) return null
-
-  return (
-    <article className="ga-painel">
-      <div className="ga-painel__topo">
-        <div>
-          <p className="ga-sobretitulo">{GT.fipe}</p>
-          <h3>{reais(fipe.valor)}</h3>
-        </div>
-      </div>
-      {fipe.codigo && fipe.mesReferencia && (
-        <p className="ga-conta">{T.fipeCodigo} {fipe.codigo}. {T.fipeMes} {fipe.mesReferencia}.</p>
-      )}
-      <p className="ga-conta">{T.fipeReferencia}</p>
-    </article>
-  )
-}
-
 function LinhaCuidado({ criterio }: { criterio: Criterio }) {
   return (
     <li>
@@ -487,22 +460,14 @@ export function Garimpar({
   const fechar = useRef<HTMLButtonElement>(null)
   const original = useRef(a)
   const [carro, setCarro] = useState(a)
-  const [falhaFipe, setFalhaFipe] = useState(false)
 
-  useEffect(() => {
-    let ativo = true
-    const anuncio = original.current
-    resolverFipe(anuncio)
-      .then((resultado) => {
-        if (!ativo) return
-        const atualizado = { ...anuncio, ...resultado }
-        setCarro(atualizado)
-        onFipe(atualizado)
-      })
-      .catch(() => {
-        if (ativo) setFalhaFipe(true)
-      })
-    return () => { ativo = false }
+  // A FIPE vem do quadro Referência de preço da página do anúncio, lida pela FichaAnuncio.
+  const chegouDetalhe = useCallback((detalhe: DetalheAnuncio) => {
+    const fipe = fipeDaOlx(original.current.preco, detalhe.referencia_preco?.fipe)
+    if (!fipe) return
+    const atualizado = { ...original.current, fipe }
+    setCarro(atualizado)
+    onFipe(atualizado)
   }, [onFipe])
 
   useEffect(() => {
@@ -542,7 +507,6 @@ export function Garimpar({
       </header>
 
       <main className="ga-conteudo">
-        {falhaFipe && <p role="status" className="ga-fora">{T.fipeFalhou}</p>}
         <Hero carro={carro} recencia={recencia} />
         <Veredito
           carro={carro}
@@ -564,10 +528,10 @@ export function Garimpar({
             <ReguaKm carro={carro} criterio={km} />
             <FaixaPreco carro={carro} criterio={preco} mercado={analise?.mercado} />
             <Margem criterio={margem} />
-            <ReferenciaFipe carro={carro} />
           </div>
         </section>
 
+        <FichaAnuncio anuncio={original.current} onDetalhe={chegouDetalhe} />
         <Cuidados criterios={criterios} />
         <Apoios criterios={criterios} carro={carro} />
         <p className="ga-fora">{T.aindaNaoEntra}</p>

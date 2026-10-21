@@ -67,7 +67,7 @@ Sem o banco ligado o servidor continua funcionando, só que guardando tudo na me
 
 ## As tabelas
 
-O banco tem 13 tabelas. As tabelas de busca vencem. As tabelas FIPE continuam guardadas entre as buscas.
+O banco tem 13 tabelas. As tabelas de busca vencem. As tabelas FIPE ficaram sem uso (veja abaixo).
 
 ### `busca_sessao`: a busca em andamento
 
@@ -127,7 +127,11 @@ Lista as migrations (mudanças no formato do banco) que já foram aplicadas. Vej
 | **`versao`** | Nome do arquivo da migration (ex.: `001_cache_de_busca`) |
 | `aplicada_em` | Quando foi aplicada |
 
-### Tabelas FIPE
+### Tabelas FIPE (sem uso)
+
+A FIPE agora vem pronta da página do anúncio na OLX ([fipe.md](fipe.md)). O servidor não lê nem grava
+mais nestas tabelas. Elas foram mantidas para não apagar dado com migration. Remover só com pedido
+explícito.
 
 | Tabela | O que guarda |
 |---|---|
@@ -140,8 +144,7 @@ Lista as migrations (mudanças no formato do banco) que já foram aplicadas. Vej
 | `fipe_casamento` | O resultado do casamento de cada anúncio |
 | `fipe_requisicao_dia` | Quantas chamadas foram reservadas em cada dia |
 
-Essas tabelas não se ligam à sessão da busca. Quando uma sessão vence, o catálogo e os casamentos
-continuam disponíveis para a próxima página.
+Essas tabelas não se ligam à sessão da busca.
 
 ## Como as tabelas se ligam
 

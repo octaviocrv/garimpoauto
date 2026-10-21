@@ -9,22 +9,8 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, field_validator, model_validator
 
-# Campos sem os quais o anúncio não serve para comparar com a FIPE.
+# Campos sem os quais o anúncio não serve para comparar preço.
 CAMPOS_OBRIGATORIOS = ("preco", "ano", "modelo")
-MotivoAusenciaFipe = Literal[
-    "sem_candidato", "confianca_media", "confianca_baixa", "sem_orcamento",
-    "tempo_esgotado", "banco_fora", "fonte_indisponivel", "erro_inesperado",
-]
-
-
-@dataclass
-class ReferenciaFipe:
-    codigo: str
-    preco: float
-    diferenca_percentual: int
-    mes_referencia: str
-    confianca: Literal["alta"]
-    preco_estranho: bool = False
 
 
 @dataclass
@@ -58,9 +44,6 @@ class Anuncio:
     novo: bool = False  # apareceu desde a última busca igual (só com o banco ligado e depois da 1ª busca)
     incompleto: bool = False
     campos_faltando: list[str] = field(default_factory=list)
-    fipe: Optional[ReferenciaFipe] = None
-    fipe_bloqueio: Optional[str] = None
-    fipe_ausencia: Optional[MotivoAusenciaFipe] = None
     # Item cru da fonte, já sem nome nem telefone de anunciante (vai para raw_listings).
     raw: dict[str, Any] = field(default_factory=dict, repr=False)
 
@@ -84,23 +67,61 @@ class Anuncio:
         return d
 
 
-class AnuncioParaFipe(BaseModel):
+class FichaDetalhes(BaseModel):
+    """O quadro "Detalhes" da página do anúncio. Campo que o anúncio não informa fica None."""
+
+    categoria: Optional[str] = None
+    modelo: Optional[str] = None
+    marca: Optional[str] = None
+    tipo: Optional[str] = None  # carroceria: Hatch, Sedã, Pick-up...
+    ano: Optional[int] = None
+    km: Optional[int] = None
+    potencia: Optional[str] = None
+    combustivel: Optional[str] = None
+    cambio: Optional[str] = None
+    direcao: Optional[str] = None
+    cor: Optional[str] = None
+    portas: Optional[str] = None
+    final_placa: Optional[str] = None
+    kit_gnv: Optional[str] = None
+
+
+class LocalAnuncio(BaseModel):
+    bairro: Optional[str] = None
+    cidade: Optional[str] = None
+    estado: Optional[str] = None
+    cep: Optional[str] = None  # só os 8 dígitos
+
+
+class ReferenciaPreco(BaseModel):
+    """O quadro "Referência de preço" da página do anúncio na OLX. Números calculados pela própria OLX,
+    em reais. Qualquer um pode faltar: a OLX não mostra para todo anúncio."""
+
+    preco_anuncio: Optional[int] = None
+    fipe: Optional[int] = None  # "preço fipe" que a OLX mostra para a versão do anúncio
+    media_olx: Optional[int] = None  # "Preço Médio OLX"
+    menor: Optional[int] = None
+    corte_baixo: Optional[int] = None  # fim do 1º terço da régua
+    corte_alto: Optional[int] = None  # fim do 2º terço da régua
+    maior: Optional[int] = None
+    carros: Optional[int] = None  # quantos carros a OLX usou na conta
+    mes_referencia: Optional[str] = None  # "2026-09"
+
+
+class DetalheAnuncio(BaseModel):
+    """O que só a página do anúncio traz. Lida sob demanda, quando a pessoa abre o Garimpar,
+    e ligada ao anúncio pelo mesmo `source` + `external_id` da listagem."""
+
     source: str
     external_id: str
     url: str
-    titulo: Optional[str] = None
-    marca: Optional[str] = None
-    modelo: Optional[str] = None
-    modelo_original: Optional[str] = None
-    ano: Optional[int] = None
-    km: Optional[int] = None
-    preco: Optional[int] = None
-    cambio: Optional[str] = None
-    combustivel: Optional[str] = None
-    portas: Optional[int] = None
-
-    def para_anuncio(self) -> Anuncio:
-        return Anuncio(**self.model_dump())
+    detalhes: FichaDetalhes
+    opcionais: list[str] = []
+    outras: list[str] = []  # aceita trocas, IPVA pago, único dono... Só o que o anúncio afirma
+    localizacao: LocalAnuncio
+    descricao: Optional[str] = None  # sem telefone nem e-mail do anunciante
+    referencia_preco: Optional[ReferenciaPreco] = None
+    coletado_em: datetime
 
 
 @dataclass

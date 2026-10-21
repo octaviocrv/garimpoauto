@@ -11,20 +11,6 @@ Páginas reais coletadas em 10 de outubro de 2026, guardadas só com o que o col
 | `olx_zero.json` | busca que não acha nada. Total 0, `ads` vazio |
 | `olx_api_marcas.json`, `olx_api_modelos_honda.json`, `olx_api_versoes_civic.json` | respostas de `/api/filters/v1/attributes/{carbrand,carmodel,carversion}`, usadas para achar os códigos de marca, modelo e versão |
 | `olx_listagem.html` | página antiga com 5 anúncios, usada nos primeiros testes |
+| `olx_anuncio.json` | o objeto `ad` do `initial-data` da página de um anúncio (Onix 2024, `listId` 1546298897), usado no Garimpar. Telefone da descrição trocado por um falso e links das propriedades removidos |
 
 Bloqueio nunca foi visto de verdade. Os testes simulam com 403, 429 e página sem `ads`.
-
-## Fixtures da FIPE
-
-A pasta `fipe/` guarda respostas reais da fipe.online lidas em 10 de outubro de 2026.
-
-- `referencias.json`
-- `marcas.json`
-- `modelos_volkswagen.json`
-- `anos_gol_trendline_1_0.json`
-- `anos_gol_novo_1_0_2p.json`
-- `anos_gol_comfortline_1_6.json`
-- `preco_gol_trendline_1_0_2016.json`
-
-Elas confirmam que o código `2016-5` significa ano 2016 e combustível Flex, e que o preço devolvido
-vem como texto em reais. Os testes nunca chamam a fonte real.

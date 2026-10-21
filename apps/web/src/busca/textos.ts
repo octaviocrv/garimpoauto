@@ -46,10 +46,7 @@ export const T = {
   poucoKm: 'Pouco km pro ano',
   fipeNoValor: 'No valor da FIPE',
   fipePrecoEstranho: 'Preço muito abaixo da FIPE',
-  fipeCodigo: 'Código FIPE',
-  fipeMes: 'Mês de referência',
-  fipeReferencia: 'A FIPE é uma referência nacional. O preço real de revenda pode ser outro.',
-  fipeFalhou: 'Não consegui consultar a FIPE agora.',
+  detalheFalhou: 'Não consegui abrir esse anúncio na OLX agora, tenta de novo?',
 } as const
 
 export const naOlx = (total: number) => `${total.toLocaleString('pt-BR')} na OLX`

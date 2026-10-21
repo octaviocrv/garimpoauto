@@ -14,10 +14,15 @@ Uso:
         mostrar(pagina.anuncios)
         if pagina.ultima:
             print(pagina.parou_por, pagina.aviso)
+
+A página de um anúncio só é aberta sob demanda, um anúncio por vez (o Garimpar da tela):
+
+    detalhe = detalhar(anuncio.external_id, anuncio.url)   # DetalheAnuncio
 """
 
 from __future__ import annotations
 
+import html
 import json
 import random
 import re
@@ -25,7 +30,7 @@ import time
 import unicodedata
 from datetime import datetime, timezone
 from typing import Any, Callable, Iterator, Optional
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlsplit
 
 from scrapling.fetchers import FetcherSession
 from scrapling.parser import Selector
@@ -33,7 +38,9 @@ from scrapling.parser import Selector
 import localidades
 from busca import filtrar_local_contando, filtros_locais, marcar_repetidos, montar_resultado, normalizar_texto
 from config import LimitesBusca
-from schemas import Anuncio, Busca, PaginaBusca, ResultadoBusca
+from schemas import (
+    Anuncio, Busca, DetalheAnuncio, FichaDetalhes, LocalAnuncio, PaginaBusca, ReferenciaPreco, ResultadoBusca,
+)
 
 FONTE = "olx"
 URL_BASE = "https://www.olx.com.br/autos-e-pecas/carros-vans-e-utilitarios"
@@ -546,6 +553,60 @@ def montar_url(busca: Busca, pagina: int = 1, *, codigos: Optional[dict[str, str
 # ---------------------------------------------------------------------------
 
 
+class _TentarDeNovo(Exception):
+    """A resposta não serve (bloqueio, payload estranho): vale esperar e pedir de novo."""
+
+
+def _pedir_com_cuidado(
+    sessao: Any,
+    url: str,
+    ler: Callable[[Any], Any],
+    *,
+    inicio: float,
+    tempo_max: float,
+    tentativas_bloqueio: int,
+    backoff_base: float,
+    dormir: Callable[[float], None],
+    relogio: Callable[[], float],
+    espera_fixa: Optional[tuple[float, float]] = None,
+) -> tuple[Any, Optional[str]]:
+    """Pede `url` e entrega a resposta para `ler`. Se `ler` levantar _TentarDeNovo (ou a rede falhar),
+    espera cada vez mais e tenta de novo, no máximo `tentativas_bloqueio` vezes. `espera_fixa` (mínimo,
+    máximo) troca a espera crescente por um sorteio nesse intervalo. Devolve (o que `ler` devolveu, None)
+    ou (None, erro). Qualquer outro erro de `ler` sobe para quem chamou."""
+    erro = "sem resposta"
+    for tentativa in range(tentativas_bloqueio + 1):
+        if tentativa > 0:
+            if espera_fixa is not None:
+                espera = random.uniform(*espera_fixa)
+            else:
+                espera = backoff_base * (2 ** (tentativa - 1)) * random.uniform(1.0, 1.5)
+            if relogio() - inicio + espera > tempo_max:
+                return None, f"{erro} (sem tempo para tentar de novo)"
+            dormir(espera)
+        try:
+            resposta = sessao.get(url)
+        except Exception as e:  # falha de rede, timeout, etc.
+            erro = f"falha de rede ({type(e).__name__})"
+            continue
+        try:
+            return ler(resposta), None
+        except _TentarDeNovo as e:
+            erro = str(e)
+    return None, erro
+
+
+def _ler_listagem(resposta: Any) -> tuple[list[dict], Optional[int]]:
+    if resposta.status == 404:
+        return [], None  # página depois da última
+    if resposta.status != 200:
+        raise _TentarDeNovo(f"HTTP {resposta.status}")
+    try:
+        return extrair_pagina(resposta.html_content)
+    except PayloadSemAdsError as e:
+        raise _TentarDeNovo(str(e)) from e
+
+
 def _baixar_com_cuidado(
     sessao: Any,
     url: str,
@@ -558,37 +619,15 @@ def _baixar_com_cuidado(
     relogio: Callable[[], float],
     espera_fixa: Optional[tuple[float, float]] = None,
 ) -> tuple[Optional[list[dict]], Optional[int], Optional[str]]:
-    """Baixa uma página. Em 403, 429 ou página sem "ads", espera cada vez mais e tenta de novo,
-    no máximo `tentativas_bloqueio` vezes. `espera_fixa` (mínimo, máximo) troca a espera crescente por
-    um sorteio nesse intervalo. Devolve (itens, totalOfAds, erro)."""
-    erro = "sem resposta"
-    for tentativa in range(tentativas_bloqueio + 1):
-        if tentativa > 0:
-            if espera_fixa is not None:
-                espera = random.uniform(*espera_fixa)
-            else:
-                espera = backoff_base * (2 ** (tentativa - 1)) * random.uniform(1.0, 1.5)
-            if relogio() - inicio + espera > tempo_max:
-                return None, None, f"{erro} (sem tempo para tentar de novo)"
-            dormir(espera)
-        try:
-            resposta = sessao.get(url)
-        except Exception as e:  # falha de rede, timeout, etc.
-            erro = f"falha de rede ({type(e).__name__})"
-            continue
-        status = resposta.status
-        if status == 404:
-            return [], None, None  # página depois da última
-        if status != 200:
-            erro = f"HTTP {status}"
-            continue
-        try:
-            itens, total = extrair_pagina(resposta.html_content)
-        except PayloadSemAdsError as e:
-            erro = str(e)
-            continue
-        return itens, total, None
-    return None, None, erro
+    """Baixa uma página da listagem. Em 403, 429 ou página sem "ads", espera e tenta de novo (veja
+    _pedir_com_cuidado). Devolve (itens, totalOfAds, erro)."""
+    lido, erro = _pedir_com_cuidado(
+        sessao, url, _ler_listagem, inicio=inicio, tempo_max=tempo_max, tentativas_bloqueio=tentativas_bloqueio,
+        backoff_base=backoff_base, dormir=dormir, relogio=relogio, espera_fixa=espera_fixa,
+    )
+    if lido is None:
+        return None, None, erro
+    return lido[0], lido[1], None
 
 
 def buscar_paginas(
@@ -1012,3 +1051,270 @@ def buscar(
 def buscar_tudo(*args: Any, **kwargs: Any) -> ResultadoBusca:
     """Nome antigo de `buscar`, que agora já devolve tudo junto."""
     return buscar(*args, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# Página do anúncio (só quando a pessoa abre o Garimpar de um carro)
+# ---------------------------------------------------------------------------
+
+
+class AnuncioSaiuError(Exception):
+    """A OLX diz que o anúncio não existe mais (404 ou 410)."""
+
+
+class PaginaSemAnuncioError(Exception):
+    """A página veio sem o initial-data do anúncio: bloqueio ou a OLX mudou a página."""
+
+
+class DetalheIndisponivelError(Exception):
+    """Não deu para ler a página do anúncio, nem tentando de novo. A mensagem é técnica."""
+
+
+# Quadro "Detalhes": campo da ficha -> nomes da propriedade na OLX, na ordem de preferência.
+_DETALHES = {
+    "categoria": ("category",),
+    "modelo": ("vehicle_model",),
+    "marca": ("vehicle_brand",),
+    "tipo": ("cartype",),
+    "potencia": ("motorpower",),
+    "combustivel": ("fuel",),
+    "cambio": ("gearbox",),
+    "direcao": ("car_steering", "indexed_car_steering"),
+    "cor": ("carcolor",),
+    "portas": ("doors",),
+    "final_placa": ("end_tag",),
+    "kit_gnv": ("gnv_kit", "has_gnv_kit"),
+}
+# "Outras características": entram só quando o anúncio diz "Sim", na ordem da tela.
+_OUTRAS = (
+    ("exchange", "Aceita trocas"),
+    ("has_paid_ipva", "IPVA pago"),
+    ("owner", "Único dono"),
+    ("is_settled", "Quitado"),
+    ("is_funded", "Financiado"),
+    ("has_with_fine", "Com multas"),
+    ("has_auction", "De leilão"),
+    ("dealership_review", "Revisões feitas em concessionária"),
+    ("warranty", "Com garantia"),
+    ("owner_manual", "Com manual"),
+    ("extra_key", "Chave reserva"),
+)
+# Listas da OLX que completam as outras características (o que já entrou acima não repete).
+_OUTRAS_LISTAS = ("documentation_and_regularization", "conservation_and_warranty", "financial")
+
+CONTATO_ESCONDIDO = "(contato no anúncio original)"
+_CONTATO = re.compile(
+    r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+"  # e-mail
+    r"|(?<!\d)(?:\+?55[\s.-]?)?\(?\d{2}\)?[\s.-]?9?\d{4}[\s.-]?\d{4}(?!\d)"  # telefone com DDD
+    r"|(?<!\d)9\d{4}[\s.-]?\d{4}(?!\d)"  # celular sem DDD
+)
+_QUEBRA = re.compile(r"<br\s*/?>|</p>|</div>|</li>", re.I)
+_TAG = re.compile(r"<[^>]+>")
+
+
+def extrair_anuncio(html_pagina: str) -> dict:
+    """O objeto "ad" do <script id="initial-data" data-json='...'> da página do anúncio.
+    Levanta PaginaSemAnuncioError se ele não existir."""
+    sel = Selector(content=html_pagina)
+    for script in sel.css("script#initial-data"):
+        try:
+            dados = json.loads(script.attrib.get("data-json") or "")
+        except ValueError:
+            continue
+        ad = dados.get("ad") if isinstance(dados, dict) else None
+        if isinstance(ad, dict) and "listId" in ad:
+            return ad
+    raise PaginaSemAnuncioError(
+        "A página do anúncio veio sem o initial-data. Ou a OLX bloqueou a requisição, "
+        "ou mudou a página e o extrator precisa de ajuste."
+    )
+
+
+def _props_do_anuncio(ad: dict) -> dict[str, dict]:
+    return {
+        p["name"]: p for p in ad.get("properties") or []
+        if isinstance(p, dict) and isinstance(p.get("name"), str) and not _nome_de_anunciante(p["name"])
+    }
+
+
+def _valor(props: dict[str, dict], *nomes: str) -> Optional[str]:
+    for nome in nomes:
+        valor = _texto((props.get(nome) or {}).get("value"))
+        if valor is not None:
+            return valor
+    return None
+
+
+def _lista(prop: Optional[dict]) -> list[str]:
+    """Itens de uma propriedade com vários valores. A OLX manda "0" quando a lista está vazia."""
+    if not prop:
+        return []
+    valores = prop.get("values")
+    if isinstance(valores, list) and valores:
+        itens = [_texto(v.get("label")) for v in valores if isinstance(v, dict)]
+    else:
+        itens = [_texto(parte) for parte in str(prop.get("value") or "").split(",")]
+    return [i for i in itens if i and not i.isdigit()]
+
+
+def _sem_repetir(itens: list[str]) -> list[str]:
+    vistos: set[str] = set()
+    saida = []
+    for item in itens:
+        chave = _tira_acento(item).lower()
+        if chave not in vistos:
+            vistos.add(chave)
+            saida.append(item)
+    return saida
+
+
+def _sim(valor: Optional[str]) -> bool:
+    return valor is not None and _tira_acento(valor).strip().lower() == "sim"
+
+
+def esconder_contato(texto: str) -> str:
+    """Troca telefone e e-mail do anunciante por um aviso. O resto do texto fica igual."""
+    return _CONTATO.sub(CONTATO_ESCONDIDO, texto)
+
+
+def _descricao(bruta: Any) -> Optional[str]:
+    """Texto do anúncio com as quebras de linha, sem HTML e sem contato do anunciante."""
+    if not bruta:
+        return None
+    texto = html.unescape(_TAG.sub("", _QUEBRA.sub("\n", str(bruta))))
+    linhas = [linha.strip() for linha in esconder_contato(texto).replace("\r", "").split("\n")]
+    texto = re.sub(r"\n{3,}", "\n\n", "\n".join(linhas)).strip()
+    return texto or None
+
+
+def normalizar_detalhe(ad: dict, url: str, agora: Optional[datetime] = None) -> DetalheAnuncio:
+    """Objeto "ad" da página do anúncio -> DetalheAnuncio. Campo ausente fica vazio, nada é inventado."""
+    props = _props_do_anuncio(ad)
+    local = ad.get("location") if isinstance(ad.get("location"), dict) else {}
+    extra = {
+        i.get("label"): i.get("value") for i in ad.get("locationProperties") or [] if isinstance(i, dict)
+    }
+    cep = re.sub(r"\D", "", str(local.get("zipcode") or extra.get("CEP") or ""))
+    outras = [rotulo for nome, rotulo in _OUTRAS if _sim(_valor(props, nome))]
+    for nome in _OUTRAS_LISTAS:
+        outras += _lista(props.get(nome))
+    detalhes = {campo: _valor(props, *nomes) for campo, nomes in _DETALHES.items()}
+    return DetalheAnuncio(
+        source=FONTE,
+        external_id=str(ad["listId"]),
+        url=url,
+        detalhes=FichaDetalhes(
+            **detalhes, ano=_numero(_valor(props, "regdate")), km=_numero(_valor(props, "mileage")),
+        ),
+        opcionais=_sem_repetir(_lista(props.get("car_features"))),
+        outras=_sem_repetir(outras),
+        localizacao=LocalAnuncio(
+            bairro=_texto(local.get("neighbourhood")) or _texto(extra.get("Bairro")),
+            cidade=_texto(local.get("municipality")) or _texto(extra.get("Município")),
+            estado=(_texto(local.get("uf")) or "").upper() or None,
+            cep=cep if len(cep) == 8 else None,
+        ),
+        descricao=_descricao(ad.get("body") or ad.get("description")),
+        referencia_preco=_referencia_preco(ad),
+        coletado_em=agora or datetime.now(timezone.utc),
+    )
+
+
+def _reais(valor: Any) -> Optional[int]:
+    """Valor em reais vindo como número (68697, 68697.0) ou texto ("R$ 68.697"). Zero ou negativo -> None."""
+    if isinstance(valor, bool):
+        return None
+    numero = round(valor) if isinstance(valor, (int, float)) else _numero(valor)
+    return numero if numero and numero > 0 else None
+
+
+def _referencia_preco(ad: dict) -> Optional[ReferenciaPreco]:
+    """O quadro "Referência de preço": abuyFipePrice e abuyPriceRef do initial-data. São campos internos
+    da OLX, sem garantia. Se mudarem ou faltarem, o Garimpar só não mostra o quadro."""
+    fipe = ad.get("abuyFipePrice") if isinstance(ad.get("abuyFipePrice"), dict) else {}
+    ref = ad.get("abuyPriceRef") if isinstance(ad.get("abuyPriceRef"), dict) else {}
+    mes = re.fullmatch(r"(\d{4})(\d{2})", str(ref.get("year_month_ref") or ""))
+    carros = ref.get("vehicle_count")
+    referencia = ReferenciaPreco(
+        preco_anuncio=_reais(ad.get("priceValue") or ad.get("price")),
+        fipe=_reais(fipe.get("fipePrice")),
+        media_olx=_reais(ref.get("price_p50")),
+        menor=_reais(ref.get("price_min")),
+        corte_baixo=_reais(ref.get("price_p33")),
+        corte_alto=_reais(ref.get("price_p66")),
+        maior=_reais(ref.get("price_max")),
+        carros=carros if isinstance(carros, int) and not isinstance(carros, bool) and carros > 0 else None,
+        mes_referencia=f"{mes.group(1)}-{mes.group(2)}" if mes else None,
+    )
+    if referencia.fipe is None and referencia.media_olx is None:
+        return None
+    return referencia
+
+
+def url_do_anuncio(external_id: str, url: str) -> str:
+    """Confere que `url` é a página desse anúncio na OLX (https, domínio da OLX e o id no fim) e devolve
+    o endereço limpo, sem ? nem #. Levanta ValueError se não for: o servidor nunca pede outro site."""
+    if not re.fullmatch(r"\d{1,20}", external_id or ""):
+        raise ValueError("id de anúncio inválido")
+    partes = urlsplit(url or "")
+    host = (partes.hostname or "").lower()
+    if (
+        partes.scheme != "https" or partes.username or partes.password or partes.port not in (None, 443)
+        or not (host == "olx.com.br" or host.endswith(".olx.com.br"))
+    ):
+        raise ValueError("endereço fora da OLX")
+    caminho = partes.path.rstrip("/")
+    if not re.search(rf"[-/]{external_id}$", caminho):
+        raise ValueError("endereço de outro anúncio")
+    return f"https://{host}{caminho}"
+
+
+def detalhar(
+    external_id: str,
+    url: str,
+    limites: Optional[LimitesBusca] = None,
+    *,
+    repeticoes: Optional[int] = None,
+    espera_repeticao: Optional[tuple[float, float]] = None,
+    sessao: Any = None,
+    dormir: Callable[[float], None] = time.sleep,
+    relogio: Callable[[], float] = time.monotonic,
+) -> DetalheAnuncio:
+    """Lê a página de um anúncio e devolve o que a listagem não traz. Um pedido só, com as mesmas
+    repetições da busca em caso de bloqueio (`repeticoes` e `espera_repeticao` trocam as de LimitesBusca).
+    Confere que a página é do mesmo listId. Levanta ValueError (endereço que não é desse anúncio),
+    AnuncioSaiuError ou DetalheIndisponivelError."""
+    limites = limites or LimitesBusca()
+    endereco = url_do_anuncio(external_id, url)
+
+    def ler(resposta: Any) -> dict:
+        if resposta.status in (404, 410):
+            raise AnuncioSaiuError(f"HTTP {resposta.status}")
+        if resposta.status != 200:
+            raise _TentarDeNovo(f"HTTP {resposta.status}")
+        try:
+            ad = extrair_anuncio(resposta.html_content)
+        except PaginaSemAnuncioError as e:
+            raise _TentarDeNovo(str(e)) from e
+        if str(ad.get("listId")) != external_id:
+            raise DetalheIndisponivelError(f"a página trouxe o anúncio {ad.get('listId')} e não o {external_id}")
+        return ad
+
+    gerenciador = None
+    if sessao is None:
+        gerenciador = FetcherSession(
+            impersonate="chrome", stealthy_headers=True, timeout=limites.timeout_requisicao_segundos, retries=1,
+        )
+        sessao = gerenciador.__enter__()
+    try:
+        ad, erro = _pedir_com_cuidado(
+            sessao, endereco, ler, inicio=relogio(), tempo_max=limites.tempo_max_segundos,
+            tentativas_bloqueio=limites.tentativas_bloqueio if repeticoes is None else repeticoes,
+            backoff_base=limites.backoff_base_segundos, dormir=dormir, relogio=relogio, espera_fixa=espera_repeticao,
+        )
+    finally:
+        if gerenciador is not None:
+            gerenciador.__exit__(None, None, None)
+    if ad is None:
+        raise DetalheIndisponivelError(erro)
+    return normalizar_detalhe(ad, endereco)

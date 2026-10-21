@@ -4,6 +4,7 @@ GET /saude          confere que subiu
 GET /buscar         ResultadoBusca completo em JSON
 GET /buscar/stream  o mesmo por SSE: um evento "pagina" por página, "fim" com funil, motivo_parada
                     e avisos, e "erro" (em tom humano) se algo quebrar
+GET /anuncio/detalhe  a página de um anúncio (fonte, id e url), lida só quando a pessoa abre o Garimpar
 
 Parâmetros: texto (obrigatório, mas pode vir vazio: aí é a vitrine do estado), marca, modelo, versao, ano_min, ano_max, preco_min, preco_max,
 km_min, km_max, cambio, combustivel, anunciante (particular ou profissional), ordenar (recentes,
@@ -24,11 +25,10 @@ import json
 import logging
 import threading
 import time
-from dataclasses import asdict
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturoTimeout
 from datetime import datetime, timedelta, timezone
-from typing import Any, Iterator, Optional
+from typing import Any, Callable, Iterator, Optional
 
 from fastapi import Depends, FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
@@ -41,8 +41,7 @@ import localidades
 from armazem import Armazem, BancoFora, hash_da_chave
 from busca import aviso_filtro_aproximado, chave_busca, filtros_locais, montar_resultado, texto_informacao
 from config import LimitesBusca
-from schemas import Anuncio, AnuncioParaFipe, Aviso, Busca, PaginaBusca, ResultadoBusca
-from servico_fipe import EnriquecedorFipe, criar_enriquecedor
+from schemas import Anuncio, Aviso, Busca, DetalheAnuncio, PaginaBusca, ResultadoBusca
 from sources import olx
 from sources.base import Fonte
 
@@ -54,6 +53,9 @@ MSG_PEDIDO = "Esse pedido de busca não está certo, confere os filtros?"
 MSG_REGIAO = "Não achei essa região nesse estado, escolhe uma da lista?"
 MSG_ZONA = "Não achei essa zona, escolhe uma da lista?"
 MSG_ZONA_SEM_REGIAO = "Pra escolher a zona, escolhe a região primeiro."
+MSG_DETALHE_FALHOU = "Não consegui abrir esse anúncio na OLX agora, tenta de novo?"
+MSG_DETALHE_SAIU = "Esse anúncio saiu do ar na OLX."
+MSG_DETALHE_PEDIDO = "Não reconheci esse anúncio, volta pra lista e abre de novo?"
 ESPERA_PING = 15.0  # segundos sem novidade até mandar um sinal de vida no stream
 
 
@@ -120,12 +122,10 @@ class SessaoBusca:
     def __init__(
         self, chave: str, fonte: Fonte, busca: Busca, limites: LimitesBusca, teto: int, semaforo: threading.Semaphore,
         armazem: Optional[Armazem] = None, ttl: float = config.CACHE_TTL_SEGUNDOS, usuario: str = "",
-        enriquecedor_fipe: Optional[EnriquecedorFipe] = None,
     ) -> None:
         self.chave, self.fonte, self.busca, self.limites, self.teto = chave, fonte, busca, limites, teto
         self.semaforo = semaforo
         self.armazem, self.ttl, self.usuario = armazem, ttl, usuario
-        self.enriquecedor_fipe = enriquecedor_fipe
         self.trava = threading.Lock()
         self.cursor: Any = None
         self.paginas: list[PaginaBusca] = []
@@ -237,10 +237,6 @@ class SessaoBusca:
                     )
                 if pag.parou_por == olx.BLOQUEIO:
                     return pag, False
-                if self.enriquecedor_fipe is not None:
-                    self.enriquecedor_fipe.carregar_cache(pag.anuncios)
-                    if self.busca.texto.strip() or self.busca.modelo:
-                        self.enriquecedor_fipe.resolver_busca(pag.anuncios)
                 agora_utc = datetime.now(timezone.utc)
                 tempo, quando = time.monotonic() - inicio, agora_utc.replace(microsecond=agora_utc.microsecond // 1000 * 1000)  # o banco guarda até milissegundos
                 self._guardar(pag, tempo, quando)
@@ -258,11 +254,10 @@ class Servico:
 
     def __init__(
         self, fonte: Fonte, ttl: float, limites: Optional[LimitesBusca] = None, teto: int = config.MAX_PAGINAS_SOB_DEMANDA,
-        armazem: Optional[Armazem] = None, enriquecedor_fipe: Optional[EnriquecedorFipe] = None,
+        armazem: Optional[Armazem] = None,
     ) -> None:
         self.fonte, self.ttl, self.limites, self.teto = fonte, ttl, limites or LimitesBusca(), teto
         self.armazem = armazem
-        self.enriquecedor_fipe = enriquecedor_fipe
         self.trava = threading.Lock()
         self.semaforo = threading.Semaphore(1)
         self.cache: dict[str, SessaoBusca] = {}
@@ -271,7 +266,6 @@ class Servico:
     def _nova(self, chave: str, busca: Busca) -> SessaoBusca:
         return SessaoBusca(
             chave, self.fonte, busca, self.limites, self.teto, self.semaforo, self.armazem, self.ttl,
-            enriquecedor_fipe=self.enriquecedor_fipe,
         )
 
     def _do_banco(self, chave: str, busca: Busca, id_: int) -> Optional[SessaoBusca]:
@@ -364,6 +358,45 @@ class Servico:
                 except BancoFora:
                     pass
         return pag, do_cache
+
+
+class DetalhesGuardados:
+    """A página de cada anúncio já lida, por `ttl` segundos, só em memória. Uma leitura por anúncio de
+    cada vez: quem pede o mesmo anúncio ao mesmo tempo espera e aproveita a leitura. Falha não fica
+    guardada, então tentar de novo lê de novo."""
+
+    def __init__(self, ttl: float, relogio: Callable[[], float] = time.monotonic) -> None:
+        self.ttl, self._relogio = ttl, relogio
+        self._trava = threading.Lock()
+        self._travas: dict[tuple[str, str], list] = {}  # chave -> [trava, quantos pedidos usam]
+        self._guardados: dict[tuple[str, str], tuple[float, DetalheAnuncio]] = {}
+
+    def _vigente(self, chave: tuple[str, str]) -> Optional[DetalheAnuncio]:
+        guardado = self._guardados.get(chave)
+        if guardado is not None and self._relogio() - guardado[0] < self.ttl:
+            return guardado[1]
+        return None
+
+    def obter(self, chave: tuple[str, str], ler: Callable[[], DetalheAnuncio]) -> tuple[DetalheAnuncio, bool]:
+        """Devolve (detalhe, veio_guardado)."""
+        with self._trava:
+            agora = self._relogio()
+            self._guardados = {k: v for k, v in self._guardados.items() if agora - v[0] < self.ttl}
+            uso = self._travas.setdefault(chave, [threading.Lock(), 0])
+            uso[1] += 1
+        try:
+            with uso[0]:
+                guardado = self._vigente(chave)
+                if guardado is not None:
+                    return guardado, True
+                detalhe = ler()
+                self._guardados[chave] = (self._relogio(), detalhe)
+                return detalhe, False
+        finally:
+            with self._trava:
+                uso[1] -= 1
+                if uso[1] == 0:
+                    self._travas.pop(chave, None)
 
 
 def resultado_da_sessao(
@@ -492,22 +525,23 @@ def criar_app(
     cors_origens: Optional[list[str]] = None,
     max_paginas_demanda: int = config.MAX_PAGINAS_SOB_DEMANDA,
     armazem: Optional[Armazem] = None,
-    enriquecedor_fipe: Optional[EnriquecedorFipe] = None,
 ) -> FastAPI:
     """`armazem` liga o cache no banco. Sem ele o cache é só de memória, como antes."""
     app = FastAPI(title="Garimpo Auto")
     app.add_middleware(
         CORSMiddleware, allow_origins=cors_origens if cors_origens is not None else config.CORS_ORIGENS,
-        allow_methods=["GET", "POST"], allow_headers=["*"],
+        allow_methods=["GET"], allow_headers=["*"],
     )
-    servico = Servico(fonte, ttl, limites, max_paginas_demanda, armazem, enriquecedor_fipe)
+    servico = Servico(fonte, ttl, limites, max_paginas_demanda, armazem)
     app.state.servico = servico
+    detalhes = DetalhesGuardados(ttl)
+    app.state.detalhes = detalhes
 
     @app.on_event("startup")
     def _preparar_banco() -> None:
         """Ao subir, confere o banco e aplica as migrations. Se ele estiver fora, o servidor sobe do mesmo jeito."""
         if armazem is None:
-            log.warning("Subi sem o banco. A busca segue normal e não consulta a FIPE.")
+            log.warning("Subi sem o banco. A busca segue normal, só com a memória.")
             return
         try:
             armazem.migrar()
@@ -578,17 +612,43 @@ def criar_app(
     def saude() -> dict[str, str]:
         return {"status": "ok"}
 
-    @app.post("/fipe/anuncio")
-    def fipe_anuncio(pedido_fipe: AnuncioParaFipe) -> JSONResponse:
-        if enriquecedor_fipe is None:
-            return JSONResponse({"erro": "A FIPE não está disponível agora."}, status_code=503)
-        anuncio = pedido_fipe.para_anuncio()
-        enriquecedor_fipe.resolver(anuncio)
-        return JSONResponse({
-            "fipe": asdict(anuncio.fipe) if anuncio.fipe is not None else None,
-            "fipe_bloqueio": anuncio.fipe_bloqueio,
-            "fipe_ausencia": anuncio.fipe_ausencia,
-        })
+    @app.get("/anuncio/detalhe")
+    def detalhe_anuncio(
+        fonte_pedida: str = Query(..., alias="fonte", max_length=20),
+        id_anuncio: str = Query(..., alias="id", max_length=30),
+        url: str = Query(..., max_length=600),
+    ) -> JSONResponse:
+        """O que só a página do anúncio traz (detalhes, opcionais, outras características, localização e
+        descrição). Um pedido à fonte por anúncio, guardado pelo mesmo TTL da busca."""
+        detalhar = getattr(fonte, "detalhar", None)
+        if fonte_pedida != getattr(fonte, "FONTE", None) or detalhar is None:
+            return JSONResponse({"erro": MSG_DETALHE_PEDIDO}, status_code=422)
+        conferir_url = getattr(fonte, "url_do_anuncio", None)
+        if conferir_url is not None:
+            try:  # antes do cache, senão um endereço ruim pegaria carona no que já está guardado
+                url = conferir_url(id_anuncio, url)
+            except ValueError:
+                return JSONResponse({"erro": MSG_DETALHE_PEDIDO}, status_code=422)
+
+        def ler() -> DetalheAnuncio:
+            return detalhar(
+                id_anuncio, url, servico.limites,
+                repeticoes=config.REPETICOES_VER_MAIS, espera_repeticao=config.ESPERA_REPETICAO_VER_MAIS_SEGUNDOS,
+            )
+
+        try:
+            lido, do_cache = detalhes.obter((fonte_pedida, id_anuncio), ler)
+        except ValidationError as e:  # herda de ValueError, mas é a página que veio estranha
+            log.warning("Página do anúncio %s %s fora do formato (%s)", fonte_pedida, id_anuncio, e)
+            return JSONResponse({"erro": MSG_DETALHE_FALHOU}, status_code=503)
+        except ValueError:
+            return JSONResponse({"erro": MSG_DETALHE_PEDIDO}, status_code=422)
+        except olx.AnuncioSaiuError:
+            return JSONResponse({"erro": MSG_DETALHE_SAIU}, status_code=404)
+        except Exception as e:  # bloqueio, rede, página diferente: a tela oferece tentar de novo
+            log.warning("Não li a página do anúncio %s %s (%s: %s)", fonte_pedida, id_anuncio, type(e).__name__, e)
+            return JSONResponse({"erro": MSG_DETALHE_FALHOU}, status_code=503)
+        return JSONResponse({**lido.model_dump(mode="json"), "do_cache": do_cache})
 
     @app.get("/regioes")
     def regioes(estado: Optional[str] = None) -> dict[str, Any]:
@@ -662,4 +722,4 @@ def criar_app(
 
 
 _armazem = Armazem(config.DATABASE_URL, confere_segundos=config.BANCO_CONFERE_SEGUNDOS) if config.DATABASE_URL else None
-app = criar_app(armazem=_armazem, enriquecedor_fipe=criar_enriquecedor(_armazem))
+app = criar_app(armazem=_armazem)

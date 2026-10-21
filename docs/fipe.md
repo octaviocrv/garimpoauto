@@ -2,128 +2,57 @@
 
 ## De onde vem
 
-O Garimpo Auto consulta a API gratuita da fipe.online em
-`https://fipe.parallelum.com.br/api/v2`.
+A FIPE vem pronta da própria OLX. A página de cada anúncio de carro tem o quadro **Referência de
+preço**, com o preço do anúncio, o "Preço Médio OLX", o "preço fipe" e uma régua em 3 trechos.
 
-Só o servidor fala com essa fonte. A tela recebe apenas a referência já conferida e guardada.
+O Garimpo Auto lê esse quadro do JSON `initial-data` da página, e não das classes CSS:
 
-O token gratuito é opcional e fica em `GARIMPO_FIPE_TOKEN`. Sem token, o Garimpo Auto usa no máximo
-450 chamadas por dia. Com token, usa no máximo 900. A margem evita encostar nos limites externos de
-500 e 1.000 chamadas.
+| Campo na OLX | Campo no Garimpo | O que é |
+|---|---|---|
+| `priceValue` | `preco_anuncio` | Preço do anúncio |
+| `abuyFipePrice.fipePrice` | `fipe` | Preço FIPE que a OLX mostra para a versão do anúncio |
+| `abuyPriceRef.price_p50` | `media_olx` | "Preço Médio OLX" |
+| `abuyPriceRef.price_min` | `menor` | Começo da régua |
+| `abuyPriceRef.price_p33` | `corte_baixo` | Fim do 1º trecho |
+| `abuyPriceRef.price_p66` | `corte_alto` | Fim do 2º trecho |
+| `abuyPriceRef.price_max` | `maior` | Fim da régua |
+| `abuyPriceRef.vehicle_count` | `carros` | Quantos carros a OLX usou na conta |
+| `abuyPriceRef.year_month_ref` | `mes_referencia` | Mês da conta da OLX, como `"2026-09"` |
 
-## O que fica guardado
-
-Marcas, modelos, anos, combustíveis e preços ficam no banco por mês de referência. Quando chega um
-mês novo, o catálogo antigo continua guardado e o preço novo só é buscado quando alguém precisar.
-
-O resultado do casamento também fica guardado por anúncio. Abrir a mesma página não consulta a
-FIPE de novo.
-
-Decisões como sem candidato e confiança baixa ficam em `fipe_casamento`. Falhas operacionais ficam
-em `fipe_ausencia`, separadas por anúncio, entrada e motivo. Repetições são contadas sem criar uma
-linha nova. Os motivos são sem orçamento, tempo esgotado, banco fora, fonte indisponível e erro
-inesperado.
+Não há consulta a nenhuma API de FIPE. A integração antiga com a fipe.online (casamento de versões,
+catálogo no banco, orçamento diário e aquecimento) foi removida.
 
 ## Quando consulta
 
-A vitrine nunca abre chamadas novas à fonte FIPE. Ela apenas lê casamentos que já estão no banco.
-Por isso um card da vitrine só mostra o selo quando o resultado já estava guardado.
+Só ao abrir o **Garimpar** de um anúncio. O quadro chega junto com a página do anúncio, em
+`GET /anuncio/detalhe`, no campo `referencia_preco`. É a mesma leitura da ficha, sem pedido extra à OLX,
+e fica guardada em memória por 20 minutos como o resto do detalhe.
 
-Uma busca digitada ou filtrada por modelo resolve as combinações distintas daquela página. Anúncios
-com a mesma marca, modelo, versão, ano, combustível, câmbio e portas reaproveitam o casamento, sem
-repetir a consulta externa.
+A lista e a vitrine não leem página de anúncio, então não trazem FIPE. Depois que um Garimpar abre e a
+FIPE chega, ela passa a valer também no card daquele anúncio e na análise.
 
-Ao abrir o Garimpar, `POST /fipe/anuncio` resolve somente aquele anúncio. Pedidos simultâneos para o
-mesmo anúncio são compartilhados pela tela e o resultado passa a valer também no card.
+## Na tela
 
-O botão **Buscar carros iguais** abre uma busca focada em marca, modelo e ano. Ele mantém a
-localização da busca atual e tira filtros de versão, preço, km, câmbio, combustível e anunciante.
-Assim a lista tem mais chance de reunir os cinco preços válidos exigidos pela mediana.
+- O Garimpar mostra o bloco **Referência de preço** dentro de "O que o anúncio conta", com a régua, o
+  preço do anúncio, o preço médio OLX e o preço FIPE.
+- A régua tem 3 trechos iguais (menor até corte baixo, corte baixo até corte alto, corte alto até maior),
+  como a da OLX. O trecho onde o preço do anúncio cai fica em destaque e o pino anda dentro dele.
+- A FIPE da OLX alimenta a análise que já existia (`a.fipe`, com `confianca: 'alta'`). As regras da
+  análise e do veredito não mudaram.
 
-## Como o casamento decide
+## Quando falta
 
-O Garimpo Auto confere nesta ordem.
+Os campos são internos da OLX e podem faltar ou mudar sem aviso.
 
-1. Marca
-2. Modelo base
-3. Ano e combustível
-4. Motor, portas, câmbio e acabamento
-5. Similaridade do texto para desempatar
+- Sem FIPE e sem média, `referencia_preco` vem `null` e o bloco não aparece.
+- Com parte dos números, a tela mostra o que tem. Sem os cortes, a régua some e as caixas ficam.
+- Sem FIPE, a análise segue como "FIPE não encontrada", igual a antes.
+- A OLX não informa o código FIPE nem o mês da tabela FIPE. O mês mostrado é o da conta de mercado
+  da OLX.
 
-Campos separados da OLX valem mais que o título. Candidatos incompatíveis com motor, portas ou
-câmbio saem antes das consultas de anos para economizar o limite diário.
+## Banco
 
-O nome da marca aceita complementos do catálogo quando a correspondência continua única, como
-`Chevrolet` e `GM - Chevrolet`. Os modelos são procurados primeiro pela família e depois ranqueados
-pela versão completa. Abreviações de pelo menos três letras, diferenças de pontuação e caixa não
-criam regras específicas por carro.
-
-### Confiança alta
-
-Marca, modelo, ano e combustível conferem. A versão tem uma diferença clara para a segunda opção.
-Só esta confiança chega à tela.
-
-### Confiança média
-
-Há um candidato provável, mas outra versão ficou perto ou houve empate. Fica guardado para
-diagnóstico e não aparece na tela.
-
-### Confiança baixa
-
-A versão ficou pouco parecida. Não aparece na tela.
-
-### Sem candidato
-
-Faltou dado ou nenhuma opção foi compatível. Não aparece na tela.
-
-## Casos que não viram selo
-
-- Anúncio promocional ou com preço de entrada
-- Carro com pelo menos dois anos e menos de 1.000 km
-- Ano impossível
-- Preço menor que metade da FIPE
-- Confiança média ou baixa
-
-Preço abaixo de 50% da FIPE fica marcado como estranho. O carro continua na lista.
-
-## Tempo e falhas
-
-O servidor dedica por padrão até 4 segundos à FIPE por página e usa no máximo duas consultas ao
-mesmo tempo. Quem não terminar nesse tempo fica sem FIPE naquela página.
-
-Sem banco, nenhuma chamada é feita. Erro de rede, resposta 429 ou orçamento esgotado não derrubam a
-busca. A página segue sem a referência que faltou e leva um motivo padronizado. Quando o banco está
-fora, a ocorrência fica na memória e é gravada depois que ele volta. A gravação acontece fora do
-caminho da resposta para não aumentar o teto de tempo da página.
-
-## Aquecer antes da vitrine
-
-Depois de abrir a vitrine ou fazer buscas, rode dentro de `scraper`.
-
-```bash
-.venv/bin/python aquecer_fipe.py --orcamento 100
-```
-
-O script lê os anúncios das páginas ainda guardadas, começa pelos modelos mais comuns e respeita
-tanto o orçamento da execução quanto o limite diário. Pode parar e rodar de novo. Casamentos já
-guardados não gastam chamadas novamente.
-
-No fim ele mostra quantos anúncios ficaram com confiança alta, média, baixa e sem candidato.
-
-## Trocar a fonte
-
-O contrato está em `scraper/sources/fipe.py`, no protocolo `FonteFipe`. Uma fonte por CSV ou outro
-provedor precisa implementar referências, marcas, modelos, anos e preço. O cache, o casamento, a
-API e a tela não precisam mudar.
-
-## Variáveis
-
-| Variável | Padrão | Para que serve |
-|---|---:|---|
-| `GARIMPO_FIPE_TOKEN` | vazio | Token opcional da fonte |
-| `GARIMPO_FIPE_LIMITE_DIA` | 450 ou 900 | Teto local diário |
-| `GARIMPO_FIPE_TIMEOUT_REQUISICAO_SEGUNDOS` | 10 | Tempo de uma chamada |
-| `GARIMPO_FIPE_TEMPO_PAGINA_SEGUNDOS` | 4 | Tempo total da FIPE numa página |
-| `GARIMPO_FIPE_PAUSA_SEGUNDOS` | 0,2 | Pausa curta entre chamadas |
-| `GARIMPO_FIPE_REPETICOES` | 1 | Repetição depois de 429 ou rede |
-| `GARIMPO_FIPE_BACKOFF_SEGUNDOS` | 1 | Primeira espera antes da repetição |
+As tabelas `fipe_*` criadas pelas migrations `003_fipe.sql` e `004_ausencia_fipe.sql` ficaram sem
+uso. Elas foram mantidas para não apagar dado com migration. Remover só com pedido explícito.
+Páginas de busca guardadas antes da troca ainda podem ter `fipe` no JSON, e o servidor ignora esse
+campo ao carregar.

@@ -1,6 +1,6 @@
 // Única porta de entrada dos dados: a busca por página do servidor (/buscar/pagina), o "Ver mais".
 // A tela chama /api/... e o Vite repassa para o servidor (veja vite.config.ts).
-import type { Anuncio, Lugar, RespostaPagina, RespostaRegioes, RespostaZonas, ResultadoFipe } from './types'
+import type { Anuncio, DetalheAnuncio, Lugar, RespostaPagina, RespostaRegioes, RespostaZonas } from './types'
 import type { Pedido } from './busca/pedido'
 import { T } from './busca/textos'
 
@@ -65,23 +65,31 @@ export async function buscarZonas(estado: string, regiao: string, signal: AbortS
   return r.zonas
 }
 
-const consultasFipe = new Map<string, Promise<ResultadoFipe>>()
+// podeTentar é falso quando repetir não adianta: anúncio fora do ar (404) ou pedido recusado (422).
+export class ErroDetalhe extends ErroBusca {
+  constructor(mensagem: string, readonly podeTentar: boolean) {
+    super(mensagem)
+  }
+}
 
-export function resolverFipe(anuncio: Anuncio): Promise<ResultadoFipe> {
+export const urlDetalhe = (anuncio: Pick<Anuncio, 'source' | 'external_id' | 'url'>): string =>
+  `${API}/anuncio/detalhe?${new URLSearchParams({ fonte: anuncio.source, id: anuncio.external_id, url: anuncio.url })}`
+
+const consultasDetalhe = new Map<string, Promise<DetalheAnuncio>>()
+
+// Lê a página de um anúncio só quando a pessoa abre o Garimpar. Pedido igual em andamento é reaproveitado.
+export function buscarDetalhe(anuncio: Pick<Anuncio, 'source' | 'external_id' | 'url'>): Promise<DetalheAnuncio> {
   const chave = `${anuncio.source}|${anuncio.external_id}`
-  const existente = consultasFipe.get(chave)
+  const existente = consultasDetalhe.get(chave)
   if (existente) return existente
-  const consulta = fetch(`${API}/fipe/anuncio`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(anuncio),
-  }).then(async (r) => {
-    if (!r.ok) throw new ErroBusca(T.fipeFalhou)
-    return r.json() as Promise<ResultadoFipe>
+  const consulta = fetch(urlDetalhe(anuncio)).then(async (r) => {
+    if (r.ok) return r.json() as Promise<DetalheAnuncio>
+    const corpo = await r.json().catch(() => null)
+    throw new ErroDetalhe(corpo?.erro ?? T.detalheFalhou, r.status !== 404 && r.status !== 422)
   }).catch((e) => {
-    if (e instanceof ErroBusca) throw e
-    throw new ErroBusca(T.fipeFalhou)
-  }).finally(() => consultasFipe.delete(chave))
-  consultasFipe.set(chave, consulta)
+    if (e instanceof ErroDetalhe) throw e
+    throw new ErroDetalhe(T.detalheFalhou, true)
+  }).finally(() => consultasDetalhe.delete(chave))
+  consultasDetalhe.set(chave, consulta)
   return consulta
 }
