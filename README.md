@@ -8,9 +8,10 @@ O frontend inicial está em `apps/web` e usa a identidade visual de
 `identidade/landing-page` como referência.
 
 ```bash
-cd apps/web
-npm run dev
+./rodar-projeto
 ```
+
+O comando sobe a API e a tela juntas. Para encerrar as duas, use `Ctrl+C`.
 
 O ambiente atual usa Node 18.20.4. Para manter as ferramentas atualizadas ao longo do projeto, a recomendação é migrar para Node 20 LTS antes de atualizar dependências.
 

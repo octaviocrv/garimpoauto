@@ -17,7 +17,7 @@ export const T = {
   tentarDeNovo: 'Tentar de novo',
   buscarDeNovo: 'Buscar de novo',
   limparFiltros: 'Limpar filtros',
-  dicaFiltros: 'Os filtros valem na próxima busca. Aperta Buscar pra aplicar.',
+  dicaFiltros: 'Trocou estado, região ou zona, a busca já atualiza. Os outros filtros valem quando você aperta Buscar.',
   destaque: 'Destaque',
   placeholder: 'Qual carro você quer? Tipo gol 2012',
   listaFalhou: 'Não consegui carregar essa lista agora. A busca funciona do mesmo jeito.',

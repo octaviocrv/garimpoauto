@@ -90,8 +90,14 @@ export function PaginaBusca() {
     </Campo>
   )
 
-  const mudarEstado = (estado: string) => setR((x) => ({ ...x, estado, regiao: '', zona: '' })) // região é do estado
-  const mudarRegiao = (regiao: string) => setR((x) => ({ ...x, regiao, zona: '' })) // zona é da região
+  // Trocar o local já busca de novo, levando junto os filtros que estão preenchidos.
+  const trocarLocal = (novo: Rascunho) => {
+    setR(novo)
+    buscar(montarPedidoOuVitrine(novo))
+  }
+  const mudarEstado = (estado: string) => trocarLocal({ ...r, estado, regiao: '', zona: '' }) // região é do estado
+  const mudarRegiao = (regiao: string) => trocarLocal({ ...r, regiao, zona: '' }) // zona é da região
+  const mudarZona = (zona: string) => trocarLocal({ ...r, zona })
 
   const buscarAgora = (e: React.FormEvent) => {
     e.preventDefault()
@@ -241,7 +247,7 @@ export function PaginaBusca() {
               )}
               {r.estado !== 'todos' && r.regiao !== '' && (zonas.carregando || zonas.itens.length > 0) && (
                 <Campo nome={T.zona}>
-                  <select className={campo} value={r.zona} disabled={zonas.carregando} onChange={(e) => mudar('zona', e.target.value)}>
+                  <select className={campo} value={r.zona} disabled={zonas.carregando} onChange={(e) => mudarZona(e.target.value)}>
                     <option value="">{zonas.carregando ? T.carregando : T.qualquerZona}</option>
                     {zonas.itens.map((l) => <option key={l.slug} value={l.slug}>{l.nome}</option>)}
                   </select>
